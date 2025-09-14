@@ -1,69 +1,44 @@
-# React + TypeScript + Vite
+# Frontend — React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This folder contains the React frontend built with Vite and TypeScript. The instructions below use PowerShell on Windows (adjust for other shells).
 
-Currently, two official plugins are available:
+## Prerequisites
+- Node.js 18+ and npm
+- Git (optional)
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Install dependencies
 
-## Expanding the ESLint configuration
+Open PowerShell in `f:/Vessel/frontend` (or from repo root):
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+cd f:/Vessel/frontend
+npm install
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+If you run into peer dependency resolution issues, try:
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```powershell
+npm install --legacy-peer-deps
 ```
+
+## Run in development mode (HMR)
+
+```powershell
+npm run dev
+```
+
+Vite will show the local URL (typically http://localhost:5173). Open it in your browser.
+
+## Build for production
+
+```powershell
+npm run build:tsc   # runs TypeScript build (tsc -b) then vite build (if this script exists)
+npm run build       # vite build only
+```
+
+## Notes and troubleshooting
+- If Vite fails to start because it loads a Vite config from another folder, use the included helper config `vite.design.config.ts` which points the root to the design folder while using the `frontend` node_modules.
+- A few UI files were stubbed/removed during a cleanup pass. If you see import errors from `src/components/ui`, ensure the files `button`, `card`, `input`, `select`, `badge`, `table`, `textarea`, `progress`, `utils.ts` and `use-mobile.ts` are present. Those are required by the app.
+- If TypeScript shows errors introduced earlier (temporary `any` uses), they are safe for local dev but should be fixed before pushing.
+
+Want me to add a single PowerShell script to start both backend and frontend concurrently? I can add a `dev.ps1` that runs both servers in parallel.
