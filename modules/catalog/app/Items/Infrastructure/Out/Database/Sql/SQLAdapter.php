@@ -2,7 +2,7 @@
 
 namespace App\Items\Infrastructure\Out\Database\Sql;
 
-class SQLAdapter
+class SqlAdapter
 {
 
 }
