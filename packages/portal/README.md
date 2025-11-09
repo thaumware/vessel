@@ -1,57 +1,31 @@
 # Portal
 
-Cross-service data relationships. Framework agnostic.
+Cross-service data relationships for distributed systems.
 
-## Install
+## Implementations
+
+### PHP
+Full-featured implementation for Laravel and PHP projects.
+
+[Documentation](php/README.md)
 
 ```bash
 composer require thaumware/portal
 ```
 
-Laravel setup:
+### Python (Planned)
+Coming soon.
 
-```php
-// app/Providers/PortalServiceProvider.php
-use Thaumware\Portal\Contracts\StorageAdapter;
-use Thaumware\Portal\Contracts\DataFetcher;
-use Thaumware\Portal\Adapters\IlluminateAdapter;
+### TypeScript (Planned)
+Coming soon.
 
-$this->app->singleton(IlluminateAdapter::class, fn() => 
-    new IlluminateAdapter(DB::class, Http::class, Str::class)
-);
+## Concept
 
-$this->app->singleton(StorageAdapter::class, IlluminateAdapter::class);
-$this->app->singleton(DataFetcher::class, IlluminateAdapter::class);
-```
+Portal manages relationships between entities across different services or data sources:
+- Local database tables
+- Remote HTTP APIs
+- Message queues
+- Other microservices
 
-## Usage
-
-```php
-use Thaumware\Portal\Portal;
-
-// Register origin
-Portal::register('items', 'catalog_items', 'table');
-Portal::register('inventory', 'http://inventory:9111/api/items', 'http');
-
-// Link relation
-Portal::link(
-    modelId: $term->id,
-    modelType: Term::class,
-    originName: 'items',
-    relatedId: $item->id
-);
-
-// Load relations (batch)
-$terms = Term::all();
-Portal::attach($terms);
-
-// Access
-$terms[0]->portal_items; // Array of related data
-```
-
-## Methods
-
-- `Portal::register(name, source, type)` - Register origin
-- `Portal::link(modelId, modelType, originName, relatedId, metadata)` - Create relation
-- `Portal::attach(models)` - Load relations (batch)
-- `Portal::deactivate(name)` - Soft delete origin
+## License
+MIT
