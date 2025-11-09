@@ -1,0 +1,3 @@
+[submodule "packages/portal"]
+	path = packages/portal
+	url = git@github.com:thaumware/portal.git
