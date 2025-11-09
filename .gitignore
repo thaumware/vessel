@@ -39,3 +39,5 @@ coverage/
 # Logs
 logs/
 *.log
+packages/portal/
+packages/portal/
