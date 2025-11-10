@@ -2,6 +2,8 @@
 
 namespace App\Taxonomy\Domain\UseCases\Term;
 
+use App\Shared\Domain\DTOs\PaginatedResult;
+use App\Shared\Domain\DTOs\PaginationParams;
 use App\Taxonomy\Domain\Interfaces\TermRepositoryInterface;
 
 class ListTerms
@@ -10,12 +12,12 @@ class ListTerms
         private TermRepositoryInterface $repository
     ) {}
 
-    public function execute(?string $vocabularyId = null): array
+    public function execute(PaginationParams $params, ?string $vocabularyId = null): PaginatedResult
     {
         if ($vocabularyId) {
-            return $this->repository->findByVocabulary($vocabularyId);
+            return $this->repository->findByVocabulary($vocabularyId, $params);
         }
 
-        return $this->repository->findAll();
+        return $this->repository->findAll($params);
     }
 }

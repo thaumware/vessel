@@ -2,6 +2,8 @@
 
 namespace App\Taxonomy\Infrastructure\Out\Models\Eloquent;
 
+use App\Shared\Domain\DTOs\PaginationParams;
+use App\Shared\Domain\DTOs\PaginatedResult;
 use App\Taxonomy\Domain\Entities\Vocabulary;
 use App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface;
 
@@ -35,17 +37,38 @@ class VocabularyRepository implements VocabularyRepositoryInterface
         );
     }
 
-    public function findAll(): array
+    public function findAll(PaginationParams $params): PaginatedResult
     {
-        return VocabularyModel::all()
-            ->map(fn($model) => (new Vocabulary(
+        $query = VocabularyModel::query();
+
+        // Apply sorting
+        if ($params->sortBy) {
+            $query->orderBy($params->sortBy, $params->sortDirection);
+        } else {
+            $query->orderBy('created_at', 'desc');
+        }
+
+        // Get total count before pagination
+        $total = $query->count();
+
+        // Apply pagination
+        $models = $query
+            ->skip($params->getOffset())
+            ->take($params->getLimit())
+            ->get();
+
+        // Map to arrays
+        $data = $models->map(function ($model) {
+            return (new Vocabulary(
                 id: $model->id,
                 name: $model->name,
                 slug: $model->slug,
                 description: $model->description,
                 workspace_id: $model->workspace_id
-            ))->toArray())
-            ->all();
+            ))->toArray();
+        })->all();
+
+        return PaginatedResult::fromArray($data, $total, $params);
     }
 
     public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool

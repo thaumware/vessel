@@ -2,6 +2,7 @@
 
 namespace App\Taxonomy\Infrastructure\In\Http\Controllers;
 
+use App\Shared\Domain\DTOs\PaginationParams;
 use App\Taxonomy\Domain\UseCases\Term\CreateTerm;
 use App\Taxonomy\Domain\UseCases\Term\DeleteTerm;
 use App\Taxonomy\Domain\UseCases\Term\GetTerm;
@@ -28,9 +29,11 @@ class TaxonomyController extends Controller
         ListTerms $listTerms
     ): JsonResponse {
         $vocabularyId = $request->query('vocabulary_id');
-        $terms = $listTerms->execute($vocabularyId);
+        
+        $params = PaginationParams::fromRequest($request->query());
+        $result = $listTerms->execute($params, $vocabularyId);
 
-        return response()->json(['data' => $terms]);
+        return response()->json($result->toArray());
     }
 
     public function termProfile(
@@ -102,11 +105,13 @@ class TaxonomyController extends Controller
     // ========== VOCABULARY ENDPOINTS ==========
 
     public function vocabularyList(
+        Request $request,
         ListVocabularies $listVocabularies
     ): JsonResponse {
-        $vocabularies = $listVocabularies->execute();
+        $params = PaginationParams::fromRequest($request->query());
+        $result = $listVocabularies->execute($params);
 
-        return response()->json(['data' => $vocabularies]);
+        return response()->json($result->toArray());
     }
 
     public function vocabularyProfile(

@@ -3,7 +3,8 @@
 namespace App\Taxonomy\Domain\Interfaces;
 
 use App\Taxonomy\Domain\Entities\Term;
-use App\Taxonomy\Domain\DTOs\TermTreeNode;
+use App\Shared\Domain\DTOs\PaginationParams;
+use App\Shared\Domain\DTOs\PaginatedResult;
 
 interface TermRepositoryInterface
 {
@@ -11,9 +12,9 @@ interface TermRepositoryInterface
 
     public function findById(string $id): ?Term;
 
-    public function findAll(): array;
+    public function findAll(PaginationParams $params): PaginatedResult;
 
-    public function findByVocabulary(string $vocabularyId): array;
+    public function findByVocabulary(string $vocabularyId, PaginationParams $params): PaginatedResult;
 
     public function getTree(string $vocabularyId, ?string $parentId = null): array;
 

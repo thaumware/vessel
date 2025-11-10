@@ -3,6 +3,8 @@
 namespace App\Taxonomy\Domain\Interfaces;
 
 use App\Taxonomy\Domain\Entities\Vocabulary;
+use App\Shared\Domain\DTOs\PaginationParams;
+use App\Shared\Domain\DTOs\PaginatedResult;
 
 interface VocabularyRepositoryInterface
 {
@@ -10,7 +12,7 @@ interface VocabularyRepositoryInterface
 
     public function findById(string $id): ?Vocabulary;
 
-    public function findAll(): array;
+    public function findAll(PaginationParams $params): PaginatedResult;
 
     public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool;
 
