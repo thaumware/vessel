@@ -1,0 +1,183 @@
+---
+sidebar_position: 1
+---
+
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Taxonomía
+
+Módulo de gestión de taxonomías (vocabularios y términos) para categorización de productos.
+
+## Arquitectura
+
+```
+Domain/
+├── Entities/          # Term, Vocabulary (inmutables)
+├── Interfaces/        # Contratos de repositorios
+└── UseCases/         # Lógica de negocio pura
+    ├── Term/         # CreateTerm, ListTerms, etc.
+    └── Vocabulary/   # CreateVocabulary, ListVocabularies, etc.
+
+Infrastructure/
+├── In/Http/          # Controllers (solo validación + respuesta)
+└── Out/Persistence/  # Repositories (Eloquent)
+```
+
+## API Reference
+
+### Vocabularies
+
+#### Crear Vocabulario
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/taxonomy/vocabularies/create"
+  body={{
+    name: "Product Categories"
+  }}
+  description="Crea un nuevo vocabulario"
+/>
+
+#### Listar Vocabularios
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/taxonomy/vocabularies/read"
+  description="Obtiene todos los vocabularios"
+/>
+
+#### Obtener Vocabulario
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/taxonomy/vocabularies/show/{id}"
+  params={{ id: "uuid-here" }}
+  description="Obtiene un vocabulario por ID"
+/>
+
+#### Actualizar Vocabulario
+
+<ApiPlayground
+  method="PUT"
+  endpoint="/v1/taxonomy/vocabularies/update/{id}"
+  params={{ id: "uuid-here" }}
+  body={{
+    name: "Updated Categories"
+  }}
+  description="Actualiza un vocabulario existente"
+/>
+
+#### Eliminar Vocabulario
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/taxonomy/vocabularies/delete/{id}"
+  params={{ id: "uuid-here" }}
+  description="Elimina un vocabulario"
+/>
+
+---
+
+### Terms
+
+#### Crear Término
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/taxonomy/terms/create"
+  body={{
+    name: "Electronics",
+    vocabulary_id: "uuid-here"
+  }}
+  description="Crea un nuevo término dentro de un vocabulario"
+/>
+
+#### Listar Términos
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/taxonomy/terms/read"
+  queryParams={{ vocabulary_id: "uuid-here (opcional)" }}
+  description="Lista todos los términos, opcionalmente filtrados por vocabulario"
+/>
+
+#### Obtener Término
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/taxonomy/terms/show/{id}"
+  params={{ id: "uuid-here" }}
+  description="Obtiene un término por ID"
+/>
+
+#### Actualizar Término
+
+<ApiPlayground
+  method="PUT"
+  endpoint="/v1/taxonomy/terms/update/{id}"
+  params={{ id: "uuid-here" }}
+  body={{
+    name: "Updated Electronics",
+    vocabulary_id: "uuid-here"
+  }}
+  description="Actualiza un término existente"
+/>
+
+#### Eliminar Término
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/taxonomy/terms/delete/{id}"
+  params={{ id: "uuid-here" }}
+  description="Elimina un término"
+/>
+
+---
+
+## Ejemplo de Uso
+
+### Flujo completo: Crear categorías de productos
+
+```javascript
+// 1. Crear vocabulario
+const vocab = await fetch('http://localhost:8000/api/v1/taxonomy/vocabularies/create', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ name: 'Product Categories' })
+});
+const { data: vocabulary } = await vocab.json();
+
+// 2. Crear términos
+const electronics = await fetch('http://localhost:8000/api/v1/taxonomy/terms/create', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'Electronics',
+    vocabulary_id: vocabulary.id
+  })
+});
+
+const clothing = await fetch('http://localhost:8000/api/v1/taxonomy/terms/create', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    name: 'Clothing',
+    vocabulary_id: vocabulary.id
+  })
+});
+
+// 3. Listar términos del vocabulario
+const terms = await fetch(
+  `http://localhost:8000/api/v1/taxonomy/terms/read?vocabulary_id=${vocabulary.id}`
+);
+const { data: termList } = await terms.json();
+console.log(termList); // [{ id, name, vocabulary_id }, ...]
+```
+
+## Principios de Diseño
+
+- **Domain puro**: Sin dependencias de Laravel en entidades y use cases
+- **Use Cases únicos**: Una responsabilidad por clase
+- **Controllers delgados**: Solo validación HTTP + delegación
+- **DI automático**: Laravel resuelve dependencias automáticamente
+- **Testeable**: Mockear interfaces, no implementaciones
