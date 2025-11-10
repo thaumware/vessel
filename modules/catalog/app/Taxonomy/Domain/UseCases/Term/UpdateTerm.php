@@ -19,7 +19,8 @@ class UpdateTerm
             return null;
         }
 
-        $updated = new Term($id, $name, $vocabularyId);
+        $updated = $term;
+        $updated->setName($name);
         $this->repository->save($updated);
 
         return $updated;

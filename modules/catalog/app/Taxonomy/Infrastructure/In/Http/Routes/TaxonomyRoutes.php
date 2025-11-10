@@ -18,6 +18,8 @@ Route::prefix('api/v1/taxonomy')->group(function () {
             Route::post('/add', [TaxonomyController::class, 'addTermRelation']);
             Route::post('/remove', [TaxonomyController::class, 'removeTermRelation']);
         });
+
+        Route::get('/tree', [TaxonomyController::class, 'getTermTree']);
     });
 
 

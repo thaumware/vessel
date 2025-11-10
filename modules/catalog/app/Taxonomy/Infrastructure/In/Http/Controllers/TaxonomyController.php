@@ -5,8 +5,11 @@ namespace App\Taxonomy\Infrastructure\In\Http\Controllers;
 use App\Taxonomy\Domain\UseCases\Term\CreateTerm;
 use App\Taxonomy\Domain\UseCases\Term\DeleteTerm;
 use App\Taxonomy\Domain\UseCases\Term\GetTerm;
+use App\Taxonomy\Domain\UseCases\Term\GetTermTree;
 use App\Taxonomy\Domain\UseCases\Term\ListTerms;
 use App\Taxonomy\Domain\UseCases\Term\UpdateTerm;
+use App\Taxonomy\Domain\UseCases\TermRelation\AddTermRelation;
+use App\Taxonomy\Domain\UseCases\TermRelation\RemoveTermRelation;
 use App\Taxonomy\Domain\UseCases\Vocabulary\CreateVocabulary;
 use App\Taxonomy\Domain\UseCases\Vocabulary\DeleteVocabulary;
 use App\Taxonomy\Domain\UseCases\Vocabulary\GetVocabulary;
@@ -163,17 +166,68 @@ class TaxonomyController extends Controller
         return response()->json(['message' => 'Vocabulary deleted'], 200);
     }
 
-    // ========== TERM RELATIONS (Placeholder) ==========
+    // ========== TERM RELATIONS ==========
 
-    public function addTermRelation(Request $request): JsonResponse
-    {
-        // TODO: Implement term-to-term relations if needed
-        return response()->json(['message' => 'Not implemented yet'], 501);
+    public function getTermTree(
+        Request $request,
+        GetTermTree $getTermTree
+    ): JsonResponse {
+        $validated = $request->validate([
+            'vocabulary_id' => 'required|string|uuid',
+            'parent_id' => 'nullable|string|uuid',
+        ]);
+
+        $tree = $getTermTree->execute(
+            vocabularyId: $validated['vocabulary_id'],
+            parentId: $validated['parent_id'] ?? null
+        );
+
+        return response()->json(['data' => $tree]);
     }
 
-    public function removeTermRelation(Request $request): JsonResponse
-    {
-        // TODO: Implement term-to-term relations if needed
-        return response()->json(['message' => 'Not implemented yet'], 501);
+    public function addTermRelation(
+        Request $request,
+        AddTermRelation $addTermRelation
+    ): JsonResponse {
+        $validated = $request->validate([
+            'from_term_id' => 'required|string|uuid',
+            'to_term_id' => 'required|string|uuid',
+            'relation_type' => 'nullable|string|in:parent,related,synonym',
+        ]);
+
+        try {
+            $relation = $addTermRelation->execute(
+                fromTermId: $validated['from_term_id'],
+                toTermId: $validated['to_term_id'],
+                relationType: $validated['relation_type'] ?? 'parent'
+            );
+
+            return response()->json(['data' => $relation->toArray()], 201);
+        } catch (\DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 409);
+        }
+    }
+
+    public function removeTermRelation(
+        Request $request,
+        RemoveTermRelation $removeTermRelation
+    ): JsonResponse {
+        $validated = $request->validate([
+            'from_term_id' => 'required|string|uuid',
+            'to_term_id' => 'required|string|uuid',
+            'relation_type' => 'nullable|string|in:parent,related,synonym',
+        ]);
+
+        $removed = $removeTermRelation->execute(
+            fromTermId: $validated['from_term_id'],
+            toTermId: $validated['to_term_id'],
+            relationType: $validated['relation_type'] ?? 'parent'
+        );
+
+        if (!$removed) {
+            return response()->json(['error' => 'Relation not found'], 404);
+        }
+
+        return response()->json(['message' => 'Relation removed'], 200);
     }
 }
