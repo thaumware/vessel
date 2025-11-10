@@ -10,5 +10,9 @@ interface VocabularyRepositoryInterface
 
     public function findById(string $id): ?Vocabulary;
 
+    public function findAll(): array;
+
+    public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool;
+
     public function delete(Vocabulary $vocabulary): void;
 }

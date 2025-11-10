@@ -10,5 +10,9 @@ interface TermRepositoryInterface
 
     public function findById(string $id): ?Term;
 
+    public function findAll(): array;
+
+    public function findByVocabulary(string $vocabularyId): array;
+
     public function delete(Term $term): void;
 }

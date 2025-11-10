@@ -14,7 +14,6 @@ class Item
     public function __construct(
         string $id,
         string $name,
-        string $measure_id,
         ?string $description = null,
     ) {
         $this->setId($id);
@@ -24,5 +23,16 @@ class Item
     }
 
     // Otros métodos relevantes para la entidad Item
+
+    public function getName(): string
+    {
+        return $this->name;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
 
 }

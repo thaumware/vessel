@@ -7,35 +7,61 @@ use App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface;
 
 class VocabularyRepository implements VocabularyRepositoryInterface
 {
+    public function save(Vocabulary $vocabulary): void
+    {
+        $model = VocabularyModel::find($vocabulary->getId()) ?? new VocabularyModel();
+        $model->id = $vocabulary->getId();
+        $model->name = $vocabulary->getName();
+        $model->slug = $vocabulary->getSlug();
+        $model->description = $vocabulary->getDescription();
+        $model->workspace_id = $vocabulary->getWorkspaceId();
+        $model->save();
+    }
+
     public function findById(string $id): ?Vocabulary
     {
-        $vocabulary = VocabularyModel::find($id);
+        $model = VocabularyModel::find($id);
 
-        if (!$vocabulary) {
+        if (!$model) {
             return null;
         }
 
         return new Vocabulary(
-            id: $vocabulary->id,
-            name: $vocabulary->name
+            id: $model->id,
+            name: $model->name,
+            slug: $model->slug,
+            description: $model->description,
+            workspace_id: $model->workspace_id
         );
     }
 
-    public function save(
-        Vocabulary $vocabulary
-    ): void {
-        $vocabularyModel = VocabularyModel::find($vocabulary->getId()) ?? new VocabularyModel();
-        $vocabularyModel->id = $vocabulary->getId();
-        $vocabularyModel->name = $vocabulary->getName();
-        $vocabularyModel->save();
+    public function findAll(): array
+    {
+        return VocabularyModel::all()
+            ->map(fn($model) => (new Vocabulary(
+                id: $model->id,
+                name: $model->name,
+                slug: $model->slug,
+                description: $model->description,
+                workspace_id: $model->workspace_id
+            ))->toArray())
+            ->all();
+    }
+
+    public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool
+    {
+        return VocabularyModel::where('slug', $slug)
+            ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
+            ->when(!$workspaceId, fn($q) => $q->whereNull('workspace_id'))
+            ->exists();
     }
 
     public function delete(Vocabulary $vocabulary): void
     {
-        $vocabularyModel = VocabularyModel::find($vocabulary->getId());
+        $model = VocabularyModel::find($vocabulary->getId());
 
-        if ($vocabularyModel) {
-            $vocabularyModel->delete();
+        if ($model) {
+            $model->delete();
         }
     }
 }

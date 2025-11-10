@@ -23,7 +23,6 @@ class EloquentItemRepository implements ItemRepositoryInterface
             [
                 'name' => $item->getName(),
                 'description' => $item->getDescription(),
-                'measure_id' => $item->getMeasureId(),
             ]
         );
     }
@@ -35,7 +34,6 @@ class EloquentItemRepository implements ItemRepositoryInterface
         return $item ? new Item(
             id: $item->id,
             name: $item->name,
-            measure_id: $item->measure_id,
             description: $item->description
         ) : null;
 

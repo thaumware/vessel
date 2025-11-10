@@ -2,59 +2,178 @@
 
 namespace App\Taxonomy\Infrastructure\In\Http\Controllers;
 
+use App\Taxonomy\Domain\UseCases\Term\CreateTerm;
+use App\Taxonomy\Domain\UseCases\Term\DeleteTerm;
+use App\Taxonomy\Domain\UseCases\Term\GetTerm;
+use App\Taxonomy\Domain\UseCases\Term\ListTerms;
+use App\Taxonomy\Domain\UseCases\Term\UpdateTerm;
+use App\Taxonomy\Domain\UseCases\Vocabulary\CreateVocabulary;
+use App\Taxonomy\Domain\UseCases\Vocabulary\DeleteVocabulary;
+use App\Taxonomy\Domain\UseCases\Vocabulary\GetVocabulary;
+use App\Taxonomy\Domain\UseCases\Vocabulary\ListVocabularies;
+use App\Taxonomy\Domain\UseCases\Vocabulary\UpdateVocabulary;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
 
 class TaxonomyController extends Controller
 {
+    // ========== TERM ENDPOINTS ==========
 
-    // Term endpoints
-    public function termList(Request $request)
-    {
+    public function termList(
+        Request $request,
+        ListTerms $listTerms
+    ): JsonResponse {
+        $vocabularyId = $request->query('vocabulary_id');
+        $terms = $listTerms->execute($vocabularyId);
 
+        return response()->json(['data' => $terms]);
     }
 
-    public function createTerm(Request $request)
-    {
-        //
+    public function termProfile(
+        string $id,
+        GetTerm $getTerm
+    ): JsonResponse {
+        $term = $getTerm->execute($id);
+
+        if (!$term) {
+            return response()->json(['error' => 'Term not found'], 404);
+        }
+
+        return response()->json(['data' => $term]);
     }
 
-    public function updateTerm(Request $request, $id)
-    {
-        //
-    }
-    public function deleteTerm(Request $request, $id)
-    {
-        //
+    public function createTerm(
+        Request $request,
+        CreateTerm $createTerm
+    ): JsonResponse {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'vocabulary_id' => 'required|string|uuid',
+        ]);
+
+        $term = $createTerm->execute(
+            name: $validated['name'],
+            vocabularyId: $validated['vocabulary_id']
+        );
+
+        return response()->json(['data' => $term], 201);
     }
 
-    public function addTermRelation(Request $request)
-    {
-        //
+    public function updateTerm(
+        Request $request,
+        string $id,
+        UpdateTerm $updateTerm
+    ): JsonResponse {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'vocabulary_id' => 'required|string|uuid',
+        ]);
+
+        $term = $updateTerm->execute(
+            id: $id,
+            name: $validated['name'],
+            vocabularyId: $validated['vocabulary_id']
+        );
+
+        if (!$term) {
+            return response()->json(['error' => 'Term not found'], 404);
+        }
+
+        return response()->json(['data' => $term]);
     }
 
-    public function removeTermRelation(Request $request)
-    {
-        //
+    public function deleteTerm(
+        string $id,
+        DeleteTerm $deleteTerm
+    ): JsonResponse {
+        $deleted = $deleteTerm->execute($id);
+
+        if (!$deleted) {
+            return response()->json(['error' => 'Term not found'], 404);
+        }
+
+        return response()->json(['message' => 'Term deleted'], 200);
     }
 
-    // Vocabulary endpoints
+    // ========== VOCABULARY ENDPOINTS ==========
 
-    public function vocabularyList(Request $request)
-    {
-        //
-    }
-    public function createVocabulary(Request $request)
-    {
-        //
+    public function vocabularyList(
+        ListVocabularies $listVocabularies
+    ): JsonResponse {
+        $vocabularies = $listVocabularies->execute();
+
+        return response()->json(['data' => $vocabularies]);
     }
 
-    public function updateVocabulary(Request $request, $id)
-    {
-        //
+    public function vocabularyProfile(
+        string $id,
+        GetVocabulary $getVocabulary
+    ): JsonResponse {
+        $vocabulary = $getVocabulary->execute($id);
+
+        if (!$vocabulary) {
+            return response()->json(['error' => 'Vocabulary not found'], 404);
+        }
+
+        return response()->json(['data' => $vocabulary->toArray()]);
     }
-    public function deleteVocabulary(Request $request, $id)
+
+    public function createVocabulary(
+        Request $request,
+        CreateVocabulary $createVocabulary
+    ): JsonResponse {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $vocabulary = $createVocabulary->execute($validated['name']);
+
+        return response()->json(['data' => $vocabulary->toArray()], 201);
+    }
+
+    public function updateVocabulary(
+        Request $request,
+        string $id,
+        UpdateVocabulary $updateVocabulary
+    ): JsonResponse {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $vocabulary = $updateVocabulary->execute($id, $validated['name']);
+
+        if (!$vocabulary) {
+            return response()->json(['error' => 'Vocabulary not found'], 404);
+        }
+
+        return response()->json(['data' => $vocabulary->toArray()]);
+    }
+
+    public function deleteVocabulary(
+        string $id,
+        DeleteVocabulary $deleteVocabulary
+    ): JsonResponse {
+        $deleted = $deleteVocabulary->execute($id);
+
+        if (!$deleted) {
+            return response()->json(['error' => 'Vocabulary not found'], 404);
+        }
+
+        return response()->json(['message' => 'Vocabulary deleted'], 200);
+    }
+
+    // ========== TERM RELATIONS (Placeholder) ==========
+
+    public function addTermRelation(Request $request): JsonResponse
     {
-        //
+        // TODO: Implement term-to-term relations if needed
+        return response()->json(['message' => 'Not implemented yet'], 501);
+    }
+
+    public function removeTermRelation(Request $request): JsonResponse
+    {
+        // TODO: Implement term-to-term relations if needed
+        return response()->json(['message' => 'Not implemented yet'], 501);
     }
 }
