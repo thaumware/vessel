@@ -1,0 +1,48 @@
+---
+sidebar_position: 10
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Unidad de Medida (UoM)
+
+Endpoints disponibles (JSON-backed adapter, sin DB):
+
+## Listar medidas
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/uom/measures/read"
+  description="Lista todas las unidades disponibles"
+/>
+
+## Consultar medida
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/uom/measures/show/{id}"
+  params={{ id: 'kg' }}
+  description="Obtiene una medida por id o código"
+/>
+
+## Convertir valor entre unidades
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/uom/measures/convert"
+  body={{ from: 'm', to: 'cm', value: 2.5 }}
+  description="Convierte un valor de una unidad a otra (usa conversiones definidas en el adapter)"
+/>
+
+### Notas
+
+- Las medidas y las conversiones están actualmente en arrays PHP bajo `app/Uom/Infrastructure/Out/Data/`.
+- El adapter es intercambiable: puedes cambiarlo por un repositorio SQL más tarde sin tocar el dominio ni los use-cases.
+
+### Probar con curl
+
+```bash
+curl -X POST \
+  -H "Content-Type: application/json" \
+  -d '{"from":"m","to":"cm","value":2.5}' \
+  http://localhost:8000/v1/uom/measures/convert
+```

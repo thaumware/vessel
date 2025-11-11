@@ -11,7 +11,8 @@ class TermTreeNode
         public readonly ?string $description,
         public readonly int $depth,
         public readonly array $children = []
-    ) {}
+    ) {
+    }
 
     public function toArray(): array
     {
