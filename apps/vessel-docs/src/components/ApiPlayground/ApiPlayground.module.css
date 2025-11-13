@@ -171,3 +171,19 @@
   background: #3d1f1f;
   color: #f8d7da;
 }
+
+.adapterSelect {
+  padding: 0.5rem;
+  border: 1px solid var(--ifm-color-emphasis-300);
+  border-radius: 4px;
+  background: var(--ifm-background-color);
+  color: var(--ifm-color-emphasis-800);
+  font-size: 0.9rem;
+  min-width: 120px;
+}
+
+.adapterSelect:focus {
+  outline: none;
+  border-color: var(--ifm-color-primary);
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}

@@ -1,0 +1,110 @@
+---
+sidebar_position: 20
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Locaciones (Locations)
+
+Módulo para gestión de locaciones físicas en el sistema de inventario. Soporta diferentes tipos de locaciones: almacenes, tiendas, oficinas y centros de distribución.
+
+## Adaptadores Disponibles
+
+Este módulo soporta **dos adaptadores intercambiables** que se seleccionan mediante headers HTTP:
+
+### SQL
+- **Header**: Sin header o cualquier valor que no sea `local`
+- **Persistencia**: MySQL/PostgreSQL
+- **Uso**: Producción, datos persistentes
+
+### Local
+- **Header**: `X-LOCATION-ADAPTER: local`
+- **Persistencia**: Solo en memoria RAM
+- **Uso**: Testing, desarrollo, datos temporales
+
+## Endpoints
+
+### Listar locaciones
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/locations/read"
+  headers={{ "X-LOCATION-ADAPTER": "" }}
+  description="Lista todas las locaciones registradas"
+/>
+
+### Consultar locación
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/locations/show/{id}"
+  params={{ id: 'ID_DE_LA_LOCACION' }}
+  headers={{ "X-LOCATION-ADAPTER": "" }}
+  description="Obtiene una locación específica. Reemplaza {id} con el ID real de la locación."
+/>
+
+### Crear locación
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/locations/create"
+  headers={{ "X-LOCATION-ADAPTER": "" }}
+  body={{
+    name: 'Nuevo Almacén Central',
+    address_id: 'addr-1',
+    type: 'warehouse',
+    description: 'Almacén principal con capacidad para 1000 pallets'
+  }}
+  description="Crea una nueva locación"
+/>
+
+### Actualizar locación
+
+<ApiPlayground
+  method="PUT"
+  endpoint="/v1/locations/update/{id}"
+  params={{ id: 'ID_DE_LA_LOCACION' }}
+  headers={{ "X-LOCATION-ADAPTER": "" }}
+  body={{
+    name: 'Almacén Central Actualizado',
+    address_id: 'addr-1',
+    type: 'warehouse',
+    description: 'Almacén principal actualizado'
+  }}
+  description="Actualiza una locación existente. Reemplaza {id} con el ID real de la locación."
+/>
+
+### Eliminar locación
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/locations/delete/{id}"
+  params={{ id: 'ID_DE_LA_LOCACION' }}
+  headers={{ "X-LOCATION-ADAPTER": "" }}
+  description="Elimina una locación del sistema. Reemplaza {id} con el ID real de la locación."
+/>
+
+## Usar con Headers
+
+Cada endpoint tiene un selector de adaptador integrado que establece automáticamente el header `X-LOCATION-ADAPTER`:
+
+```bash
+# Usar Local
+curl -X GET -H "X-LOCATION-ADAPTER: local" http://localhost:8000/v1/locations/read
+
+# Usar SQL (sin header)
+curl -X GET http://localhost:8000/v1/locations/read
+```
+
+## Tipos de locación soportados
+
+- \`warehouse\`: Almacén
+- \`store\`: Tienda
+- \`office\`: Oficina
+- \`distribution_center\`: Centro de distribución
+
+## Notas
+
+- Las locaciones se almacenan en tablas MySQL/PostgreSQL bajo el prefijo `locations_`
+- Cada endpoint tiene un selector integrado de adaptador que controla el header X-LOCATION-ADAPTER
+- Las locaciones están diseñadas para agruparse por direcciones usando `address_id`
+- Soporta soft deletes para auditoría y recuperación de datos

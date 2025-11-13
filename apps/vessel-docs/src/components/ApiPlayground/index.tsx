@@ -7,6 +7,7 @@ interface ApiPlaygroundProps {
     body?: Record<string, any>;
     params?: Record<string, string>;
     queryParams?: Record<string, string>;
+    headers?: Record<string, string>;
     description?: string;
 }
 
@@ -16,6 +17,7 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
     body = {},
     params = {},
     queryParams = {},
+    headers = {},
     description,
 }) => {
     const [response, setResponse] = useState<any>(null);
@@ -24,6 +26,7 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
     const [editableBody, setEditableBody] = useState(JSON.stringify(body, null, 2));
     const [editableParams, setEditableParams] = useState(params);
     const [editableQuery, setEditableQuery] = useState(queryParams);
+    const [editableHeaders, setEditableHeaders] = useState(headers);
 
     const apiUrl = typeof window !== 'undefined'
         ? (window as any).ENV?.API_URL || 'http://localhost:8000/api'
@@ -34,7 +37,12 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
 
         // Replace path params
         Object.entries(editableParams).forEach(([key, value]) => {
-            url = url.replace(`{${key}}`, value);
+            if (value && value.trim() !== '') {
+                url = url.replace(`{${key}}`, value);
+            } else {
+                // If param is empty, show a placeholder
+                url = url.replace(`{${key}}`, `{${key}}`);
+            }
         });
 
         // Add query params
@@ -47,17 +55,30 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
     };
 
     const handleExecute = async () => {
+        // Validate required path params
+        const missingParams = Object.entries(editableParams).filter(([key, value]) => 
+            !value || value.trim() === ''
+        );
+
+        if (missingParams.length > 0) {
+            setError(`Missing required path parameters: ${missingParams.map(([key]) => key).join(', ')}`);
+            return;
+        }
+
         setLoading(true);
         setError(null);
         setResponse(null);
 
         try {
+            const requestHeaders: Record<string, string> = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                ...editableHeaders,
+            };
+
             const options: RequestInit = {
                 method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                },
+                headers: requestHeaders,
             };
 
             if (method !== 'GET' && editableBody.trim()) {
@@ -90,6 +111,35 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
                     </span>
                     <code className={styles.endpoint}>{buildUrl()}</code>
                 </div>
+
+                {/* Custom Headers */}
+                {Object.keys(headers).length > 0 && (
+                    <div className={styles.section}>
+                        <h4>Headers</h4>
+                        {Object.entries(editableHeaders).map(([key, value]) => (
+                            <div key={key} className={styles.param}>
+                                <label>{key}:</label>
+                                {key === 'X-LOCATION-ADAPTER' ? (
+                                    <select
+                                        value={value}
+                                        onChange={(e) => setEditableHeaders({ ...editableHeaders, [key]: e.target.value })}
+                                        className={styles.adapterSelect}
+                                    >
+                                        <option value="">SQL</option>
+                                        <option value="local">Local</option>
+                                    </select>
+                                ) : (
+                                    <input
+                                        type="text"
+                                        value={value}
+                                        onChange={(e) => setEditableHeaders({ ...editableHeaders, [key]: e.target.value })}
+                                        placeholder={`Enter ${key}`}
+                                    />
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                )}
 
                 {/* Path Parameters */}
                 {Object.keys(params).length > 0 && (

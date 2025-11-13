@@ -1,23 +1,24 @@
 <?php
 
-namespace App\Taxonomy\Infrastructure\Out\Models\Eloquent;
+namespace App\Locations\Infrastructure\Out\Models\Eloquent;
 
 use App\Shared\Adapters\Eloquent\EloquentModel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class TermModel extends EloquentModel
+class LocationModel extends EloquentModel
 {
     use SoftDeletes, HasFactory;
 
-    protected $table = 'catalog_terms';
+    protected $table = 'locations_locations';
 
     protected $fillable = [
         'id',
         'name',
-        'slug',
         'description',
-        'vocabulary_id',
+        'type',
+        'address_id',
         'workspace_id',
         'created_at',
         'updated_at',
@@ -30,8 +31,12 @@ class TermModel extends EloquentModel
         'deleted_at',
     ];
 
-    public function vocabulary()
+    protected $casts = [
+        'type' => 'string',
+    ];
+
+    public function address(): BelongsTo
     {
-        return $this->belongsTo(VocabularyModel::class, 'vocabulary_id', 'id');
+        return $this->belongsTo(AddressModel::class, 'address_id');
     }
 }
