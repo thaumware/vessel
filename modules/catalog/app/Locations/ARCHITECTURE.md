@@ -113,7 +113,8 @@ app/Locations/
 ## Adaptadores de Persistencia
 
 ### 🔄 Adaptador Dinámico
-- **Middleware**: `AdapterMiddleware` detecta el header `X-LOCATION-ADAPTER`
+- **Middleware**: `AdapterMiddleware` compartido (`app/Shared/Infrastructure/Middleware/AdapterMiddleware`)
+- **Header**: `X-LOCATION-ADAPTER` (local = In-Memory, otros = Eloquent)
 - **SQL** (por defecto): Usa Eloquent ORM con MySQL/PostgreSQL
 - **Local** (In-Memory): Usa arrays en memoria RAM
 

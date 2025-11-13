@@ -119,7 +119,7 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
                         {Object.entries(editableHeaders).map(([key, value]) => (
                             <div key={key} className={styles.param}>
                                 <label>{key}:</label>
-                                {key === 'X-LOCATION-ADAPTER' ? (
+                                {key === 'X-LOCATION-ADAPTER' || key === 'X-TAXONOMY-ADAPTER' ? (
                                     <select
                                         value={value}
                                         onChange={(e) => setEditableHeaders({ ...editableHeaders, [key]: e.target.value })}

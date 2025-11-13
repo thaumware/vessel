@@ -127,6 +127,26 @@ class TermRepository implements TermRepositoryInterface
         })->all();
     }
 
+    public function getBreadcrumb(string $termId): string
+    {
+        $term = $this->findById($termId);
+        if (!$term) {
+            return '';
+        }
+
+        $breadcrumb = [];
+        $currentTerm = $term;
+
+        // Traverse up the hierarchy using term relationships
+        while ($currentTerm) {
+            array_unshift($breadcrumb, $currentTerm->getName());
+            $parentRelation = TermRelationshipModel::where('child_term_id', $currentTerm->getId())->first();
+            $currentTerm = $parentRelation ? $this->findById($parentRelation->parent_term_id) : null;
+        }
+
+        return implode('/', $breadcrumb);
+    }
+
     public function delete(Term $term): void
     {
         $termModel = TermModel::find($term->getId());

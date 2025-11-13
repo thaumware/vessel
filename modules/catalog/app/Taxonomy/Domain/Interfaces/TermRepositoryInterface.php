@@ -18,5 +18,7 @@ interface TermRepositoryInterface
 
     public function getTree(string $vocabularyId, ?string $parentId = null): array;
 
+    public function getBreadcrumb(string $termId): string;
+
     public function delete(Term $term): void;
 }

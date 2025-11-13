@@ -6,6 +6,7 @@ use App\Shared\Domain\DTOs\PaginationParams;
 use App\Taxonomy\Domain\UseCases\Term\CreateTerm;
 use App\Taxonomy\Domain\UseCases\Term\DeleteTerm;
 use App\Taxonomy\Domain\UseCases\Term\GetTerm;
+use App\Taxonomy\Domain\UseCases\Term\GetTermBreadcrumb;
 use App\Taxonomy\Domain\UseCases\Term\GetTermTree;
 use App\Taxonomy\Domain\UseCases\Term\ListTerms;
 use App\Taxonomy\Domain\UseCases\Term\UpdateTerm;
@@ -188,6 +189,19 @@ class TaxonomyController extends Controller
         );
 
         return response()->json(['data' => $tree]);
+    }
+
+    public function getTermBreadcrumb(
+        string $id,
+        GetTermBreadcrumb $getTermBreadcrumb
+    ): JsonResponse {
+        $breadcrumb = $getTermBreadcrumb->execute($id);
+
+        if (empty($breadcrumb)) {
+            return response()->json(['error' => 'Term not found'], 404);
+        }
+
+        return response()->json(['data' => $breadcrumb]);
     }
 
     public function addTermRelation(

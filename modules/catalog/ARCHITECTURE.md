@@ -6,6 +6,14 @@ Mapa explícito en forma de árbol (para agentes):
 catalog/
 ├─ app/
 │  ├─ AppServiceProvider.php
+│  ├─ Shared/
+│  │  ├─ Adapters/
+│  │  ├─ Domain/
+│  │  ├─ Infrastructure/
+│  │  │  └─ Middleware/
+│  │  │     └─ AdapterMiddleware.php    # 🧩 Middleware genérico para switching de adaptadores
+│  │  └─ Providers/
+│  │     └─ PortalServiceProvider.php
 │  ├─ Items/
 │  │  └─ ItemsServiceProvider.php
   ├─ Locations/
@@ -63,12 +71,41 @@ catalog/
 │  │  │  │  └─ TermRelation.php
 │  │  │  ├─ DTOs/
 │  │  │  │  └─ TermTreeNode.php
-│  │  │  └─ Interfaces/
+│  │  │  ├─ Interfaces/
+│  │  │  └─ UseCases/
+│  │  │     ├─ Term/
+│  │  │     │  ├─ CreateTerm.php
+│  │  │     │  ├─ ListTerms.php
+│  │  │     │  ├─ GetTerm.php
+│  │  │     │  ├─ UpdateTerm.php
+│  │  │     │  ├─ DeleteTerm.php
+│  │  │     │  ├─ GetTermTree.php          # 🌳 Árbol jerárquico de términos
+│  │  │     │  └─ GetTermBreadcrumb.php    # 🧭 Navegación breadcrumb
+│  │  │     ├─ TermRelation/
+│  │  │     │  ├─ AddTermRelation.php
+│  │  │     │  └─ RemoveTermRelation.php
+│  │  │     └─ Vocabulary/
+│  │  │        ├─ CreateVocabulary.php
+│  │  │        ├─ ListVocabularies.php
+│  │  │        ├─ GetVocabulary.php
+│  │  │        ├─ UpdateVocabulary.php
+│  │  │        └─ DeleteVocabulary.php
 │  │  └─ Infrastructure/
 │  │     ├─ In/Http/
 │  │     │  ├─ Controllers/TaxonomyController.php
 │  │     │  └─ Routes/TaxonomyRoutes.php
-│  │     └─ Out/Models/Eloquent/VocabularyModel.php
+│  │     └─ Out/
+│  │        ├─ Data/
+│  │        │  └─ terms.php                # 📊 Datos jerárquicos para adapter local
+│  │        ├─ InMemory/
+│  │        │  ├─ InMemoryTermRepository.php
+│  │        │  └─ InMemoryVocabularyRepository.php
+│  │        └─ Models/Eloquent/
+│  │           ├─ TermModel.php
+│  │           ├─ TermRelationshipModel.php
+│  │           ├─ TermRepository.php
+│  │           ├─ VocabularyModel.php
+│  │           └─ VocabularyRepository.php
 │  └─ Uom/
 │     ├─ Domain/
 │     │  ├─ Entities/
@@ -105,6 +142,7 @@ Dónde buscar por tipo de artefacto:
 - HTTP entrypoints: `app/*/Infrastructure/In/Http`
 - Persistencia/adapters: `app/*/Infrastructure/Out`
 - Module wiring: `app/*/Infrastructure/*ServiceProvider.php`
+- Shared infrastructure: `app/Shared/Infrastructure` (middlewares, helpers, etc.)
 
 Mantén el árbol actualizado cuando agregues o muevas providers o módulos.
 
@@ -115,6 +153,6 @@ Mantén el árbol actualizado cuando agregues o muevas providers o módulos.
 Cada módulo puede tener su propia documentación de arquitectura detallada:
 
 - **Locations**: [`app/Locations/ARCHITECTURE.md`](app/Locations/ARCHITECTURE.md) - Arquitectura hexagonal completa con adaptadores dinámicos
-- **Taxonomy**: Próximamente
+- **Taxonomy**: [`app/Taxonomy/ARCHITECTURE.md`](app/Taxonomy/ARCHITECTURE.md) - Arquitectura hexagonal con middleware de adapter compartido
 - **Uom**: Próximamente
 - **Items**: Próximamente

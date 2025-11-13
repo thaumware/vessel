@@ -17,7 +17,7 @@ class LocationsServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register middleware
-        $this->app['router']->aliasMiddleware('adapter', \App\Locations\Infrastructure\In\Http\Middleware\AdapterMiddleware::class);
+        $this->app['router']->aliasMiddleware('adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':locations');
 
         // Load migrations
         $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
