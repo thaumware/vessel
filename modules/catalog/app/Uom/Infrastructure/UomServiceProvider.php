@@ -19,6 +19,9 @@ class UomServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        // Register middleware
+        $this->app['router']->aliasMiddleware('adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':uom');
+
         $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
         $this->loadRoutesFrom(__DIR__ . '/In/Http/UomRoutes.php');
     }

@@ -8,25 +8,8 @@ use Illuminate\Http\Request;
 class AdapterMiddleware
 {
     private array $moduleConfigs = [
-        'locations' => [
-            'interface' => \App\Locations\Domain\Interfaces\LocationRepository::class,
-            'eloquent' => \App\Locations\Infrastructure\Out\Models\Eloquent\EloquentLocationRepository::class,
-            'inmemory' => \App\Locations\Infrastructure\Out\InMemory\InMemoryLocationRepository::class,
-        ],
-        'taxonomy' => [
-            'interfaces' => [
-                \App\Taxonomy\Domain\Interfaces\TermRepositoryInterface::class,
-                \App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface::class,
-            ],
-            'eloquent' => [
-                \App\Taxonomy\Domain\Interfaces\TermRepositoryInterface::class => \App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermRepository::class,
-                \App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface::class => \App\Taxonomy\Infrastructure\Out\Models\Eloquent\VocabularyRepository::class,
-            ],
-            'inmemory' => [
-                \App\Taxonomy\Domain\Interfaces\TermRepositoryInterface::class => \App\Taxonomy\Infrastructure\Out\InMemory\InMemoryTermRepository::class,
-                \App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface::class => \App\Taxonomy\Infrastructure\Out\InMemory\InMemoryVocabularyRepository::class,
-            ],
-        ],
+        // Cada módulo debe definir su propia config en su AdapterMiddleware específico
+        // No cargar configs aquí para mantener separación de responsabilidades
     ];
 
     public function handle(Request $request, Closure $next, string $module)
