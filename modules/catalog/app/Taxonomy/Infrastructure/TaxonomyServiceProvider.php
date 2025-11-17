@@ -26,8 +26,6 @@ class TaxonomyServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        // Register middleware
-        $this->app['router']->aliasMiddleware('taxonomy_adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':taxonomy');
 
         // Register migrations from Taxonomy module (relative to this file)
         $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
