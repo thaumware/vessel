@@ -3,7 +3,7 @@
 use App\Taxonomy\Infrastructure\In\Http\Controllers\TaxonomyController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/v1/taxonomy')->middleware('taxonomy_adapter')->group(function () {
+Route::prefix('api/v1/taxonomy')->group(function () {
     // Term routes
     Route::prefix('terms')->group(function () {
         Route::post('/create', [TaxonomyController::class, 'createTerm']);
