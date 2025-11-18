@@ -11,7 +11,7 @@ class PricingServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Default binding (fallback)
-        $this->app->bind(PricingRepository::class, EloquentPricingRepository::class);
+        // $this->app->bind(PricingRepository::class, EloquentPricingRepository::class);
     }
 
     public function boot(): void

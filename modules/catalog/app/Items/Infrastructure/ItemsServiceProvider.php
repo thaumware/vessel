@@ -2,8 +2,8 @@
 
 namespace App\Items\Infrastructure;
 
-use App\Items\Domain\Interfaces\ItemRepository;
-use App\Items\Infrastructure\Out\Models\Eloquent\EloquentItemRepository;
+use App\Items\Domain\Interfaces\ItemRepositoryInterface;
+use App\Items\Infrastructure\Out\Models\EloquentItemRepository;
 use Illuminate\Support\ServiceProvider;
 
 class ItemsServiceProvider extends ServiceProvider
@@ -11,7 +11,7 @@ class ItemsServiceProvider extends ServiceProvider
     public function register(): void
     {
         // Default binding (fallback)
-        $this->app->bind(ItemRepository::class, EloquentItemRepository::class);
+        $this->app->bind(ItemRepositoryInterface::class, EloquentItemRepository::class);
     }
 
     public function boot(): void

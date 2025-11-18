@@ -1,8 +1,14 @@
 <?php
 
-namespace App\Catalog\Stock\Domain\Interfaces;
+namespace App\Stock\Domain\Interfaces;
+
+use App\Stock\Domain\Entities\Unit;
 
 interface UnitRepositoryInterface
 {
-    // Define repository interface methods here
+    public function save(Unit $unit): Unit;
+
+    public function findById(string $id): ?Unit;
+
+    public function findByCode(string $code): ?Unit;
 }
