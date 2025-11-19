@@ -23,6 +23,6 @@ class ItemsServiceProvider extends ServiceProvider
         $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
 
         // Load routes
-        $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/ItemsRoutes.php');
+        $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/items_routes.php');
     }
 }

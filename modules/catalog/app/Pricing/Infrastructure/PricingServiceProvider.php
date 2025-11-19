@@ -17,12 +17,12 @@ class PricingServiceProvider extends ServiceProvider
     public function boot(): void
     {
         // Register middleware
-        $this->app['router']->aliasMiddleware('adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':pricing');
+        // $this->app['router']->aliasMiddleware('adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':pricing');
 
-        // Load migrations
-        $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
+        // // Load migrations
+        // $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
 
-        // Load routes
-        $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/PricingRoutes.php');
+        // // Load routes
+        // $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/PricingRoutes.php');
     }
 }
