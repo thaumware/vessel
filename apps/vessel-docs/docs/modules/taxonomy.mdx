@@ -160,17 +160,56 @@ Este módulo soporta **dos adaptadores intercambiables** que se seleccionan medi
   description="Obtiene la ruta de navegación (breadcrumb) de un término. Ejemplo: 'Electronics/Smartphones' para term-2"
 />
 
-## Usar con Headers
+---
 
-Cada endpoint tiene un selector de adaptador integrado que establece automáticamente el header `X-TAXONOMY-ADAPTER`:
+## 🔄 Sistema de Adaptadores
+
+Cada endpoint soporta cambio dinámico de repositorio via header HTTP:
 
 ```bash
-# Usar Local (datos jerárquicos pre-cargados)
-curl -X GET -H "X-TAXONOMY-ADAPTER: local" http://localhost:8000/v1/taxonomy/terms/tree?vocabulary_id=vocab-1
+# Usar Eloquent (default - base de datos)
+curl http://localhost:8000/v1/taxonomy/vocabularies/read
 
-# Usar SQL (sin header)
-curl -X GET http://localhost:8000/v1/taxonomy/terms/tree?vocabulary_id=vocab-1
+# Usar InMemory (datos pre-cargados para testing)
+curl http://localhost:8000/v1/taxonomy/vocabularies/read \
+  -H "X-TAXONOMY-ADAPTER: local"
 ```
+
+### Adaptadores disponibles
+
+| Header Value | Repositorio | Uso |
+|--------------|-------------|-----|
+| `eloquent` (default) | `TermRepository` / `VocabularyRepository` | Producción |
+| `local` | `InMemoryTermRepository` / `InMemoryVocabularyRepository` | Testing, demos |
+
+---
+
+## 📐 Arquitectura
+
+### Generación de IDs
+
+Los IDs son generados en la capa de Infrastructure (Controller) usando `Thaumware\Support\Uuid\Uuid::v4()`:
+
+```php
+// TaxonomyController.php
+public function createTerm(Request $request, CreateTerm $createTerm): JsonResponse
+{
+    $term = $createTerm->execute(
+        Uuid::v4(),  // ID generado en Infrastructure
+        $validated['name'],
+        $validated['vocabulary_id'],
+        $validated['description'] ?? null
+    );
+    // ...
+}
+```
+
+### Convenciones de Naming
+
+- **Domain/Application**: camelCase (`vocabularyId`, `fromTermId`)
+- **Infrastructure (toArray)**: snake_case (`vocabulary_id`, `from_term_id`)
+
+---
 
 ## Tipos de taxonomía soportados
 

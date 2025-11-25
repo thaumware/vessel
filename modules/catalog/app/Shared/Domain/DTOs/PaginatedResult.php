@@ -16,7 +16,12 @@ class PaginatedResult
     public function toArray(): array
     {
         return [
-            'data' => $this->data,
+            'data' => array_map(
+                fn($item) => is_object($item) && method_exists($item, 'toArray') 
+                    ? $item->toArray() 
+                    : $item,
+                $this->data
+            ),
             'meta' => [
                 'total' => $this->total,
                 'page' => $this->page,

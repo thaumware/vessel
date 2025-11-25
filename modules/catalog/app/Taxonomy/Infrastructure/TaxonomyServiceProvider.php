@@ -45,7 +45,7 @@ class TaxonomyServiceProvider extends ServiceProvider
         $this->app['router']->aliasMiddleware('taxonomy_adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':taxonomy');
 
         // Register migrations from Taxonomy module
-        $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
+        $this->loadMigrationsFrom(__DIR__ . '/Migrations');
 
         // Register routes from Taxonomy module
         $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/TaxonomyRoutes.php');

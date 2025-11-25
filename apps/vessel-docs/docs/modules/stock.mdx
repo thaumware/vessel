@@ -1,0 +1,250 @@
+---
+sidebar_position: 5
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Stock (Inventario)
+
+Módulo de gestión de inventario con arquitectura hexagonal. Soporta múltiples adaptadores (Eloquent/InMemory) intercambiables via header HTTP.
+
+## Características
+
+- ✅ Entidades inmutables con ID obligatorio
+- ✅ Integración con catálogo via `CatalogGatewayInterface`
+- ✅ Soporte para lotes, números de serie, fechas de expiración
+- ✅ Reserva y liberación de stock
+- ✅ Adaptador InMemory para desarrollo/testing
+
+---
+
+## 📦 Stock Items
+
+### Listar items de stock
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/items"
+  description="Lista todos los items de stock con filtros opcionales"
+/>
+
+**Query params opcionales:**
+- `location_id` - Filtrar por ubicación
+- `sku` - Filtrar por SKU
+- `catalog_item_id` - Filtrar por item de catálogo
+- `with_catalog=true` - Incluir datos del catálogo
+- `limit` - Límite de resultados (default: 50)
+- `offset` - Offset para paginación
+
+### Obtener item de stock
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/items/{id}"
+  params={{ id: 'uuid-del-item' }}
+  description="Obtiene un item de stock por ID"
+/>
+
+### Crear item de stock
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items"
+  body={{
+    sku: 'PROD-001',
+    catalog_item_id: 'uuid-del-producto',
+    catalog_origin: 'internal_catalog',
+    location_id: 'uuid-de-ubicacion',
+    location_type: 'warehouse',
+    quantity: 100,
+    lot_number: 'LOT-2024-001',
+    expiration_date: '2025-12-31'
+  }}
+  description="Crea un nuevo item de stock (ID generado automáticamente)"
+/>
+
+### Actualizar item de stock
+
+<ApiPlayground
+  method="PUT"
+  endpoint="/v1/stock/items/{id}"
+  params={{ id: 'uuid-del-item' }}
+  body={{
+    quantity: 150,
+    lot_number: 'LOT-2024-002'
+  }}
+  description="Actualiza un item de stock existente"
+/>
+
+### Eliminar item de stock
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/stock/items/{id}"
+  params={{ id: 'uuid-del-item' }}
+  description="Elimina un item de stock"
+/>
+
+---
+
+## 📊 Operaciones de Stock
+
+### Ajustar cantidad
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/{id}/adjust"
+  params={{ id: 'uuid-del-item' }}
+  body={{
+    sku: 'PROD-001',
+    location_id: 'uuid-de-ubicacion',
+    delta: 50,
+    reason: 'Recepción de mercancía'
+  }}
+  description="Ajusta la cantidad de stock (positivo o negativo)"
+/>
+
+### Reservar stock
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/{id}/reserve"
+  params={{ id: 'uuid-del-item' }}
+  body={{ quantity: 10 }}
+  description="Reserva una cantidad de stock para una orden"
+/>
+
+### Liberar reserva
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/{id}/release"
+  params={{ id: 'uuid-del-item' }}
+  body={{ quantity: 5 }}
+  description="Libera stock previamente reservado"
+/>
+
+---
+
+## 🔄 Cambio de Adaptador
+
+El módulo soporta cambio dinámico de repositorio via header HTTP:
+
+```bash
+# Usar Eloquent (default - base de datos)
+curl http://localhost/api/v1/stock/items
+
+# Usar InMemory (datos locales para testing)
+curl http://localhost/api/v1/stock/items \
+  -H "X-STOCK-ADAPTER: local"
+```
+
+### Adaptadores disponibles
+
+| Header Value | Repositorio | Uso |
+|--------------|-------------|-----|
+| `eloquent` (default) | `StockItemRepository` | Producción (MySQL/PostgreSQL) |
+| `local` | `InMemoryStockItemRepository` | Testing, desarrollo, demos |
+
+---
+
+## 📐 Modelo de Datos
+
+### StockItem
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | Identificador único |
+| `sku` | string | Código SKU del producto |
+| `catalog_item_id` | UUID | Referencia al item en catálogo |
+| `catalog_origin` | string | Origen del catálogo (`internal_catalog`, etc.) |
+| `location_id` | UUID | Ubicación del stock |
+| `location_type` | string | Tipo de ubicación (`warehouse`, `store`, etc.) |
+| `quantity` | int | Cantidad total |
+| `reserved_quantity` | int | Cantidad reservada |
+| `lot_number` | string? | Número de lote (opcional) |
+| `expiration_date` | date? | Fecha de expiración (opcional) |
+| `serial_number` | string? | Número de serie (opcional) |
+| `workspace_id` | UUID? | Workspace (multi-tenant) |
+| `meta` | json? | Metadatos adicionales |
+
+### Campos calculados
+
+- `available_quantity` = `quantity` - `reserved_quantity`
+- `is_expired` = `expiration_date < now()`
+- `is_lot_tracked` = `lot_number !== null`
+- `is_serial_tracked` = `serial_number !== null`
+
+---
+
+## 🧪 Testing
+
+### Tests unitarios
+
+```bash
+# Ejecutar tests del módulo Stock
+cd modules/catalog
+./vendor/bin/phpunit --testsuite Stock --testdox
+```
+
+### Estructura de tests
+
+```
+app/Stock/Tests/
+├─ StockTestCase.php           # Base class con helpers
+├─ Domain/
+│  └─ StockItemTest.php        # Tests de entidad
+├─ Application/
+│  └─ StockItemUseCasesTest.php # Tests de UseCases con mocks
+└─ Infrastructure/
+   └─ InMemoryStockItemRepositoryTest.php # Tests de repositorio
+```
+
+---
+
+## 🔗 Integración con Catálogo
+
+El módulo usa `CatalogGatewayInterface` para integrarse con el catálogo de productos:
+
+```php
+interface CatalogGatewayInterface
+{
+    public function getItemData(string $catalogItemId, string $origin): ?array;
+    public function linkToCatalog(StockItem $stockItem): void;
+    public function attachCatalogData(array $stockItems): array;
+    public function getDefaultOriginName(): string;
+}
+```
+
+La implementación por defecto (`PortalCatalogGateway`) usa el paquete `Thaumware\Portal` para conectar con el catálogo interno.
+
+---
+
+## 📝 Ejemplos con curl
+
+### Crear item de stock
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "LAPTOP-001",
+    "catalog_item_id": "550e8400-e29b-41d4-a716-446655440000",
+    "location_id": "660e8400-e29b-41d4-a716-446655440001",
+    "quantity": 50
+  }'
+```
+
+### Reservar stock
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items/abc123/reserve \
+  -H "Content-Type: application/json" \
+  -d '{"quantity": 5}'
+```
+
+### Usar adaptador InMemory
+
+```bash
+curl http://localhost:8000/api/v1/stock/items \
+  -H "X-STOCK-ADAPTER: local"
+```

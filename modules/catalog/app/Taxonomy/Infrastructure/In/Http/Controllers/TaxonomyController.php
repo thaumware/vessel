@@ -48,7 +48,7 @@ class TaxonomyController extends Controller
             return response()->json(['error' => 'Term not found'], 404);
         }
 
-        return response()->json(['data' => $term]);
+        return response()->json(['data' => $term->toArray()]);
     }
 
     public function createTerm(
@@ -66,7 +66,7 @@ class TaxonomyController extends Controller
             vocabularyId: $validated['vocabulary_id']
         );
 
-        return response()->json(['data' => $term], 201);
+        return response()->json(['data' => $term->toArray()], 201);
     }
 
     public function updateTerm(
@@ -89,7 +89,7 @@ class TaxonomyController extends Controller
             return response()->json(['error' => 'Term not found'], 404);
         }
 
-        return response()->json(['data' => $term]);
+        return response()->json(['data' => $term->toArray()]);
     }
 
     public function deleteTerm(
