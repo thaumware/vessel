@@ -2,92 +2,130 @@
 
 namespace App\Stock\Domain\Entities;
 
-final class Movement
+use App\Shared\Domain\Traits\HasId;
+use DateTimeImmutable;
+
+class Movement
 {
+    use HasId;
+
     public function __construct(
         private string $id,
-        private ?string $movement_id,
+        private ?string $movementId,
         private string $sku,
-        private ?string $location_from_id,
-        private ?string $location_from_type,
-
-        private ?string $location_to_id,
-        private ?string $location_to_type,
-
+        private ?string $locationFromId,
+        private ?string $locationFromType,
+        private ?string $locationToId,
+        private ?string $locationToType,
         private int $quantity,
-        private ?int $balance_after = null,
-        private ?string $movement_type = null,
+        private ?int $balanceAfter = null,
+        private ?string $movementType = null,
         private ?string $reference = null,
-        private ?string $user_id = null,
-        private ?string $workspace_id = null,
+        private ?string $userId = null,
+        private ?string $workspaceId = null,
         private ?array $meta = null,
-        private ?\DateTimeImmutable $created_at = null,
-        private ?\DateTimeImmutable $processed_at = null
+        private ?DateTimeImmutable $createdAt = null,
+        private ?DateTimeImmutable $updatedAt = null,
     ) {
+        $this->setId($id);
+        $this->createdAt = $createdAt ?? new DateTimeImmutable();
+        $this->updatedAt = $updatedAt ?? new DateTimeImmutable();
     }
 
-    public function id(): string
+    public function getMovementId(): ?string
     {
-        return $this->id;
+        return $this->movementId;
     }
-    public function movementId(): ?string
-    {
-        return $this->movement_id;
-    }
-    public function sku(): string
+
+    public function getSku(): string
     {
         return $this->sku;
     }
-    public function locationFromId(): ?string
+
+    public function getLocationFromId(): ?string
     {
-        return $this->location_from_id;
+        return $this->locationFromId;
     }
-    public function locationFromType(): ?string
+
+    public function getLocationFromType(): ?string
     {
-        return $this->location_from_type;
+        return $this->locationFromType;
     }
-    public function locationToId(): ?string
+
+    public function getLocationToId(): ?string
     {
-        return $this->location_to_id;
+        return $this->locationToId;
     }
-    public function locationToType(): ?string
+
+    public function getLocationToType(): ?string
     {
-        return $this->location_to_type;
+        return $this->locationToType;
     }
-    public function quantity(): int
+
+    public function getQuantity(): int
     {
         return $this->quantity;
     }
-    public function balanceAfter(): ?int
+
+    public function getBalanceAfter(): ?int
     {
-        return $this->balance_after;
+        return $this->balanceAfter;
     }
-    public function movementType(): ?string
+
+    public function getMovementType(): ?string
     {
-        return $this->movement_type;
+        return $this->movementType;
     }
-    public function reference(): ?string
+
+    public function getReference(): ?string
     {
         return $this->reference;
     }
-    public function userId(): ?string
+
+    public function getUserId(): ?string
     {
-        return $this->user_id;
+        return $this->userId;
     }
-    public function workspaceId(): ?string
+
+    public function getWorkspaceId(): ?string
     {
-        return $this->workspace_id;
+        return $this->workspaceId;
     }
-    public function meta(): ?array
+
+    public function getMeta(): ?array
     {
         return $this->meta;
     }
-    public function createdAt(): ?\DateTimeImmutable
+
+    public function getCreatedAt(): DateTimeImmutable
     {
-        return $this->created_at;
+        return $this->createdAt;
     }
-    public function processedAt(): ?\DateTimeImmutable
+
+    public function getUpdatedAt(): DateTimeImmutable
     {
-        return $this->processed_at;
+        return $this->updatedAt;
+    }
+
+    public function toArray(): array
+    {
+        return [
+            'id' => $this->getId(),
+            'movement_id' => $this->movementId,
+            'sku' => $this->sku,
+            'location_from_id' => $this->locationFromId,
+            'location_from_type' => $this->locationFromType,
+            'location_to_id' => $this->locationToId,
+            'location_to_type' => $this->locationToType,
+            'quantity' => $this->quantity,
+            'balance_after' => $this->balanceAfter,
+            'movement_type' => $this->movementType,
+            'reference' => $this->reference,
+            'user_id' => $this->userId,
+            'workspace_id' => $this->workspaceId,
+            'meta' => $this->meta,
+            'created_at' => $this->createdAt->format('Y-m-d H:i:s'),
+            'updated_at' => $this->updatedAt->format('Y-m-d H:i:s'),
+        ];
     }
 }

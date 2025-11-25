@@ -11,15 +11,15 @@ class CreateLocation
     {
     }
 
-    public function execute(array $data): Location
+    public function execute(string $id, array $data): Location
     {
         // Business validation could go here
         // e.g., validate address_id exists, name is unique, etc.
 
         $location = new Location(
-            id: $data['id'] ?? null,
+            id: $id,
             name: $data['name'],
-            address_id: $data['address_id'],
+            addressId: $data['address_id'],
             type: $data['type'] ?? 'location',
             description: $data['description'] ?? null
         );

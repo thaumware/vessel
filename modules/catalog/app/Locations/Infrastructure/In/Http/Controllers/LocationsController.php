@@ -10,6 +10,7 @@ use App\Locations\Application\UseCases\UpdateLocation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Thaumware\Support\Uuid\Uuid;
 
 class LocationsController extends Controller
 {
@@ -25,7 +26,7 @@ class LocationsController extends Controller
         ]);
 
         try {
-            $location = $createLocation->execute($data);
+            $location = $createLocation->execute(Uuid::v4(), $data);
 
             return response()->json([
                 'data' => $location->toArray()

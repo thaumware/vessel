@@ -22,7 +22,7 @@ class UpdateLocation
         $updatedLocation = new Location(
             id: $existingLocation->getId(),
             name: $data['name'] ?? $existingLocation->getName(),
-            address_id: $data['address_id'] ?? $existingLocation->getAddressId(),
+            addressId: $data['address_id'] ?? $existingLocation->getAddressId(),
             type: $data['type'] ?? $existingLocation->getType(),
             description: $data['description'] ?? $existingLocation->getDescription()
         );

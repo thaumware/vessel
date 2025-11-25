@@ -4,7 +4,6 @@ namespace App\Taxonomy\Domain\UseCases\Vocabulary;
 
 use App\Taxonomy\Domain\Entities\Vocabulary;
 use App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface;
-use Thaumware\Support\Uuid\Uuid;
 
 class CreateVocabulary
 {
@@ -13,7 +12,7 @@ class CreateVocabulary
     ) {
     }
 
-    public function execute(string $name, ?string $workspaceId = null): Vocabulary
+    public function execute(string $id, string $name, ?string $workspaceId = null): Vocabulary
     {
         // Business rule: generate slug from name
         $slug = $this->generateSlug($name);
@@ -24,11 +23,11 @@ class CreateVocabulary
         }
 
         $vocabulary = new Vocabulary(
-            id: Uuid::v4(),
+            id: $id,
             name: $name,
             slug: $slug,
             description: null,
-            workspace_id: $workspaceId
+            workspaceId: $workspaceId
         );
 
         $this->repository->save($vocabulary);

@@ -6,17 +6,17 @@ final class Batch
 {
 	private string $id;
 	private string $sku;
-	private string $location_id;
+	private string $locationId;
 	private int $quantity;
-	private ?string $lot_number;
+	private ?string $lotNumber;
 
-	public function __construct(string $id, string $sku, string $location_id, int $quantity, ?string $lot_number = null)
+	public function __construct(string $id, string $sku, string $locationId, int $quantity, ?string $lotNumber = null)
 	{
 		$this->id = $id;
 		$this->sku = $sku;
-		$this->location_id = $location_id;
+		$this->locationId = $locationId;
 		$this->quantity = $quantity;
-		$this->lot_number = $lot_number;
+		$this->lotNumber = $lotNumber;
 	}
 
 	public function id(): string
@@ -31,7 +31,7 @@ final class Batch
 
 	public function locationId(): string
 	{
-		return $this->location_id;
+		return $this->locationId;
 	}
 
 	public function quantity(): int
@@ -41,7 +41,18 @@ final class Batch
 
 	public function lotNumber(): ?string
 	{
-		return $this->lot_number;
+		return $this->lotNumber;
+	}
+
+	public function toArray(): array
+	{
+		return [
+			'id' => $this->id,
+			'sku' => $this->sku,
+			'location_id' => $this->locationId,
+			'quantity' => $this->quantity,
+			'lot_number' => $this->lotNumber,
+		];
 	}
 }
 

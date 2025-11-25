@@ -10,11 +10,13 @@ class EloquentLocationRepository implements LocationRepository
     public function save(Location $location): void
     {
         $locationModel = LocationModel::find($location->getId()) ?? new LocationModel();
+
         $locationModel->id = $location->getId();
         $locationModel->name = $location->getName();
         $locationModel->description = $location->getDescription();
         $locationModel->type = $location->getType();
         $locationModel->address_id = $location->getAddressId();
+
         $locationModel->save();
     }
 
@@ -29,7 +31,7 @@ class EloquentLocationRepository implements LocationRepository
         return new Location(
             id: $locationModel->id,
             name: $locationModel->name,
-            address_id: $locationModel->address_id,
+            addressId: $locationModel->address_id,
             type: $locationModel->type,
             description: $locationModel->description
         );
@@ -44,7 +46,7 @@ class EloquentLocationRepository implements LocationRepository
             $locations[] = new Location(
                 id: $locationModel->id,
                 name: $locationModel->name,
-                address_id: $locationModel->address_id,
+                addressId: $locationModel->address_id,
                 type: $locationModel->type,
                 description: $locationModel->description
             );

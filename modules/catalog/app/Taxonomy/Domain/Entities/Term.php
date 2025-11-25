@@ -10,23 +10,23 @@ class Term
     private string $name;
     private string $slug;
     private ?string $description;
-    private string $vocabulary_id;
-    private ?string $workspace_id;
+    private string $vocabularyId;
+    private ?string $workspaceId;
 
     public function __construct(
         string $id,
         string $name,
         string $slug,
-        string $vocabulary_id,
+        string $vocabularyId,
         ?string $description = null,
-        ?string $workspace_id = null,
+        ?string $workspaceId = null,
     ) {
         $this->setId($id);
         $this->name = $name;
         $this->slug = $slug;
-        $this->vocabulary_id = $vocabulary_id;
+        $this->vocabularyId = $vocabularyId;
         $this->description = $description;
-        $this->workspace_id = $workspace_id;
+        $this->workspaceId = $workspaceId;
     }
 
     public function getId(): string
@@ -55,12 +55,12 @@ class Term
 
     public function getVocabularyId(): string
     {
-        return $this->vocabulary_id;
+        return $this->vocabularyId;
     }
 
     public function getWorkspaceId(): ?string
     {
-        return $this->workspace_id;
+        return $this->workspaceId;
     }
 
     public function toArray(): array

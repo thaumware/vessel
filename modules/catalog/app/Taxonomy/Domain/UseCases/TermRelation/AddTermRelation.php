@@ -5,7 +5,6 @@ namespace App\Taxonomy\Domain\UseCases\TermRelation;
 use App\Taxonomy\Domain\Entities\TermRelation;
 use App\Taxonomy\Domain\Interfaces\TermRelationRepositoryInterface;
 use App\Taxonomy\Domain\Interfaces\TermRepositoryInterface;
-use Thaumware\Support\Uuid\Uuid;
 
 class AddTermRelation
 {
@@ -16,6 +15,7 @@ class AddTermRelation
     }
 
     public function execute(
+        string $id,
         string $fromTermId,
         string $toTermId,
         string $relationType = 'parent'
@@ -39,10 +39,10 @@ class AddTermRelation
         }
 
         $relation = new TermRelation(
-            id: Uuid::v4(),
-            from_term_id: $fromTermId,
-            to_term_id: $toTermId,
-            relation_type: $relationType,
+            id: $id,
+            fromTermId: $fromTermId,
+            toTermId: $toTermId,
+            relationType: $relationType,
             depth: 0 // Can be calculated later for hierarchies
         );
 

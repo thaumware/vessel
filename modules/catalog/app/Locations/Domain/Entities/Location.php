@@ -2,29 +2,21 @@
 
 namespace App\Locations\Domain\Entities;
 
+use App\Locations\Domain\ValueObjects\LocationType;
 use App\Shared\Domain\Traits\HasId;
 
 class Location
 {
     use HasId;
-    private string $name;
-    private ?string $description;
-    private string $address_id;
 
-    // warehouse, store, office, etc.
-    private string $type;
     public function __construct(
-        ?string $id,
-        string $name,
-        string $address_id,
-        string $type,
-        ?string $description = null
+        private string $id,
+        private string $name,
+        private string $addressId,
+        private LocationType $type,
+        private ?string $description = null
     ) {
-        $this->setId($id, true);
-        $this->name = $name;
-        $this->address_id = $address_id;
-        $this->type = $type;
-        $this->description = $description;
+        $this->setId($id);
     }
 
     public function getName(): string
@@ -32,19 +24,19 @@ class Location
         return $this->name;
     }
 
+    public function getAddressId(): string
+    {
+        return $this->addressId;
+    }
+
+    public function getType(): LocationType
+    {
+        return $this->type;
+    }
+
     public function getDescription(): ?string
     {
         return $this->description;
-    }
-
-    public function getAddressId(): string
-    {
-        return $this->address_id;
-    }
-
-    public function getType(): string
-    {
-        return $this->type;
     }
 
     public function toArray(): array
@@ -52,8 +44,8 @@ class Location
         return [
             'id' => $this->getId(),
             'name' => $this->name,
-            'address_id' => $this->address_id,
-            'type' => $this->type,
+            'address_id' => $this->addressId,
+            'type' => $this->type->value,
             'description' => $this->description,
         ];
     }

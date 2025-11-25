@@ -10,21 +10,21 @@ class Vocabulary
     private string $name;
     private ?string $description;
     private string $slug;
-    private ?string $workspace_id;
+    private ?string $workspaceId;
 
     public function __construct(
         string $id,
         string $name,
         string $slug,
         ?string $description = null,
-        ?string $workspace_id = null,
+        ?string $workspaceId = null,
     ) {
         $this->setId($id);
 
         $this->name = $name;
         $this->slug = $slug;
         $this->description = $description;
-        $this->workspace_id = $workspace_id;
+        $this->workspaceId = $workspaceId;
     }
 
     public function getId(): string
@@ -57,7 +57,7 @@ class Vocabulary
 
     public function getWorkspaceId(): ?string
     {
-        return $this->workspace_id;
+        return $this->workspaceId;
     }
 
     public function toArray(): array

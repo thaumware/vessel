@@ -20,6 +20,7 @@ use App\Taxonomy\Domain\UseCases\Vocabulary\UpdateVocabulary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Thaumware\Support\Uuid\Uuid;
 
 class TaxonomyController extends Controller
 {
@@ -60,6 +61,7 @@ class TaxonomyController extends Controller
         ]);
 
         $term = $createTerm->execute(
+            id: Uuid::v4(),
             name: $validated['name'],
             vocabularyId: $validated['vocabulary_id']
         );
@@ -136,7 +138,7 @@ class TaxonomyController extends Controller
             'name' => 'required|string|max:255',
         ]);
 
-        $vocabulary = $createVocabulary->execute($validated['name']);
+        $vocabulary = $createVocabulary->execute(Uuid::v4(), $validated['name']);
 
         return response()->json(['data' => $vocabulary->toArray()], 201);
     }
@@ -216,6 +218,7 @@ class TaxonomyController extends Controller
 
         try {
             $relation = $addTermRelation->execute(
+                id: Uuid::v4(),
                 fromTermId: $validated['from_term_id'],
                 toTermId: $validated['to_term_id'],
                 relationType: $validated['relation_type'] ?? 'parent'

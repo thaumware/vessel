@@ -4,7 +4,6 @@ namespace App\Taxonomy\Domain\UseCases\Term;
 
 use App\Taxonomy\Domain\Entities\Term;
 use App\Taxonomy\Domain\Interfaces\TermRepositoryInterface;
-use Thaumware\Support\Uuid\Uuid;
 
 class CreateTerm
 {
@@ -13,13 +12,13 @@ class CreateTerm
     ) {
     }
 
-    public function execute(string $name, string $vocabularyId, ?string $description = null): Term
+    public function execute(string $id, string $name, string $vocabularyId, ?string $description = null): Term
     {
         $term = new Term(
-            id: Uuid::v4(),
+            id: $id,
             name: $name,
-            vocabulary_id: $vocabularyId,
             slug: $this->generateSlug($name),
+            vocabularyId: $vocabularyId,
             description: $description
         );
 

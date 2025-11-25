@@ -1,13 +1,22 @@
 <?php
 
-use App\Locations\Infrastructure\In\Http\Controllers\LocationsController;
+use App\Locations\Infrastructure\In\Http\Controllers\LocationController;
 use Illuminate\Support\Facades\Route;
 
 // Todas las rutas pasan por el middleware de adapter
 Route::prefix('api/v1/locations')->middleware('adapter')->group(function () {
-    Route::post('/create', [LocationsController::class, 'create']);
-    Route::get('/read', [LocationsController::class, 'list']);
-    Route::get('/show/{id}', [LocationsController::class, 'show']);
-    Route::put('/update/{id}', [LocationsController::class, 'update']);
-    Route::delete('/delete/{id}', [LocationsController::class, 'delete']);
+    // LIST - Listar todos los recursos
+    Route::get('/list', [LocationController::class, 'list']);
+    
+    // SHOW - Obtener un recurso específico
+    Route::get('/show/{id}', [LocationController::class, 'show']);
+    
+    // CREATE - Crear un nuevo recurso
+    Route::post('/create', [LocationController::class, 'create']);
+    
+    // UPDATE - Actualizar un recurso existente
+    Route::put('/update/{id}', [LocationController::class, 'update']);
+    
+    // DELETE - Eliminar un recurso
+    Route::delete('/delete/{id}', [LocationController::class, 'delete']);
 });

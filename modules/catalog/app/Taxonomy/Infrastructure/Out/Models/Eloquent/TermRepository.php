@@ -12,6 +12,7 @@ class TermRepository implements TermRepositoryInterface
     public function save(Term $term): void
     {
         $termModel = TermModel::find($term->getId()) ?? new TermModel();
+
         $termModel->id = $term->getId();
         $termModel->name = $term->getName();
         $termModel->slug = $term->getSlug();
@@ -33,9 +34,9 @@ class TermRepository implements TermRepositoryInterface
             id: $term->id,
             name: $term->name,
             slug: $term->slug,
-            vocabulary_id: $term->vocabulary_id,
+            vocabularyId: $term->vocabulary_id,
             description: $term->description,
-            workspace_id: $term->workspace_id
+            workspaceId: $term->workspace_id
         );
     }
 
@@ -65,9 +66,9 @@ class TermRepository implements TermRepositoryInterface
                 id: $model->id,
                 name: $model->name,
                 slug: $model->slug,
-                vocabulary_id: $model->vocabulary_id,
+                vocabularyId: $model->vocabulary_id,
                 description: $model->description,
-                workspace_id: $model->workspace_id
+                workspaceId: $model->workspace_id
             ))->toArray();
         })->all();
 
@@ -100,9 +101,9 @@ class TermRepository implements TermRepositoryInterface
                 id: $model->id,
                 name: $model->name,
                 slug: $model->slug,
-                vocabulary_id: $model->vocabulary_id,
+                vocabularyId: $model->vocabulary_id,
                 description: $model->description,
-                workspace_id: $model->workspace_id
+                workspaceId: $model->workspace_id
             ))->toArray();
         })->all();
 
@@ -120,9 +121,9 @@ class TermRepository implements TermRepositoryInterface
                 id: $model->id,
                 name: $model->name,
                 slug: $model->slug,
-                vocabulary_id: $model->vocabulary_id,
+                vocabularyId: $model->vocabulary_id,
                 description: $model->description,
-                workspace_id: $model->workspace_id
+                workspaceId: $model->workspace_id
             ))->toArray();
         })->all();
     }

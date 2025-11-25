@@ -5,11 +5,29 @@
          colors="true"
 >
     <testsuites>
+        <!-- Module-specific test suites -->
+        <testsuite name="Stock">
+            <directory>app/Stock/Tests</directory>
+        </testsuite>
+        <testsuite name="Taxonomy">
+            <directory>app/Taxonomy/Tests</directory>
+        </testsuite>
+        <testsuite name="Locations">
+            <directory>app/Locations/Tests</directory>
+        </testsuite>
+        <testsuite name="Uom">
+            <directory>app/Uom/Tests</directory>
+        </testsuite>
+        
+        <!-- Global test suites -->
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
         </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
+        </testsuite>
+        <testsuite name="Integration">
+            <directory>tests/Integration</directory>
         </testsuite>
     </testsuites>
     <source>

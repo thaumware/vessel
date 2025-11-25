@@ -7,22 +7,22 @@ use App\Shared\Domain\Traits\HasId;
 class TermRelation
 {
     use HasId;
-    private string $from_term_id;
-    private string $to_term_id;
-    private string $relation_type;
+    private string $fromTermId;
+    private string $toTermId;
+    private string $relationType;
     private int $depth;
 
     public function __construct(
         string $id,
-        string $from_term_id,
-        string $to_term_id,
-        string $relation_type = 'parent',
+        string $fromTermId,
+        string $toTermId,
+        string $relationType = 'parent',
         int $depth = 0
     ) {
         $this->setId($id);
-        $this->from_term_id = $from_term_id;
-        $this->to_term_id = $to_term_id;
-        $this->relation_type = $relation_type;
+        $this->fromTermId = $fromTermId;
+        $this->toTermId = $toTermId;
+        $this->relationType = $relationType;
         $this->depth = $depth;
     }
 
@@ -33,17 +33,17 @@ class TermRelation
 
     public function getFromTermId(): string
     {
-        return $this->from_term_id;
+        return $this->fromTermId;
     }
 
     public function getToTermId(): string
     {
-        return $this->to_term_id;
+        return $this->toTermId;
     }
 
     public function getRelationType(): string
     {
-        return $this->relation_type;
+        return $this->relationType;
     }
 
     public function getDepth(): int

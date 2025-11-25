@@ -33,7 +33,7 @@ class VocabularyRepository implements VocabularyRepositoryInterface
             name: $model->name,
             slug: $model->slug,
             description: $model->description,
-            workspace_id: $model->workspace_id
+            workspaceId: $model->workspace_id
         );
     }
 
@@ -64,7 +64,7 @@ class VocabularyRepository implements VocabularyRepositoryInterface
                 name: $model->name,
                 slug: $model->slug,
                 description: $model->description,
-                workspace_id: $model->workspace_id
+                workspaceId: $model->workspace_id
             ))->toArray();
         })->all();
 

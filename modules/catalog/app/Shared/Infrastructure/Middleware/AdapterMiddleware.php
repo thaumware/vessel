@@ -5,48 +5,37 @@ namespace App\Shared\Infrastructure\Middleware;
 use Closure;
 use Illuminate\Http\Request;
 
+/**
+ * Middleware para cambiar el adaptador de repositorios según el header X-{MODULE}-ADAPTER.
+ * 
+ * Cada módulo debe registrar su configuración de adaptadores en el container:
+ *   app()->instance('adapters.{module}', [
+ *       'interfaces' => [Interface::class => ['local' => InMemory::class, 'eloquent' => Eloquent::class]],
+ *   ]);
+ */
 class AdapterMiddleware
 {
-    private array $moduleConfigs = [
-        // Cada módulo debe definir su propia config en su AdapterMiddleware específico
-        // No cargar configs aquí para mantener separación de responsabilidades
-    ];
-
     public function handle(Request $request, Closure $next, string $module)
     {
         $adapter = $request->header('X-' . strtoupper($module) . '-ADAPTER', 'eloquent');
+        
+        // Obtener configuración de adaptadores del módulo
+        $config = app()->bound("adapters.{$module}") 
+            ? app("adapters.{$module}") 
+            : null;
 
-        if (!isset($this->moduleConfigs[$module])) {
-            return $next($request);
-        }
-
-        $config = $this->moduleConfigs[$module];
-
-        if ($adapter === 'local' && isset($config['inmemory'])) {
-            if (isset($config['interfaces'])) {
-                // Multiple interfaces (like Taxonomy)
-                foreach ($config['interfaces'] as $interface) {
-                    if (isset($config['inmemory'][$interface])) {
-                        app()->bind($interface, $config['inmemory'][$interface]);
-                    }
+        if ($config && isset($config['interfaces'])) {
+            foreach ($config['interfaces'] as $interface => $implementations) {
+                $implementation = $implementations[$adapter] ?? $implementations['eloquent'] ?? null;
+                
+                if ($implementation && class_exists($implementation)) {
+                    app()->bind($interface, $implementation);
                 }
-            } else {
-                // Single interface (like Locations)
-                app()->bind($config['interface'], $config['inmemory']);
-            }
-        } else {
-            if (isset($config['interfaces'])) {
-                // Multiple interfaces (like Taxonomy)
-                foreach ($config['interfaces'] as $interface) {
-                    if (isset($config['eloquent'][$interface])) {
-                        app()->bind($interface, $config['eloquent'][$interface]);
-                    }
-                }
-            } else {
-                // Single interface (like Locations)
-                app()->bind($config['interface'], $config['eloquent']);
             }
         }
+
+        // Guardar el adaptador actual para que otros servicios puedan consultarlo
+        app()->instance("adapter.{$module}", $adapter);
 
         return $next($request);
     }

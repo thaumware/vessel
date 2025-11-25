@@ -5,6 +5,7 @@ namespace App\Stock\Infrastructure\In\Http\Controllers;
 use App\Stock\Application\UseCases\CreateUnit;
 use App\Stock\Infrastructure\In\Http\Requests\CreateUnitRequest;
 use Illuminate\Http\JsonResponse;
+use Thaumware\Support\Uuid\Uuid;
 
 final class UnitController
 {
@@ -15,7 +16,7 @@ final class UnitController
     public function create(CreateUnitRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $unit = $this->createUnit->execute($data['id'], $data['code'], $data['name']);
+        $unit = $this->createUnit->execute(Uuid::v4(), $data['code'], $data['name']);
 
         return response()->json(['id' => $unit->id(), 'code' => $unit->code(), 'name' => $unit->name()], 201);
     }
