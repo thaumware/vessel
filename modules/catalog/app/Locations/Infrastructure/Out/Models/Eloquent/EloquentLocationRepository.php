@@ -62,8 +62,8 @@ class EloquentLocationRepository implements LocationRepository
         return new Location(
             id: $model->id,
             name: $model->name,
-            addressId: $model->address_id,
             type: LocationType::tryFrom($model->type) ?? LocationType::WAREHOUSE,
+            addressId: $model->address_id,
             description: $model->description,
             parentId: $model->parent_id,
         );

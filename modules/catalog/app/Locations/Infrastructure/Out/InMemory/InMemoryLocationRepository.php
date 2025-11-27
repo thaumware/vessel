@@ -28,8 +28,8 @@ class InMemoryLocationRepository implements LocationRepository
                 $location = new Location(
                     $locationData['id'],
                     $locationData['name'],
-                    $locationData['address_id'],
                     $type,
+                    $locationData['address_id'] ?? null,
                     $locationData['description'] ?? null,
                     $locationData['parent_id'] ?? null,
                 );

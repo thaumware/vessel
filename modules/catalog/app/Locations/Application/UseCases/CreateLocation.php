@@ -23,8 +23,8 @@ class CreateLocation
         $location = new Location(
             id: $id,
             name: $data['name'],
-            addressId: $data['address_id'],
             type: $type,
+            addressId: $data['address_id'] ?? null,
             description: $data['description'] ?? null,
             parentId: $data['parent_id'] ?? null,
         );

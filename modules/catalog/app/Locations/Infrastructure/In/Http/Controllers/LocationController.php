@@ -85,7 +85,7 @@ class LocationController
     {
         $request->validate([
             'name' => 'required|string',
-            'address_id' => 'required|string',
+            'address_id' => 'sometimes|nullable|string|uuid',
             'type' => 'sometimes|string|in:warehouse,store,distribution_center,office,storage_unit',
             'description' => 'sometimes|nullable|string',
             'parent_id' => 'sometimes|nullable|string|uuid',

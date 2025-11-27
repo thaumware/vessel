@@ -24,8 +24,8 @@ class Location
     public function __construct(
         private string $id,
         private string $name,
-        private string $addressId,
         private LocationType $type,
+        private ?string $addressId = null,
         private ?string $description = null,
         private ?string $parentId = null,  // Para jerarquía de ubicaciones
     ) {
@@ -37,7 +37,7 @@ class Location
         return $this->name;
     }
 
-    public function getAddressId(): string
+    public function getAddressId(): ?string
     {
         return $this->addressId;
     }
