@@ -4,6 +4,7 @@ namespace App\Locations\Infrastructure\Out\Models\Eloquent;
 
 use App\Locations\Domain\Entities\Location;
 use App\Locations\Domain\Interfaces\LocationRepository;
+use App\Locations\Domain\ValueObjects\LocationType;
 
 class EloquentLocationRepository implements LocationRepository
 {
@@ -14,8 +15,9 @@ class EloquentLocationRepository implements LocationRepository
         $locationModel->id = $location->getId();
         $locationModel->name = $location->getName();
         $locationModel->description = $location->getDescription();
-        $locationModel->type = $location->getType();
+        $locationModel->type = $location->getType()->value;
         $locationModel->address_id = $location->getAddressId();
+        $locationModel->parent_id = $location->getParentId();
 
         $locationModel->save();
     }
@@ -28,31 +30,43 @@ class EloquentLocationRepository implements LocationRepository
             return null;
         }
 
-        return new Location(
-            id: $locationModel->id,
-            name: $locationModel->name,
-            addressId: $locationModel->address_id,
-            type: $locationModel->type,
-            description: $locationModel->description
-        );
+        return $this->toDomain($locationModel);
     }
 
     public function findAll(): array
     {
-        $locationModels = LocationModel::all();
-        $locations = [];
+        return LocationModel::all()->map(fn($m) => $this->toDomain($m))->toArray();
+    }
 
-        foreach ($locationModels as $locationModel) {
-            $locations[] = new Location(
-                id: $locationModel->id,
-                name: $locationModel->name,
-                addressId: $locationModel->address_id,
-                type: $locationModel->type,
-                description: $locationModel->description
-            );
+    public function findByFilters(array $filters = []): array
+    {
+        $query = LocationModel::query();
+        
+        if (isset($filters['type'])) {
+            $query->where('type', $filters['type']);
         }
+        
+        if (isset($filters['parent_id'])) {
+            $query->where('parent_id', $filters['parent_id']);
+        }
+        
+        if (isset($filters['root']) && $filters['root'] === true) {
+            $query->whereNull('parent_id');
+        }
+        
+        return $query->get()->map(fn($m) => $this->toDomain($m))->toArray();
+    }
 
-        return $locations;
+    private function toDomain(LocationModel $model): Location
+    {
+        return new Location(
+            id: $model->id,
+            name: $model->name,
+            addressId: $model->address_id,
+            type: LocationType::tryFrom($model->type) ?? LocationType::WAREHOUSE,
+            description: $model->description,
+            parentId: $model->parent_id,
+        );
     }
 
     public function update(Location $location): void

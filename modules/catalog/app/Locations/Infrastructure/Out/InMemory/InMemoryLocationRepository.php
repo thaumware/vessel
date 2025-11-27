@@ -4,6 +4,7 @@ namespace App\Locations\Infrastructure\Out\InMemory;
 
 use App\Locations\Domain\Entities\Location;
 use App\Locations\Domain\Interfaces\LocationRepository;
+use App\Locations\Domain\ValueObjects\LocationType;
 
 class InMemoryLocationRepository implements LocationRepository
 {
@@ -22,12 +23,15 @@ class InMemoryLocationRepository implements LocationRepository
             $data = require $dataFile;
             
             foreach ($data as $locationData) {
+                $type = LocationType::tryFrom($locationData['type']) ?? LocationType::WAREHOUSE;
+                
                 $location = new Location(
                     $locationData['id'],
                     $locationData['name'],
                     $locationData['address_id'],
-                    $locationData['type'],
-                    $locationData['description'] ?? null
+                    $type,
+                    $locationData['description'] ?? null,
+                    $locationData['parent_id'] ?? null,
                 );
                 $this->locations[$location->getId()] = $location;
             }
@@ -47,6 +51,25 @@ class InMemoryLocationRepository implements LocationRepository
     public function findAll(): array
     {
         return array_values($this->locations);
+    }
+
+    public function findByFilters(array $filters = []): array
+    {
+        $results = $this->locations;
+        
+        if (isset($filters['type'])) {
+            $results = array_filter($results, fn($loc) => $loc->getType()->value === $filters['type']);
+        }
+        
+        if (isset($filters['parent_id'])) {
+            $results = array_filter($results, fn($loc) => $loc->getParentId() === $filters['parent_id']);
+        }
+        
+        if (isset($filters['root']) && $filters['root'] === true) {
+            $results = array_filter($results, fn($loc) => $loc->getParentId() === null);
+        }
+        
+        return array_values($results);
     }
 
     public function update(Location $location): void

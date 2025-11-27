@@ -10,8 +10,15 @@ class ListLocations
     {
     }
 
-    public function execute(): array
+    /**
+     * @param array $filters ['type' => string, 'parent_id' => string, 'root' => bool]
+     */
+    public function execute(array $filters = []): array
     {
-        return $this->repository->findAll();
+        if (empty($filters)) {
+            return $this->repository->findAll();
+        }
+        
+        return $this->repository->findByFilters($filters);
     }
 }

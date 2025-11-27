@@ -5,8 +5,8 @@ use Illuminate\Support\Facades\Route;
 
 // Todas las rutas pasan por el middleware de adapter
 Route::prefix('api/v1/locations')->middleware('adapter')->group(function () {
-    // LIST - Listar todos los recursos
-    Route::get('/list', [LocationController::class, 'list']);
+    // READ - Listar todos los recursos
+    Route::get('/read', [LocationController::class, 'list']);
     
     // SHOW - Obtener un recurso específico
     Route::get('/show/{id}', [LocationController::class, 'show']);

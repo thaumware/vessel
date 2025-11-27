@@ -10,8 +10,9 @@ final class CreateLocationRequest
     public function __construct(
         public readonly string $name,
         public readonly string $address_id,
-        public readonly ?string $type = 'location',
+        public readonly ?string $type = 'warehouse',
         public readonly ?string $description = null,
+        public readonly ?string $parent_id = null,
         public readonly ?string $id = null,
     ) {
     }
@@ -21,8 +22,9 @@ final class CreateLocationRequest
         return new self(
             name: $data['name'],
             address_id: $data['address_id'],
-            type: $data['type'] ?? 'location',
+            type: $data['type'] ?? 'warehouse',
             description: $data['description'] ?? null,
+            parent_id: $data['parent_id'] ?? null,
             id: $data['id'] ?? null,
         );
     }
@@ -35,6 +37,7 @@ final class CreateLocationRequest
             'address_id' => $this->address_id,
             'type' => $this->type,
             'description' => $this->description,
+            'parent_id' => $this->parent_id,
         ];
     }
 }
