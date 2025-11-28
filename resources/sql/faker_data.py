@@ -504,7 +504,7 @@ def batch_insert(cursor, table, data, batch_size=1000):
 
 def insert_direct_to_db(faker, host, port, user, password, database,
                         items_count=1000, locations_count=50, stock_count=3000, 
-                        movements_count=5000, clean_tables=False):
+                        movements_count=5000, clean_tables=False, only_movements=False):
     """Inserta datos directamente en MySQL"""
     
     print(f"🔌 Conectando a {host}:{port}/{database}...")
@@ -525,6 +525,29 @@ def insert_direct_to_db(faker, host, port, user, password, database,
     cursor.execute("SET AUTOCOMMIT = 0")
     
     try:
+        # Modo solo movements - usa locations existentes de la BD
+        if only_movements:
+            print("📍 Cargando locations existentes de la BD...")
+            cursor.execute("SELECT id FROM locations_locations")
+            faker.locations = [row[0] for row in cursor.fetchall()]
+            print(f"   Encontradas {len(faker.locations)} ubicaciones")
+            
+            if not faker.locations:
+                raise ValueError("No hay ubicaciones en la BD. Ejecuta primero sin --only-movements")
+            
+            print(f"Generando {movements_count:,} movimientos...")
+            movements = faker.generate_stock_movements(count=movements_count)
+            
+            print(f"\n📥 Insertando {len(movements):,} movimientos...")
+            batch_insert(cursor, 'stock_movements', movements)
+            conn.commit()
+            
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
+            cursor.execute("SET UNIQUE_CHECKS = 1")
+            
+            print(f"\n✅ Insertados {len(movements):,} movimientos!")
+            return
+        
         if clean_tables:
             print("🧹 Limpiando tablas...")
             tables_to_clean = [
@@ -760,6 +783,7 @@ if __name__ == '__main__':
     parser.add_argument('--password', type=str, default=os.getenv('DB_PASSWORD', ''), help='MySQL password')
     parser.add_argument('--database', type=str, default=os.getenv('DB_DATABASE', 'vessel_test'), help='MySQL database')
     parser.add_argument('--clean', action='store_true', help='Limpiar tablas antes de insertar')
+    parser.add_argument('--only-movements', action='store_true', help='Solo insertar movements (usa locations existentes)')
     
     args = parser.parse_args()
     
@@ -782,7 +806,8 @@ if __name__ == '__main__':
             locations_count=args.locations,
             stock_count=args.stock,
             movements_count=args.movements,
-            clean_tables=args.clean
+            clean_tables=args.clean,
+            only_movements=getattr(args, 'only_movements', False)
         )
     elif args.output == 'sql':
         output_file = args.file or 'vessel_fake_data.sql'
