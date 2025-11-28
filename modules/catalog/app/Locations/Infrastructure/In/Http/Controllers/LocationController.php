@@ -8,6 +8,7 @@ use App\Locations\Application\UseCases\DeleteLocation;
 use App\Locations\Application\UseCases\GetLocation;
 use App\Locations\Application\UseCases\ListLocations;
 use App\Locations\Application\UseCases\UpdateLocation;
+use App\Shared\Domain\DTOs\FilterParams;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Thaumware\Support\Uuid\Uuid;
@@ -24,40 +25,26 @@ class LocationController
     }
 
     /**
-     * GET /locations/list
-     * Listar todas las locaciones
+     * GET /locations/read
+     * Listar locaciones con filtros y paginación
      * 
      * Query params:
+     *   - page, per_page: paginación
      *   - type: warehouse|store|distribution_center|office|storage_unit
-     *   - parent_id: UUID del padre (para ver hijos de una ubicación)
-     *   - root: 1 (solo ubicaciones raíz, sin parent_id)
+     *   - parent_id: UUID del padre (para ver hijos)
+     *   - root: true (solo ubicaciones sin parent_id)
+     *   - search: búsqueda por nombre
      */
     public function list(Request $request): JsonResponse
     {
-        $filters = [];
-        
-        if ($request->has('type')) {
-            $filters['type'] = $request->query('type');
-        }
-        
-        if ($request->has('parent_id')) {
-            $filters['parent_id'] = $request->query('parent_id');
-        }
-        
-        if ($request->query('root') === '1') {
-            $filters['root'] = true;
-        }
+        $params = FilterParams::fromRequest($request->query());
+        $result = $this->listLocations->execute($params);
 
-        $locations = $this->listLocations->execute($filters);
-
-        return response()->json([
-            'success' => true,
-            'data' => array_map(fn($loc) => $loc->toArray(), $locations),
-        ]);
+        return response()->json($result->toArray());
     }
 
     /**
-     * GET /locations/show/:id
+     * GET /locations/show/{id}
      * Obtener una locación específica
      */
     public function show(string $id): JsonResponse
@@ -65,16 +52,10 @@ class LocationController
         $location = $this->getLocation->execute($id);
 
         if (!$location) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Location not found',
-            ], 404);
+            return response()->json(['error' => 'Location not found'], 404);
         }
 
-        return response()->json([
-            'success' => true,
-            'data' => $location->toArray(),
-        ]);
+        return response()->json(['data' => $location->toArray()]);
     }
 
     /**
@@ -95,20 +76,14 @@ class LocationController
             $dto = CreateLocationRequest::fromArray($request->all());
             $location = $this->createLocation->execute(Uuid::v4(), $dto->toArray());
 
-            return response()->json([
-                'success' => true,
-                'data' => $location->toArray(),
-            ], 201);
+            return response()->json(['data' => $location->toArray()], 201);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+            return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 
     /**
-     * PUT /locations/update/:id
+     * PUT /locations/update/{id}
      * Actualizar una locación
      */
     public function update(Request $request, string $id): JsonResponse
@@ -125,42 +100,26 @@ class LocationController
             $location = $this->updateLocation->execute($id, $request->all());
 
             if (!$location) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Location not found',
-                ], 404);
+                return response()->json(['error' => 'Location not found'], 404);
             }
 
-            return response()->json([
-                'success' => true,
-                'data' => $location->toArray(),
-            ]);
+            return response()->json(['data' => $location->toArray()]);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+            return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 
     /**
-     * DELETE /locations/delete/:id
+     * DELETE /locations/delete/{id}
      * Eliminar una locación
      */
     public function delete(string $id): JsonResponse
     {
         try {
             $this->deleteLocation->execute($id);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Location deleted',
-            ]);
+            return response()->json(['message' => 'Location deleted']);
         } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 400);
+            return response()->json(['error' => $e->getMessage()], 400);
         }
     }
 }

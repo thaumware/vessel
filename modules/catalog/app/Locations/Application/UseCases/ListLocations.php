@@ -3,6 +3,8 @@
 namespace App\Locations\Application\UseCases;
 
 use App\Locations\Domain\Interfaces\LocationRepository;
+use App\Shared\Domain\DTOs\FilterParams;
+use App\Shared\Domain\DTOs\PaginatedResult;
 
 class ListLocations
 {
@@ -11,14 +13,33 @@ class ListLocations
     }
 
     /**
-     * @param array $filters ['type' => string, 'parent_id' => string, 'root' => bool]
+     * Listar locations con filtros y paginación
      */
-    public function execute(array $filters = []): array
+    public function execute(FilterParams $params): PaginatedResult
     {
-        if (empty($filters)) {
-            return $this->repository->findAll();
+        $filters = $params->filters;
+        
+        // Búsqueda por nombre
+        if ($params->search) {
+            $filters['search'] = $params->search;
         }
         
-        return $this->repository->findByFilters($filters);
+        $locations = empty($filters) 
+            ? $this->repository->findAll()
+            : $this->repository->findByFilters($filters);
+        
+        // Paginación en memoria (los repositorios deberían hacerlo en BD)
+        $total = count($locations);
+        $offset = $params->getOffset();
+        $limit = $params->getLimit();
+        $paginatedData = array_slice($locations, $offset, $limit);
+        
+        return new PaginatedResult(
+            data: $paginatedData,
+            total: $total,
+            page: $params->page,
+            perPage: $params->perPage,
+            lastPage: (int) ceil($total / $params->perPage) ?: 1
+        );
     }
 }

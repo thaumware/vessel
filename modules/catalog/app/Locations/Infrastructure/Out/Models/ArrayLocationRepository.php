@@ -4,7 +4,13 @@ namespace App\Locations\Infrastructure\Out\Models;
 
 use App\Locations\Domain\Interfaces\LocationRepository;
 use App\Locations\Domain\Entities\Location;
+use App\Locations\Domain\ValueObjects\LocationType;
 
+/**
+ * ArrayLocationRepository - Repositorio basado en archivo PHP
+ * 
+ * @deprecated Usar InMemoryLocationRepository o EloquentLocationRepository
+ */
 class ArrayLocationRepository implements LocationRepository
 {
     private string $dataFile;
@@ -14,29 +20,30 @@ class ArrayLocationRepository implements LocationRepository
         $this->dataFile = __DIR__ . '/../Data/locations.php';
     }
 
-    /**
-     * Read all locations from a local PHP array (temporary persistence).
-     * This adapter can be swapped later for an SQL-backed repository without
-     * changing the domain or use-cases.
-     *
-     * @return Location[]
-     */
     public function findAll(): array
     {
         $data = require $this->dataFile;
+        return array_map(fn($item) => $this->toDomain($item), $data);
+    }
 
-        $locations = [];
-        foreach ($data as $item) {
-            $locations[] = new Location(
-                $item['id'],
-                $item['name'],
-                $item['address_id'],
-                $item['type'],
-                $item['description'] ?? null
-            );
+    public function findByFilters(array $filters = []): array
+    {
+        $data = require $this->dataFile;
+        $results = $data;
+
+        if (isset($filters['type'])) {
+            $results = array_filter($results, fn($item) => $item['type'] === $filters['type']);
         }
 
-        return $locations;
+        if (isset($filters['parent_id'])) {
+            $results = array_filter($results, fn($item) => ($item['parent_id'] ?? null) === $filters['parent_id']);
+        }
+
+        if (isset($filters['root']) && $filters['root'] === true) {
+            $results = array_filter($results, fn($item) => empty($item['parent_id']));
+        }
+
+        return array_map(fn($item) => $this->toDomain($item), array_values($results));
     }
 
     public function findById(string $id): ?Location
@@ -45,13 +52,7 @@ class ArrayLocationRepository implements LocationRepository
 
         foreach ($data as $item) {
             if ($item['id'] === $id) {
-                return new Location(
-                    $item['id'],
-                    $item['name'],
-                    $item['address_id'],
-                    $item['type'],
-                    $item['description'] ?? null
-                );
+                return $this->toDomain($item);
             }
         }
 
@@ -62,31 +63,17 @@ class ArrayLocationRepository implements LocationRepository
     {
         $data = require $this->dataFile;
 
-        // Check if location already exists
         $exists = false;
         foreach ($data as &$item) {
             if ($item['id'] === $location->getId()) {
-                $item = [
-                    'id' => $location->getId(),
-                    'name' => $location->getName(),
-                    'address_id' => $location->getAddressId(),
-                    'type' => $location->getType(),
-                    'description' => $location->getDescription()
-                ];
+                $item = $this->toArray($location);
                 $exists = true;
                 break;
             }
         }
 
-        // If it doesn't exist, add it
         if (!$exists) {
-            $data[] = [
-                'id' => $location->getId(),
-                'name' => $location->getName(),
-                'address_id' => $location->getAddressId(),
-                'type' => $location->getType(),
-                'description' => $location->getDescription()
-            ];
+            $data[] = $this->toArray($location);
         }
 
         $this->writeData($data);
@@ -94,16 +81,42 @@ class ArrayLocationRepository implements LocationRepository
 
     public function update(Location $location): void
     {
-        $this->save($location); // For array storage, update is the same as save
+        $this->save($location);
     }
 
     public function delete(Location $location): void
     {
         $data = require $this->dataFile;
-
         $data = array_filter($data, fn($item) => $item['id'] !== $location->getId());
+        $this->writeData(array_values($data));
+    }
 
-        $this->writeData($data);
+    private function toDomain(array $item): Location
+    {
+        $type = $item['type'] instanceof LocationType 
+            ? $item['type'] 
+            : (LocationType::tryFrom($item['type']) ?? LocationType::WAREHOUSE);
+
+        return new Location(
+            id: $item['id'],
+            name: $item['name'],
+            type: $type,
+            addressId: $item['address_id'] ?? null,
+            description: $item['description'] ?? null,
+            parentId: $item['parent_id'] ?? null,
+        );
+    }
+
+    private function toArray(Location $location): array
+    {
+        return [
+            'id' => $location->getId(),
+            'name' => $location->getName(),
+            'type' => $location->getType()->value,
+            'address_id' => $location->getAddressId(),
+            'description' => $location->getDescription(),
+            'parent_id' => $location->getParentId(),
+        ];
     }
 
     private function writeData(array $data): void

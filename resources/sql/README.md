@@ -1,0 +1,1 @@
+python faker_data.py --items 20000 --stock 150000 --movements 200000 --clean  --database vessel_test
