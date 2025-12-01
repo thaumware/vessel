@@ -2,6 +2,7 @@
 
 use App\AppServiceProvider;
 use App\Shared\Providers\PortalServiceProvider;
+use App\Admin\Infrastructure\AdminServiceProvider;
 use App\Items\Infrastructure\ItemsServiceProvider;
 use App\Locations\Infrastructure\LocationsServiceProvider;
 use App\Pricing\Infrastructure\PricingServiceProvider;
@@ -12,6 +13,9 @@ use App\Uom\Infrastructure\UomServiceProvider;
 return [
     AppServiceProvider::class,
     PortalServiceProvider::class,
+    
+    // Admin panel
+    AdminServiceProvider::class,
     
     // Module providers
     ItemsServiceProvider::class,

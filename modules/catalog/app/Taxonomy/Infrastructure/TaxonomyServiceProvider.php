@@ -7,6 +7,7 @@ use App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface;
 use App\Taxonomy\Domain\Interfaces\TermRelationRepositoryInterface;
 use App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermRepository;
 use App\Taxonomy\Infrastructure\Out\Models\Eloquent\VocabularyRepository;
+use App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermRelationRepository;
 use Illuminate\Support\ServiceProvider;
 
 class TaxonomyServiceProvider extends ServiceProvider
@@ -24,6 +25,11 @@ class TaxonomyServiceProvider extends ServiceProvider
             TermRepository::class
         );
 
+        $this->app->bind(
+            TermRelationRepositoryInterface::class,
+            TermRelationRepository::class
+        );
+
         // === Adapter Configuration for Middleware ===
         $this->app->instance('adapters.taxonomy', [
             'interfaces' => [
@@ -34,6 +40,10 @@ class TaxonomyServiceProvider extends ServiceProvider
                 VocabularyRepositoryInterface::class => [
                     'local' => \App\Taxonomy\Infrastructure\Out\InMemory\InMemoryVocabularyRepository::class,
                     'eloquent' => VocabularyRepository::class,
+                ],
+                TermRelationRepositoryInterface::class => [
+                    'local' => \App\Taxonomy\Infrastructure\Out\InMemory\InMemoryTermRelationRepository::class,
+                    'eloquent' => TermRelationRepository::class,
                 ],
             ],
         ]);

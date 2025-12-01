@@ -8,16 +8,16 @@ class Measure
 {
     use HasId;
 
-    private string $code;
-    private string $name;
-    private ?string $description = null;
-
-    public function __construct(string $id, string $code, string $name, ?string $description = null)
-    {
+    public function __construct(
+        private string $id,
+        private string $code,
+        private string $name,
+        private ?string $symbol = null,
+        private ?string $category = null,
+        private bool $isBase = false,
+        private ?string $description = null,
+    ) {
         $this->setId($id);
-        $this->code = $code;
-        $this->name = $name;
-        $this->description = $description;
     }
 
     public function getCode(): string
@@ -28,6 +28,21 @@ class Measure
     public function getName(): string
     {
         return $this->name;
+    }
+
+    public function getSymbol(): ?string
+    {
+        return $this->symbol;
+    }
+
+    public function getCategory(): ?string
+    {
+        return $this->category;
+    }
+
+    public function isBase(): bool
+    {
+        return $this->isBase;
     }
 
     public function getDescription(): ?string
@@ -41,6 +56,9 @@ class Measure
             'id' => $this->getId(),
             'code' => $this->code,
             'name' => $this->name,
+            'symbol' => $this->symbol,
+            'category' => $this->category,
+            'is_base' => $this->isBase,
             'description' => $this->description,
         ];
     }

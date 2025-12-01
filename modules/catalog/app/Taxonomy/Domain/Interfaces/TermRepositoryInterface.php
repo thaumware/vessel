@@ -12,6 +12,8 @@ interface TermRepositoryInterface
 
     public function findById(string $id): ?Term;
 
+    public function findBySlugAndVocabulary(string $slug, string $vocabularyId): ?Term;
+
     public function findAll(PaginationParams $params): PaginatedResult;
 
     public function findByVocabulary(string $vocabularyId, PaginationParams $params): PaginatedResult;

@@ -42,4 +42,35 @@ abstract class StockTestCase extends TestCase
             'updatedAt' => new \DateTimeImmutable(),
         ], $overrides);
     }
+
+    protected function createBatchData(array $overrides = []): array
+    {
+        return array_merge([
+            'id' => $this->generateUuid(),
+            'sku' => 'BATCH-SKU-' . mt_rand(1000, 9999),
+            'locationId' => $this->generateUuid(),
+            'quantity' => 50,
+            'lotNumber' => 'LOT-' . mt_rand(10000, 99999),
+        ], $overrides);
+    }
+
+    protected function createMovementData(array $overrides = []): array
+    {
+        return array_merge([
+            'id' => $this->generateUuid(),
+            'movementId' => 'MOV-' . mt_rand(10000, 99999),
+            'sku' => 'MOV-SKU-' . mt_rand(1000, 9999),
+            'locationFromId' => $this->generateUuid(),
+            'locationFromType' => 'warehouse',
+            'locationToId' => $this->generateUuid(),
+            'locationToType' => 'store',
+            'quantity' => 10,
+            'balanceAfter' => 90,
+            'movementType' => 'transfer',
+            'reference' => 'REF-' . mt_rand(1000, 9999),
+            'userId' => $this->generateUuid(),
+            'workspaceId' => $this->generateUuid(),
+            'meta' => null,
+        ], $overrides);
+    }
 }

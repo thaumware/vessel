@@ -17,6 +17,9 @@ class MeasureTest extends UomTestCase
             id: $data['id'],
             code: $data['code'],
             name: $data['name'],
+            symbol: $data['symbol'] ?? null,
+            category: $data['category'] ?? null,
+            isBase: $data['is_base'] ?? false,
             description: $data['description'],
         );
 
@@ -26,7 +29,7 @@ class MeasureTest extends UomTestCase
         $this->assertEquals($data['description'], $measure->getDescription());
     }
 
-    public function test_can_create_measure_without_description(): void
+    public function test_can_create_measure_without_optional_fields(): void
     {
         $measure = new Measure(
             id: $this->generateUuid(),
@@ -35,22 +38,51 @@ class MeasureTest extends UomTestCase
         );
 
         $this->assertNull($measure->getDescription());
+        $this->assertNull($measure->getSymbol());
+        $this->assertNull($measure->getCategory());
+        $this->assertFalse($measure->isBase());
+    }
+
+    public function test_can_create_measure_with_all_fields(): void
+    {
+        $measure = new Measure(
+            id: 'meas-123',
+            code: 'kg',
+            name: 'Kilogram',
+            symbol: 'kg',
+            category: 'mass',
+            isBase: true,
+            description: 'SI unit of mass',
+        );
+
+        $this->assertEquals('kg', $measure->getCode());
+        $this->assertEquals('Kilogram', $measure->getName());
+        $this->assertEquals('kg', $measure->getSymbol());
+        $this->assertEquals('mass', $measure->getCategory());
+        $this->assertTrue($measure->isBase());
+        $this->assertEquals('SI unit of mass', $measure->getDescription());
     }
 
     public function test_to_array_returns_correct_structure(): void
     {
         $measure = new Measure(
             id: 'meas-123',
-            code: 'M',
+            code: 'm',
             name: 'Meter',
+            symbol: 'm',
+            category: 'length',
+            isBase: true,
             description: 'Unit of length',
         );
 
         $array = $measure->toArray();
 
         $this->assertEquals('meas-123', $array['id']);
-        $this->assertEquals('M', $array['code']);
+        $this->assertEquals('m', $array['code']);
         $this->assertEquals('Meter', $array['name']);
+        $this->assertEquals('m', $array['symbol']);
+        $this->assertEquals('length', $array['category']);
+        $this->assertTrue($array['is_base']);
         $this->assertEquals('Unit of length', $array['description']);
     }
 }

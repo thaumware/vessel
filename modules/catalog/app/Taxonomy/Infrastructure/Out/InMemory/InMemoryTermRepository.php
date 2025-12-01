@@ -40,13 +40,13 @@ class InMemoryTermRepository implements TermRepositoryInterface
             }
 
             // Load term relations
-            foreach ($data['term_relations'] as $relationData) {
+            foreach ($data['term_relations'] ?? [] as $relationData) {
                 $relation = new TermRelation(
                     $relationData['id'],
                     $relationData['from_term_id'],
                     $relationData['to_term_id'],
                     $relationData['relation_type'],
-                    $relationData['depth']
+                    $relationData['depth'] ?? 0
                 );
                 $this->termRelations[$relation->getId()] = $relation;
             }
@@ -61,6 +61,16 @@ class InMemoryTermRepository implements TermRepositoryInterface
     public function findById(string $id): ?Term
     {
         return $this->terms[$id] ?? null;
+    }
+
+    public function findBySlugAndVocabulary(string $slug, string $vocabularyId): ?Term
+    {
+        foreach ($this->terms as $term) {
+            if ($term->getSlug() === $slug && $term->getVocabularyId() === $vocabularyId) {
+                return $term;
+            }
+        }
+        return null;
     }
 
     public function findAll(PaginationParams $params): PaginatedResult
@@ -151,7 +161,7 @@ class InMemoryTermRepository implements TermRepositoryInterface
         }
     }
 
-    private function buildTreeNode(Term $term, int $depth): TermTreeNode
+    private function buildTreeNode(Term $term, int $depth): array
     {
         $children = $this->findChildTerms($term->getId());
         $childNodes = [];
@@ -160,14 +170,9 @@ class InMemoryTermRepository implements TermRepositoryInterface
             $childNodes[] = $this->buildTreeNode($child, $depth + 1);
         }
 
-        return new TermTreeNode(
-            id: $term->getId(),
-            name: $term->getName(),
-            slug: $term->getSlug(),
-            description: $term->getDescription(),
-            depth: $depth,
-            children: $childNodes
-        );
+        $node = $term->toArray();
+        $node['children'] = $childNodes;
+        return $node;
     }
 
     private function findChildTerms(string $parentId): array

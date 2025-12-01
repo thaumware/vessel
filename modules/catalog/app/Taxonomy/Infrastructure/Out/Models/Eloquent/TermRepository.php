@@ -4,11 +4,21 @@ namespace App\Taxonomy\Infrastructure\Out\Models\Eloquent;
 
 use App\Taxonomy\Domain\Entities\Term;
 use App\Taxonomy\Domain\Interfaces\TermRepositoryInterface;
+use App\Taxonomy\Domain\Interfaces\TermRelationRepositoryInterface;
 use App\Shared\Domain\DTOs\PaginationParams;
 use App\Shared\Domain\DTOs\PaginatedResult;
 
 class TermRepository implements TermRepositoryInterface
 {
+    public function __construct(
+        private ?TermRelationRepositoryInterface $relationRepository = null
+    ) {
+        // Lazy load relation repository if not injected
+        if ($this->relationRepository === null) {
+            $this->relationRepository = app(TermRelationRepositoryInterface::class);
+        }
+    }
+
     public function save(Term $term): void
     {
         $termModel = TermModel::find($term->getId()) ?? new TermModel();
@@ -30,13 +40,33 @@ class TermRepository implements TermRepositoryInterface
             return null;
         }
 
+        return $this->mapToEntity($term);
+    }
+
+    public function findBySlugAndVocabulary(string $slug, string $vocabularyId): ?Term
+    {
+        // Include soft-deleted to avoid unique constraint violations
+        $term = TermModel::withTrashed()
+            ->where('slug', $slug)
+            ->where('vocabulary_id', $vocabularyId)
+            ->first();
+
+        if (!$term) {
+            return null;
+        }
+
+        return $this->mapToEntity($term);
+    }
+
+    private function mapToEntity(TermModel $model): Term
+    {
         return new Term(
-            id: $term->id,
-            name: $term->name,
-            slug: $term->slug,
-            vocabularyId: $term->vocabulary_id,
-            description: $term->description,
-            workspaceId: $term->workspace_id
+            id: $model->id,
+            name: $model->name,
+            slug: $model->slug,
+            vocabularyId: $model->vocabulary_id,
+            description: $model->description,
+            workspaceId: $model->workspace_id
         );
     }
 
@@ -62,14 +92,7 @@ class TermRepository implements TermRepositoryInterface
 
         // Map to arrays
         $data = $models->map(function ($model) {
-            return (new Term(
-                id: $model->id,
-                name: $model->name,
-                slug: $model->slug,
-                vocabularyId: $model->vocabulary_id,
-                description: $model->description,
-                workspaceId: $model->workspace_id
-            ))->toArray();
+            return $this->mapToEntity($model)->toArray();
         })->all();
 
         return PaginatedResult::fromArray($data, $total, $params);
@@ -97,14 +120,7 @@ class TermRepository implements TermRepositoryInterface
 
         // Map to arrays
         $data = $models->map(function ($model) {
-            return (new Term(
-                id: $model->id,
-                name: $model->name,
-                slug: $model->slug,
-                vocabularyId: $model->vocabulary_id,
-                description: $model->description,
-                workspaceId: $model->workspace_id
-            ))->toArray();
+            return $this->mapToEntity($model)->toArray();
         })->all();
 
         return PaginatedResult::fromArray($data, $total, $params);
@@ -112,19 +128,40 @@ class TermRepository implements TermRepositoryInterface
 
     public function getTree(string $vocabularyId, ?string $parentId = null): array
     {
-        // TODO: Implement tree structure when parent_id field is added to terms table
-        // For now, return all terms in vocabulary as flat array
-        $terms = TermModel::where('vocabulary_id', $vocabularyId)->get();
+        // Get root terms or children of parentId
+        if ($parentId === null) {
+            // Get all terms in vocabulary
+            $allTermIds = TermModel::where('vocabulary_id', $vocabularyId)
+                ->pluck('id')
+                ->all();
 
-        return $terms->map(function ($model) {
-            return (new Term(
-                id: $model->id,
-                name: $model->name,
-                slug: $model->slug,
-                vocabularyId: $model->vocabulary_id,
-                description: $model->description,
-                workspaceId: $model->workspace_id
-            ))->toArray();
+            // Get terms that have a parent relation (they are children)
+            $childTermIds = TermRelationModel::whereIn('from_term_id', $allTermIds)
+                ->where('relation_type', 'parent')
+                ->pluck('from_term_id')
+                ->all();
+
+            // Root terms are those not in childTermIds
+            $rootTermIds = array_diff($allTermIds, $childTermIds);
+
+            $terms = TermModel::whereIn('id', $rootTermIds)
+                ->where('vocabulary_id', $vocabularyId)
+                ->orderBy('name')
+                ->get();
+        } else {
+            // Get children of parentId
+            $childrenIds = $this->relationRepository->getChildrenIds($parentId);
+
+            $terms = TermModel::whereIn('id', $childrenIds)
+                ->where('vocabulary_id', $vocabularyId)
+                ->orderBy('name')
+                ->get();
+        }
+
+        return $terms->map(function ($model) use ($vocabularyId) {
+            $term = $this->mapToEntity($model)->toArray();
+            $term['children'] = $this->getTree($vocabularyId, $model->id);
+            return $term;
         })->all();
     }
 
@@ -138,11 +175,11 @@ class TermRepository implements TermRepositoryInterface
         $breadcrumb = [];
         $currentTerm = $term;
 
-        // Traverse up the hierarchy using term relationships
+        // Traverse up the hierarchy using term relations
         while ($currentTerm) {
             array_unshift($breadcrumb, $currentTerm->getName());
-            $parentRelation = TermRelationshipModel::where('child_term_id', $currentTerm->getId())->first();
-            $currentTerm = $parentRelation ? $this->findById($parentRelation->parent_term_id) : null;
+            $parentId = $this->relationRepository->getParentId($currentTerm->getId());
+            $currentTerm = $parentId ? $this->findById($parentId) : null;
         }
 
         return implode('/', $breadcrumb);
@@ -153,6 +190,8 @@ class TermRepository implements TermRepositoryInterface
         $termModel = TermModel::find($term->getId());
 
         if ($termModel) {
+            // Also delete all relations involving this term
+            $this->relationRepository->deleteAllByTermId($term->getId());
             $termModel->delete();
         }
     }

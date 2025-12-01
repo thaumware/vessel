@@ -2,8 +2,10 @@
 
 namespace App\Locations\Infrastructure;
 
+use App\Locations\Domain\Interfaces\AddressRepository;
 use App\Locations\Domain\Interfaces\LocationRepository;
 use App\Locations\Infrastructure\In\Http\Middleware\AdapterMiddleware;
+use App\Locations\Infrastructure\Out\Models\Eloquent\EloquentAddressRepository;
 use App\Locations\Infrastructure\Out\Models\Eloquent\EloquentLocationRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -13,6 +15,7 @@ class LocationsServiceProvider extends ServiceProvider
     {
         // Default binding (fallback)
         $this->app->bind(LocationRepository::class, EloquentLocationRepository::class);
+        $this->app->bind(AddressRepository::class, EloquentAddressRepository::class);
     }
 
     public function boot(): void
@@ -25,5 +28,6 @@ class LocationsServiceProvider extends ServiceProvider
 
         // Load routes
         $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/LocationsRoutes.php');
+        $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/AddressRoutes.php');
     }
 }

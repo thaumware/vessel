@@ -53,18 +53,55 @@ class TaxonomyController extends Controller
 
     public function createTerm(
         Request $request,
-        CreateTerm $createTerm
+        CreateTerm $createTerm,
+        AddTermRelation $addTermRelation
     ): JsonResponse {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'vocabulary_id' => 'required|string|uuid',
+            'description' => 'nullable|string',
+            // Relations - optional, will be created after the term
+            'parent_id' => 'nullable|string|uuid',
         ]);
 
-        $term = $createTerm->execute(
-            id: Uuid::v4(),
-            name: $validated['name'],
-            vocabularyId: $validated['vocabulary_id']
-        );
+        try {
+            // Create the term first
+            $term = $createTerm->execute(
+                id: Uuid::v4(),
+                name: $validated['name'],
+                vocabularyId: $validated['vocabulary_id'],
+                description: $validated['description'] ?? null
+            );
+        } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
+            return response()->json([
+                'error' => 'A term with this name already exists in the vocabulary. Please use a different name.',
+                'code' => 'DUPLICATE_TERM'
+            ], 409);
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => 'Failed to create term: ' . $e->getMessage(),
+                'code' => 'CREATE_FAILED'
+            ], 500);
+        }
+
+        // If parent_id is provided, create a parent relation
+        if (!empty($validated['parent_id'])) {
+            try {
+                $addTermRelation->execute(
+                    id: Uuid::v4(),
+                    fromTermId: $term->getId(),
+                    toTermId: $validated['parent_id'],
+                    relationType: 'parent'
+                );
+            } catch (\DomainException $e) {
+                // If relation fails, we should still return the created term
+                // but include the error
+                return response()->json([
+                    'data' => $term->toArray(),
+                    'warning' => 'Term created but parent relation failed: ' . $e->getMessage()
+                ], 201);
+            }
+        }
 
         return response()->json(['data' => $term->toArray()], 201);
     }

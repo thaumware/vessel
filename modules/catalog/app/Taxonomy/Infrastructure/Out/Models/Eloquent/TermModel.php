@@ -34,4 +34,30 @@ class TermModel extends EloquentModel
     {
         return $this->belongsTo(VocabularyModel::class, 'vocabulary_id', 'id');
     }
+
+    /**
+     * Get parent relations (relations where this term is the child)
+     */
+    public function parentRelations()
+    {
+        return $this->hasMany(TermRelationModel::class, 'from_term_id', 'id')
+            ->where('relation_type', 'parent');
+    }
+
+    /**
+     * Get child relations (relations where this term is the parent)
+     */
+    public function childRelations()
+    {
+        return $this->hasMany(TermRelationModel::class, 'to_term_id', 'id')
+            ->where('relation_type', 'parent');
+    }
+
+    /**
+     * Get all relations involving this term
+     */
+    public function relations()
+    {
+        return $this->hasMany(TermRelationModel::class, 'from_term_id', 'id');
+    }
 }

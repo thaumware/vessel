@@ -6,6 +6,9 @@
 >
     <testsuites>
         <!-- Module-specific test suites -->
+        <testsuite name="Items">
+            <directory>app/Items/Tests</directory>
+        </testsuite>
         <testsuite name="Stock">
             <directory>app/Stock/Tests</directory>
         </testsuite>
@@ -18,11 +21,11 @@
         <testsuite name="Uom">
             <directory>app/Uom/Tests</directory>
         </testsuite>
+        <testsuite name="Admin">
+            <directory>app/Admin/Tests</directory>
+        </testsuite>
         
         <!-- Global test suites -->
-        <testsuite name="Unit">
-            <directory>tests/Unit</directory>
-        </testsuite>
         <testsuite name="Feature">
             <directory>tests/Feature</directory>
         </testsuite>

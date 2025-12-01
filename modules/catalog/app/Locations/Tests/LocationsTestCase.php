@@ -2,6 +2,7 @@
 
 namespace App\Locations\Tests;
 
+use App\Locations\Domain\ValueObjects\LocationType;
 use PHPUnit\Framework\TestCase;
 
 /**
@@ -27,9 +28,15 @@ abstract class LocationsTestCase extends TestCase
         return array_merge([
             'id' => $this->generateUuid(),
             'name' => 'Test Location ' . mt_rand(1000, 9999),
-            'addressId' => $this->generateUuid(),
+            'address_id' => $this->generateUuid(),
             'type' => 'warehouse',
             'description' => 'A test location description',
+            'parent_id' => null,
         ], $overrides);
+    }
+
+    protected function createLocationType(string $type = 'warehouse'): LocationType
+    {
+        return LocationType::tryFrom($type) ?? LocationType::WAREHOUSE;
     }
 }
