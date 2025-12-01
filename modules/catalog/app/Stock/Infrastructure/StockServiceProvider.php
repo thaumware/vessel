@@ -9,7 +9,11 @@ use App\Stock\Domain\Interfaces\MovementRepositoryInterface;
 use App\Stock\Domain\Interfaces\BatchRepositoryInterface;
 use App\Stock\Domain\Interfaces\UnitRepositoryInterface;
 use App\Stock\Domain\Interfaces\CatalogGatewayInterface;
+use App\Stock\Domain\Interfaces\LocationStockSettingsRepositoryInterface;
+use App\Stock\Domain\Interfaces\LocationGatewayInterface;
+use App\Stock\Domain\Services\StockCapacityService;
 use App\Stock\Infrastructure\Out\Gateways\PortalCatalogGateway;
+use App\Stock\Infrastructure\Adapters\LocationsModuleGateway;
 
 class StockServiceProvider extends ServiceProvider
 {
@@ -19,6 +23,12 @@ class StockServiceProvider extends ServiceProvider
         $this->app->singleton(
             CatalogGatewayInterface::class,
             PortalCatalogGateway::class
+        );
+
+        // Location Gateway: Stock -> Locations module adapter
+        $this->app->singleton(
+            LocationGatewayInterface::class,
+            LocationsModuleGateway::class
         );
 
         // === Repository Bindings (default: Eloquent) ===
@@ -46,6 +56,21 @@ class StockServiceProvider extends ServiceProvider
             StockItemRepositoryInterface::class,
             \App\Stock\Infrastructure\Out\Models\Eloquent\StockItemRepository::class
         );
+
+        // Location Stock Settings Repository
+        $this->app->bind(
+            LocationStockSettingsRepositoryInterface::class,
+            \App\Stock\Infrastructure\Out\Models\Eloquent\LocationStockSettingsRepository::class
+        );
+
+        // === Domain Services ===
+        $this->app->singleton(StockCapacityService::class, function ($app) {
+            return new StockCapacityService(
+                $app->make(LocationStockSettingsRepositoryInterface::class),
+                $app->make(LocationGatewayInterface::class),
+                $app->make(StockRepositoryInterface::class)
+            );
+        });
 
         // === Adapter Configuration for Middleware ===
         // El middleware AdapterMiddleware usa esta configuración para cambiar bindings según header

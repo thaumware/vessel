@@ -4,6 +4,8 @@ namespace App\Stock\Infrastructure\Out\InMemory;
 
 use App\Stock\Domain\Entities\Movement;
 use App\Stock\Domain\Interfaces\MovementRepositoryInterface;
+use App\Stock\Domain\ValueObjects\MovementStatus;
+use App\Stock\Domain\ValueObjects\MovementType;
 
 /**
  * InMemory implementation of MovementRepository
@@ -25,12 +27,8 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
 
     public function findByMovementId(string $movementId): ?Movement
     {
-        foreach ($this->movements as $movement) {
-            if ($movement->getMovementId() === $movementId) {
-                return $movement;
-            }
-        }
-        return null;
+        // En esta implementación, movementId = id
+        return $this->findById($movementId);
     }
 
     public function findBySku(string $sku): array
@@ -45,7 +43,8 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
     {
         return array_values(array_filter(
             $this->movements,
-            fn(Movement $m) => $m->getLocationFromId() === $locationId
+            fn(Movement $m) => $m->getSourceLocationId() === $locationId 
+                || ($m->getType()->removesStock() && $m->getLocationId() === $locationId)
         ));
     }
 
@@ -53,15 +52,24 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
     {
         return array_values(array_filter(
             $this->movements,
-            fn(Movement $m) => $m->getLocationToId() === $locationId
+            fn(Movement $m) => $m->getDestinationLocationId() === $locationId
+                || ($m->getType()->addsStock() && $m->getLocationId() === $locationId)
         ));
     }
 
-    public function findByType(string $type): array
+    public function findByType(MovementType $type): array
     {
         return array_values(array_filter(
             $this->movements,
-            fn(Movement $m) => $m->getMovementType() === $type
+            fn(Movement $m) => $m->getType() === $type
+        ));
+    }
+
+    public function findByStatus(MovementStatus $status): array
+    {
+        return array_values(array_filter(
+            $this->movements,
+            fn(Movement $m) => $m->getStatus() === $status
         ));
     }
 
@@ -69,7 +77,15 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
     {
         return array_values(array_filter(
             $this->movements,
-            fn(Movement $m) => $m->getReference() === $reference
+            fn(Movement $m) => $m->getReferenceId() === $reference
+        ));
+    }
+
+    public function findByLotId(string $lotId): array
+    {
+        return array_values(array_filter(
+            $this->movements,
+            fn(Movement $m) => $m->getLotNumber() === $lotId
         ));
     }
 

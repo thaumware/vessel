@@ -19,7 +19,10 @@
     </style>
 </head>
 <body class="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-gray-100">
-    <div x-data="adminPanel()" x-cloak class="min-h-full flex flex-col">
+    <div x-data="adminPanel()" 
+         x-init="tables = JSON.parse($el.dataset.tables)"
+         data-tables="{{ json_encode($tables ?? []) }}"
+         x-cloak class="min-h-full flex flex-col">
         
         <!-- Header -->
         <header class="glass-effect border-b border-gray-700/50 sticky top-0 z-50">
@@ -496,7 +499,7 @@
                 testFilter: '',
                 testOutput: '',
                 testResult: null,
-                tables: @json($tables ?? []),
+                tables: [],
                 selectedTable: null,
                 tableData: [],
                 tableColumns: [],

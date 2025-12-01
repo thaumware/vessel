@@ -1,0 +1,109 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Stock\Infrastructure\Adapters;
+
+use App\Locations\Domain\Interfaces\LocationRepository;
+use App\Stock\Domain\Interfaces\LocationGatewayInterface;
+
+/**
+ * Adapter para que Stock pueda consultar el modulo Locations.
+ * Implementa la interfaz del dominio de Stock usando el repositorio de Locations.
+ */
+class LocationsModuleGateway implements LocationGatewayInterface
+{
+    private LocationRepository $locationRepository;
+
+    public function __construct(LocationRepository $locationRepository)
+    {
+        $this->locationRepository = $locationRepository;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getDescendantIds(string $locationId): array
+    {
+        $descendants = [];
+        $this->collectDescendants($locationId, $descendants);
+
+        return $descendants;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getChildrenIds(string $locationId): array
+    {
+        $children = $this->locationRepository->findByFilters(['parent_id' => $locationId]);
+
+        return array_map(fn ($loc) => $loc->getId(), $children);
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getParentId(string $locationId): ?string
+    {
+        $location = $this->locationRepository->findById($locationId);
+
+        return $location?->getParentId();
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getAncestorIds(string $locationId): array
+    {
+        $ancestors = [];
+        $currentId = $locationId;
+
+        while (true) {
+            $parentId = $this->getParentId($currentId);
+
+            if ($parentId === null) {
+                break;
+            }
+
+            $ancestors[] = $parentId;
+            $currentId = $parentId;
+        }
+
+        return $ancestors;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function exists(string $locationId): bool
+    {
+        return $this->locationRepository->findById($locationId) !== null;
+    }
+
+    /**
+     * @inheritDoc
+     */
+    public function getLocationType(string $locationId): ?string
+    {
+        $location = $this->locationRepository->findById($locationId);
+
+        return $location?->getType()->value;
+    }
+
+    /**
+     * Recolecta recursivamente todos los descendientes de una ubicacion.
+     *
+     * @param string $locationId
+     * @param string[] $descendants Array por referencia donde acumular IDs
+     */
+    private function collectDescendants(string $locationId, array &$descendants): void
+    {
+        $childrenIds = $this->getChildrenIds($locationId);
+
+        foreach ($childrenIds as $childId) {
+            $descendants[] = $childId;
+            $this->collectDescendants($childId, $descendants);
+        }
+    }
+}

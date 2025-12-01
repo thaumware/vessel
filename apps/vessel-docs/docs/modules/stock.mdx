@@ -176,6 +176,65 @@ curl http://localhost/api/v1/stock/items \
 
 ---
 
+## ⚙️ Location Stock Settings
+
+Configuración de capacidad y restricciones por ubicación. Permite validar movimientos de stock contra límites definidos.
+
+### Modelo de datos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | Identificador único |
+| `location_id` | UUID | Ubicación asociada |
+| `max_quantity` | int? | Capacidad máxima de unidades |
+| `max_weight` | float? | Peso máximo (kg) |
+| `max_volume` | float? | Volumen máximo (m³) |
+| `allowed_item_types` | array? | Tipos de items permitidos |
+| `allow_mixed_lots` | bool | Permite mezclar lotes (default: true) |
+| `allow_mixed_skus` | bool | Permite mezclar SKUs (default: true) |
+| `fifo_enforced` | bool | Requiere FIFO (default: false) |
+| `is_active` | bool | Estado activo |
+
+### Validaciones de capacidad
+
+El servicio `StockCapacityService` valida:
+
+1. **Cantidad máxima**: Considera ubicación + todos sus descendientes (jerarquía)
+2. **Tipos de items**: Solo permite tipos en `allowed_item_types`
+3. **Mezcla de SKUs**: Rechaza diferentes SKUs si `allow_mixed_skus = false`
+4. **Mezcla de lotes**: Rechaza diferentes lotes si `allow_mixed_lots = false`
+
+```php
+// Ejemplo de uso
+$result = $capacityService->canAcceptStock(
+    locationId: 'warehouse-1',
+    quantity: 100,
+    sku: 'PROD-001',
+    itemType: 'regular'
+);
+
+if ($result->isInvalid()) {
+    // $result->getErrorCode() -> 'EXCEEDS_MAX_QUANTITY', 'MIXED_SKUS_NOT_ALLOWED', etc
+    // $result->getContext() -> detalles del error
+}
+```
+
+### Estadísticas de capacidad
+
+```php
+$stats = $capacityService->getCapacityStats('warehouse-1');
+// [
+//   'current_quantity' => 75,
+//   'max_quantity' => 100,
+//   'available_quantity' => 25,
+//   'usage_percent' => 75.0,
+//   'unique_skus' => 3,
+//   ...
+// ]
+```
+
+---
+
 ## 🧪 Testing
 
 ### Tests unitarios

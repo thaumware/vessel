@@ -22,8 +22,8 @@ class StockItem
     public function __construct(
         private string $id,
         private string $sku,
-        private string $catalogItemId,
-        private string $catalogOrigin,
+        private ?string $catalogItemId = null,
+        private ?string $catalogOrigin = null,
         private string $locationId,
         private ?string $locationType = null,
         private int $quantity = 0,
@@ -48,12 +48,12 @@ class StockItem
         return $this->sku;
     }
 
-    public function getCatalogItemId(): string
+    public function getCatalogItemId(): ?string
     {
         return $this->catalogItemId;
     }
 
-    public function getCatalogOrigin(): string
+    public function getCatalogOrigin(): ?string
     {
         return $this->catalogOrigin;
     }

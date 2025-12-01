@@ -1,104 +1,98 @@
 <?php
 
+declare(strict_types=1);
+
 namespace App\Stock\Tests\Domain;
 
 use App\Stock\Domain\Entities\Movement;
+use App\Stock\Domain\ValueObjects\MovementType;
+use App\Stock\Domain\ValueObjects\MovementStatus;
 use App\Stock\Tests\StockTestCase;
 use DateTimeImmutable;
 
+/**
+ * Tests de integración de la entidad Movement.
+ */
 class MovementTest extends StockTestCase
 {
     public function test_can_create_movement_with_all_fields(): void
     {
-        $data = $this->createMovementData();
-
         $movement = new Movement(
-            id: $data['id'],
-            movementId: $data['movementId'],
-            sku: $data['sku'],
-            locationFromId: $data['locationFromId'],
-            locationFromType: $data['locationFromType'],
-            locationToId: $data['locationToId'],
-            locationToType: $data['locationToType'],
-            quantity: $data['quantity'],
-            balanceAfter: $data['balanceAfter'],
-            movementType: $data['movementType'],
-            reference: $data['reference'],
-            userId: $data['userId'],
-            workspaceId: $data['workspaceId'],
-            meta: $data['meta']
+            id: $this->generateUuid(),
+            type: MovementType::RECEIPT,
+            sku: 'SKU-001',
+            locationId: $this->generateUuid(),
+            quantity: 100,
+            lotNumber: 'LOT-001',
+            referenceType: 'purchase_order',
+            referenceId: 'PO-001',
+            reason: 'Initial stock',
+            performedBy: 'user-1',
+            workspaceId: $this->generateUuid(),
+            meta: ['source' => 'api']
         );
 
-        $this->assertEquals($data['id'], $movement->getId());
-        $this->assertEquals($data['movementId'], $movement->getMovementId());
-        $this->assertEquals($data['sku'], $movement->getSku());
-        $this->assertEquals($data['locationFromId'], $movement->getLocationFromId());
-        $this->assertEquals($data['locationFromType'], $movement->getLocationFromType());
-        $this->assertEquals($data['locationToId'], $movement->getLocationToId());
-        $this->assertEquals($data['locationToType'], $movement->getLocationToType());
-        $this->assertEquals($data['quantity'], $movement->getQuantity());
-        $this->assertEquals($data['balanceAfter'], $movement->getBalanceAfter());
-        $this->assertEquals($data['movementType'], $movement->getMovementType());
-        $this->assertEquals($data['reference'], $movement->getReference());
-        $this->assertEquals($data['userId'], $movement->getUserId());
-        $this->assertEquals($data['workspaceId'], $movement->getWorkspaceId());
+        $this->assertEquals('SKU-001', $movement->getSku());
+        $this->assertEquals(100, $movement->getQuantity());
+        $this->assertEquals(MovementType::RECEIPT, $movement->getType());
+        $this->assertEquals(MovementStatus::PENDING, $movement->getStatus());
+        $this->assertEquals('LOT-001', $movement->getLotNumber());
+        $this->assertEquals('purchase_order', $movement->getReferenceType());
+        $this->assertEquals('PO-001', $movement->getReferenceId());
     }
 
     public function test_can_create_incoming_movement(): void
     {
         $movement = new Movement(
             id: $this->generateUuid(),
-            movementId: 'MOV-IN-001',
+            type: MovementType::RECEIPT,
             sku: 'SKU-001',
-            locationFromId: null,
-            locationFromType: null,
-            locationToId: $this->generateUuid(),
-            locationToType: 'warehouse',
-            quantity: 100,
-            movementType: 'incoming'
+            locationId: $this->generateUuid(),
+            quantity: 100
         );
 
-        $this->assertNull($movement->getLocationFromId());
-        $this->assertNotNull($movement->getLocationToId());
-        $this->assertEquals('incoming', $movement->getMovementType());
+        $this->assertTrue($movement->isInbound());
+        $this->assertFalse($movement->isOutbound());
+        $this->assertEquals(100, $movement->getEffectiveDelta());
+        $this->assertEquals(MovementType::RECEIPT, $movement->getType());
     }
 
     public function test_can_create_outgoing_movement(): void
     {
         $movement = new Movement(
             id: $this->generateUuid(),
-            movementId: 'MOV-OUT-001',
+            type: MovementType::SHIPMENT,
             sku: 'SKU-001',
-            locationFromId: $this->generateUuid(),
-            locationFromType: 'warehouse',
-            locationToId: null,
-            locationToType: null,
-            quantity: 50,
-            movementType: 'outgoing'
+            locationId: $this->generateUuid(),
+            quantity: 50
         );
 
-        $this->assertNotNull($movement->getLocationFromId());
-        $this->assertNull($movement->getLocationToId());
-        $this->assertEquals('outgoing', $movement->getMovementType());
+        $this->assertTrue($movement->isOutbound());
+        $this->assertFalse($movement->isInbound());
+        $this->assertEquals(-50, $movement->getEffectiveDelta());
+        $this->assertEquals(MovementType::SHIPMENT, $movement->getType());
     }
 
     public function test_can_create_transfer_movement(): void
     {
+        $sourceId = $this->generateUuid();
+        $destId = $this->generateUuid();
+
         $movement = new Movement(
             id: $this->generateUuid(),
-            movementId: 'MOV-TRF-001',
+            type: MovementType::TRANSFER_OUT,
             sku: 'SKU-001',
-            locationFromId: $this->generateUuid(),
-            locationFromType: 'warehouse',
-            locationToId: $this->generateUuid(),
-            locationToType: 'store',
+            locationId: $sourceId,
             quantity: 25,
-            movementType: 'transfer'
+            sourceLocationId: $sourceId,
+            destinationLocationId: $destId
         );
 
-        $this->assertNotNull($movement->getLocationFromId());
-        $this->assertNotNull($movement->getLocationToId());
-        $this->assertEquals('transfer', $movement->getMovementType());
+        $this->assertEquals($sourceId, $movement->getSourceLocationId());
+        $this->assertEquals($destId, $movement->getDestinationLocationId());
+        $this->assertEquals(MovementType::TRANSFER_OUT, $movement->getType());
+        $this->assertEquals(-25, $movement->getEffectiveDelta());
+        $this->assertTrue($movement->isTransfer());
     }
 
     public function test_timestamps_are_set_automatically(): void
@@ -107,12 +101,9 @@ class MovementTest extends StockTestCase
 
         $movement = new Movement(
             id: $this->generateUuid(),
-            movementId: 'MOV-001',
+            type: MovementType::RECEIPT,
             sku: 'SKU-001',
-            locationFromId: null,
-            locationFromType: null,
-            locationToId: $this->generateUuid(),
-            locationToType: 'warehouse',
+            locationId: $this->generateUuid(),
             quantity: 10
         );
 
@@ -120,46 +111,33 @@ class MovementTest extends StockTestCase
 
         $this->assertGreaterThanOrEqual($before, $movement->getCreatedAt());
         $this->assertLessThanOrEqual($after, $movement->getCreatedAt());
-        $this->assertGreaterThanOrEqual($before, $movement->getUpdatedAt());
     }
 
     public function test_to_array_returns_correct_structure(): void
     {
-        $data = $this->createMovementData();
-
         $movement = new Movement(
-            id: $data['id'],
-            movementId: $data['movementId'],
-            sku: $data['sku'],
-            locationFromId: $data['locationFromId'],
-            locationFromType: $data['locationFromType'],
-            locationToId: $data['locationToId'],
-            locationToType: $data['locationToType'],
-            quantity: $data['quantity'],
-            balanceAfter: $data['balanceAfter'],
-            movementType: $data['movementType'],
-            reference: $data['reference'],
-            userId: $data['userId'],
-            workspaceId: $data['workspaceId']
+            id: $this->generateUuid(),
+            type: MovementType::RECEIPT,
+            sku: 'SKU-001',
+            locationId: $this->generateUuid(),
+            quantity: 100,
+            lotNumber: 'LOT-001',
+            reason: 'Test'
         );
 
         $array = $movement->toArray();
 
         $this->assertArrayHasKey('id', $array);
-        $this->assertArrayHasKey('movement_id', $array);
+        $this->assertArrayHasKey('type', $array);
+        $this->assertArrayHasKey('type_label', $array);
+        $this->assertArrayHasKey('status', $array);
         $this->assertArrayHasKey('sku', $array);
-        $this->assertArrayHasKey('location_from_id', $array);
-        $this->assertArrayHasKey('location_from_type', $array);
-        $this->assertArrayHasKey('location_to_id', $array);
-        $this->assertArrayHasKey('location_to_type', $array);
+        $this->assertArrayHasKey('location_id', $array);
         $this->assertArrayHasKey('quantity', $array);
-        $this->assertArrayHasKey('balance_after', $array);
-        $this->assertArrayHasKey('movement_type', $array);
-        $this->assertArrayHasKey('reference', $array);
-        $this->assertArrayHasKey('user_id', $array);
-        $this->assertArrayHasKey('workspace_id', $array);
+        $this->assertArrayHasKey('effective_delta', $array);
+        $this->assertArrayHasKey('lot_number', $array);
+        $this->assertArrayHasKey('reason', $array);
         $this->assertArrayHasKey('created_at', $array);
-        $this->assertArrayHasKey('updated_at', $array);
     }
 
     public function test_can_store_meta_data(): void
@@ -168,12 +146,9 @@ class MovementTest extends StockTestCase
 
         $movement = new Movement(
             id: $this->generateUuid(),
-            movementId: 'MOV-001',
+            type: MovementType::RECEIPT,
             sku: 'SKU-001',
-            locationFromId: null,
-            locationFromType: null,
-            locationToId: $this->generateUuid(),
-            locationToType: 'warehouse',
+            locationId: $this->generateUuid(),
             quantity: 10,
             meta: $meta
         );

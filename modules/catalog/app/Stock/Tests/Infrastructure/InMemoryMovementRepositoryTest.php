@@ -3,6 +3,8 @@
 namespace App\Stock\Tests\Infrastructure;
 
 use App\Stock\Domain\Entities\Movement;
+use App\Stock\Domain\ValueObjects\MovementStatus;
+use App\Stock\Domain\ValueObjects\MovementType;
 use App\Stock\Infrastructure\Out\InMemory\InMemoryMovementRepository;
 use App\Stock\Tests\StockTestCase;
 use DateTimeImmutable;
@@ -19,23 +21,19 @@ class InMemoryMovementRepositoryTest extends StockTestCase
 
     public function test_save_and_find_by_id(): void
     {
-        $data = $this->createMovementData();
         $movement = new Movement(
-            id: $data['id'],
-            movementId: $data['movementId'],
-            sku: $data['sku'],
-            locationFromId: $data['locationFromId'],
-            locationFromType: $data['locationFromType'],
-            locationToId: $data['locationToId'],
-            locationToType: $data['locationToType'],
-            quantity: $data['quantity']
+            id: $this->generateUuid(),
+            type: MovementType::RECEIPT,
+            sku: 'SKU-001',
+            locationId: $this->generateUuid(),
+            quantity: 100
         );
 
         $this->repository->save($movement);
-        $found = $this->repository->findById($data['id']);
+        $found = $this->repository->findById($movement->getId());
 
         $this->assertNotNull($found);
-        $this->assertEquals($data['id'], $found->getId());
+        $this->assertEquals($movement->getId(), $found->getId());
     }
 
     public function test_find_by_id_returns_null_for_nonexistent(): void
@@ -46,23 +44,20 @@ class InMemoryMovementRepositoryTest extends StockTestCase
 
     public function test_find_by_movement_id(): void
     {
-        $movementId = 'MOV-UNIQUE-123';
+        $id = $this->generateUuid();
         $movement = new Movement(
-            id: $this->generateUuid(),
-            movementId: $movementId,
+            id: $id,
+            type: MovementType::RECEIPT,
             sku: 'SKU-001',
-            locationFromId: null,
-            locationFromType: null,
-            locationToId: $this->generateUuid(),
-            locationToType: 'warehouse',
+            locationId: $this->generateUuid(),
             quantity: 100
         );
 
         $this->repository->save($movement);
-        $found = $this->repository->findByMovementId($movementId);
+        $found = $this->repository->findByMovementId($id);
 
         $this->assertNotNull($found);
-        $this->assertEquals($movementId, $found->getMovementId());
+        $this->assertEquals($id, $found->getId());
     }
 
     public function test_find_by_movement_id_returns_null_when_not_found(): void
@@ -88,9 +83,19 @@ class InMemoryMovementRepositoryTest extends StockTestCase
     {
         $locationId = $this->generateUuid();
 
-        $this->repository->save($this->createMovement(['locationFromId' => $locationId]));
-        $this->repository->save($this->createMovement(['locationFromId' => $locationId]));
-        $this->repository->save($this->createMovement(['locationFromId' => $this->generateUuid()]));
+        // SHIPMENT removes stock from locationId
+        $this->repository->save($this->createMovement([
+            'type' => MovementType::SHIPMENT,
+            'locationId' => $locationId
+        ]));
+        $this->repository->save($this->createMovement([
+            'type' => MovementType::SHIPMENT,
+            'locationId' => $locationId
+        ]));
+        $this->repository->save($this->createMovement([
+            'type' => MovementType::SHIPMENT,
+            'locationId' => $this->generateUuid()
+        ]));
 
         $found = $this->repository->findByLocationFrom($locationId);
 
@@ -101,9 +106,19 @@ class InMemoryMovementRepositoryTest extends StockTestCase
     {
         $locationId = $this->generateUuid();
 
-        $this->repository->save($this->createMovement(['locationToId' => $locationId]));
-        $this->repository->save($this->createMovement(['locationToId' => $locationId]));
-        $this->repository->save($this->createMovement(['locationToId' => $this->generateUuid()]));
+        // RECEIPT adds stock to locationId
+        $this->repository->save($this->createMovement([
+            'type' => MovementType::RECEIPT,
+            'locationId' => $locationId
+        ]));
+        $this->repository->save($this->createMovement([
+            'type' => MovementType::RECEIPT,
+            'locationId' => $locationId
+        ]));
+        $this->repository->save($this->createMovement([
+            'type' => MovementType::RECEIPT,
+            'locationId' => $this->generateUuid()
+        ]));
 
         $found = $this->repository->findByLocationTo($locationId);
 
@@ -112,11 +127,25 @@ class InMemoryMovementRepositoryTest extends StockTestCase
 
     public function test_find_by_type(): void
     {
-        $this->repository->save($this->createMovement(['movementType' => 'incoming']));
-        $this->repository->save($this->createMovement(['movementType' => 'incoming']));
-        $this->repository->save($this->createMovement(['movementType' => 'outgoing']));
+        $this->repository->save($this->createMovement(['type' => MovementType::RECEIPT]));
+        $this->repository->save($this->createMovement(['type' => MovementType::RECEIPT]));
+        $this->repository->save($this->createMovement(['type' => MovementType::SHIPMENT]));
 
-        $found = $this->repository->findByType('incoming');
+        $found = $this->repository->findByType(MovementType::RECEIPT);
+
+        $this->assertCount(2, $found);
+    }
+
+    public function test_find_by_status(): void
+    {
+        $this->repository->save($this->createMovement());
+        $this->repository->save($this->createMovement());
+        
+        $completed = $this->createMovement();
+        $completed = $completed->markAsCompleted();
+        $this->repository->save($completed);
+
+        $found = $this->repository->findByStatus(MovementStatus::PENDING);
 
         $this->assertCount(2, $found);
     }
@@ -125,13 +154,44 @@ class InMemoryMovementRepositoryTest extends StockTestCase
     {
         $reference = 'ORDER-123';
 
-        $this->repository->save($this->createMovement(['reference' => $reference]));
-        $this->repository->save($this->createMovement(['reference' => $reference]));
-        $this->repository->save($this->createMovement(['reference' => 'OTHER-REF']));
+        $this->repository->save($this->createMovement(['referenceId' => $reference]));
+        $this->repository->save($this->createMovement(['referenceId' => $reference]));
+        $this->repository->save($this->createMovement(['referenceId' => 'OTHER-REF']));
 
         $found = $this->repository->findByReference($reference);
 
         $this->assertCount(2, $found);
+    }
+
+    public function test_find_by_lot_id(): void
+    {
+        $lotNumber = 'LOT-123';
+
+        $this->repository->save($this->createMovement(['lotNumber' => $lotNumber]));
+        $this->repository->save($this->createMovement(['lotNumber' => $lotNumber]));
+        $this->repository->save($this->createMovement(['lotNumber' => 'OTHER-LOT']));
+
+        $found = $this->repository->findByLotId($lotNumber);
+
+        $this->assertCount(2, $found);
+    }
+
+    public function test_find_by_date_range(): void
+    {
+        $now = new DateTimeImmutable();
+        $yesterday = $now->modify('-1 day');
+        $tomorrow = $now->modify('+1 day');
+        $lastWeek = $now->modify('-7 days');
+
+        // Movement created now (default)
+        $this->repository->save($this->createMovement());
+        
+        // Movement created last week
+        $this->repository->save($this->createMovementWithDate($lastWeek));
+
+        $found = $this->repository->findByDateRange($yesterday, $tomorrow);
+
+        $this->assertCount(1, $found);
     }
 
     public function test_delete_existing_movement(): void
@@ -174,20 +234,32 @@ class InMemoryMovementRepositoryTest extends StockTestCase
 
     private function createMovement(array $overrides = []): Movement
     {
-        $data = $this->createMovementData($overrides);
-
         return new Movement(
-            id: $data['id'],
-            movementId: $data['movementId'],
-            sku: $data['sku'],
-            locationFromId: $data['locationFromId'],
-            locationFromType: $data['locationFromType'],
-            locationToId: $data['locationToId'],
-            locationToType: $data['locationToType'],
-            quantity: $data['quantity'],
-            balanceAfter: $data['balanceAfter'] ?? null,
-            movementType: $data['movementType'] ?? null,
-            reference: $data['reference'] ?? null
+            id: $overrides['id'] ?? $this->generateUuid(),
+            type: $overrides['type'] ?? MovementType::RECEIPT,
+            sku: $overrides['sku'] ?? 'SKU-' . mt_rand(1000, 9999),
+            locationId: $overrides['locationId'] ?? $this->generateUuid(),
+            quantity: $overrides['quantity'] ?? 100,
+            status: $overrides['status'] ?? MovementStatus::PENDING,
+            lotNumber: $overrides['lotNumber'] ?? null,
+            expirationDate: $overrides['expirationDate'] ?? null,
+            sourceLocationId: $overrides['sourceLocationId'] ?? null,
+            destinationLocationId: $overrides['destinationLocationId'] ?? null,
+            referenceType: $overrides['referenceType'] ?? null,
+            referenceId: $overrides['referenceId'] ?? null,
+            reason: $overrides['reason'] ?? null
+        );
+    }
+
+    private function createMovementWithDate(DateTimeImmutable $createdAt): Movement
+    {
+        return new Movement(
+            id: $this->generateUuid(),
+            type: MovementType::RECEIPT,
+            sku: 'SKU-' . mt_rand(1000, 9999),
+            locationId: $this->generateUuid(),
+            quantity: 100,
+            createdAt: $createdAt
         );
     }
 }
