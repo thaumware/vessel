@@ -2,7 +2,9 @@
 
 namespace App\Admin\Infrastructure\In\Http\Controllers;
 
+use App\Admin\Infrastructure\Middleware\AdminAuthMiddleware;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
@@ -13,45 +15,92 @@ use Symfony\Component\Process\Process;
 class AdminPanelController
 {
     /**
-     * Tablas que pertenecen al modulo Catalog
+     * Prefijos de tablas que pertenecen al modulo Catalog
      */
-    private const CATALOG_TABLES = [
-        'items',
-        'item_identifiers',
-        'item_variants',
-        'item_terms',
-        'locations',
-        'addresses',
-        'stock_items',
-        'stocks',
-        'movements',
-        'batches',
-        'units',
-        'uom_categories',
-        'uom_measures',
-        'uom_conversions',
-        'vocabularies',
-        'terms',
-        'term_relations',
-        'prices',
-        'price_lists',
-        'migrations',
+    private const CATALOG_TABLE_PREFIXES = [
+        'catalog_',
+        'stock_',
+        'locations_',
+        'uom_',
+        'taxonomy_',
+        'pricing_',
+        'portal',
     ];
+
+    /**
+     * Mostrar formulario de login
+     */
+    public function showLogin(): View
+    {
+        return view('admin::login');
+    }
+
+    /**
+     * Procesar autenticacion
+     */
+    public function authenticate(Request $request): RedirectResponse
+    {
+        $username = $request->input('username', '');
+        $password = $request->input('password', '');
+
+        if (AdminAuthMiddleware::verifyCredentials($username, $password)) {
+            $request->session()->put('admin_authenticated', true);
+            $request->session()->put('admin_username', $username);
+            
+            // Si "remember" esta marcado, extender la sesion
+            if ($request->boolean('remember')) {
+                $request->session()->put('admin_remember', true);
+            }
+
+            return redirect()->route('admin.dashboard');
+        }
+
+        return redirect()->route('admin.login')
+            ->with('error', 'Credenciales invalidas');
+    }
+
+    /**
+     * Cerrar sesion
+     */
+    public function logout(Request $request): RedirectResponse
+    {
+        $request->session()->forget(['admin_authenticated', 'admin_username', 'admin_remember']);
+        
+        return redirect()->route('admin.login')
+            ->with('success', 'Sesion cerrada correctamente');
+    }
 
     /**
      * Panel principal de administración
      */
     public function index(): View
     {
-        $modules = $this->getModulesStatus();
         $database = $this->getDatabaseInfo();
-        $testSuites = $this->getTestSuites();
+        $seeders = $this->getAvailableSeeders();
+        
+        // Formatear tablas para la vista
+        $tables = array_map(function ($table) {
+            return [
+                'name' => $table['name'],
+                'rows' => $table['rows_count'],
+            ];
+        }, $database['tables']);
         
         return view('admin::dashboard', [
-            'modules' => $modules,
             'database' => $database,
-            'testSuites' => $testSuites,
+            'tables' => $tables,
+            'seeders' => $seeders,
         ]);
+    }
+    
+    /**
+     * Obtener seeders disponibles
+     */
+    private function getAvailableSeeders(): array
+    {
+        return [
+            \App\Uom\Infrastructure\Out\Database\Seeders\UomSeeder::class,
+        ];
     }
 
     /**
@@ -59,17 +108,18 @@ class AdminPanelController
      */
     public function runTests(Request $request): JsonResponse
     {
-        $suite = $request->input('suite', 'all');
-        $filter = $request->input('filter');
+        $filter = $request->input('filter', '');
         
-        $command = ['./vendor/bin/phpunit', '--colors=never'];
+        // Usar php para ejecutar phpunit (compatible con Windows y Linux)
+        $phpunit = base_path('vendor/bin/phpunit');
+        $command = ['php', $phpunit, '--colors=never'];
         
-        if ($suite !== 'all') {
-            $command[] = '--testsuite=' . $suite;
-        }
-        
-        if ($filter) {
-            $command[] = '--filter=' . $filter;
+        // Parsear el filtro que viene del frontend (ej: "--filter Locations")
+        if (!empty($filter)) {
+            $parts = explode(' ', trim($filter), 2);
+            if (count($parts) === 2 && $parts[0] === '--filter') {
+                $command[] = '--filter=' . $parts[1];
+            }
         }
         
         try {
@@ -90,6 +140,7 @@ class AdminPanelController
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
+                'output' => 'Error: ' . $e->getMessage(),
                 'error' => $e->getMessage(),
             ], 500);
         }
@@ -227,29 +278,54 @@ class AdminPanelController
     public function clearCache(): JsonResponse
     {
         try {
+            $output = [];
+            
             Artisan::call('cache:clear');
+            $output[] = Artisan::output();
+            
             Artisan::call('config:clear');
+            $output[] = Artisan::output();
+            
             Artisan::call('route:clear');
+            $output[] = Artisan::output();
+            
             Artisan::call('view:clear');
+            $output[] = Artisan::output();
             
             return response()->json([
                 'success' => true,
+                'output' => implode("\n", $output),
                 'message' => 'All caches cleared',
             ]);
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
+                'output' => 'Error: ' . $e->getMessage(),
                 'error' => $e->getMessage(),
             ], 500);
         }
     }
 
     /**
-     * Verificar si una tabla esta permitida
+     * Verificar si una tabla esta permitida (pertenece al modulo Catalog)
      */
     private function isAllowedTable(string $table): bool
     {
-        return in_array($table, self::CATALOG_TABLES, true);
+        // Si tiene esquema (ej: vessel_catalog.catalog_items), extraer solo el nombre
+        $tableName = $table;
+        if (str_contains($table, '.')) {
+            $parts = explode('.', $table);
+            $tableName = end($parts);
+        }
+        
+        // Verificar prefijos del catalogo
+        foreach (self::CATALOG_TABLE_PREFIXES as $prefix) {
+            if (str_starts_with($tableName, $prefix)) {
+                return true;
+            }
+        }
+        
+        return false;
     }
 
     /**
@@ -318,29 +394,44 @@ class AdminPanelController
     }
 
     /**
-     * Obtener solo tablas del modulo Catalog
+     * Obtener solo tablas del modulo Catalog desde la base de datos actual
      */
     private function getDatabaseTables(): array
     {
         try {
             $tables = [];
-            $tableNames = Schema::getTableListing();
+            $connection = config('database.default');
+            $database = config("database.connections.{$connection}.database");
             
-            foreach ($tableNames as $tableName) {
-                if (!$this->isAllowedTable($tableName)) {
+            // Obtener tablas de la base de datos actual
+            $allTables = DB::select('SHOW TABLES');
+            $key = "Tables_in_{$database}";
+            
+            foreach ($allTables as $tableObj) {
+                $tableName = $tableObj->$key ?? null;
+                
+                if (!$tableName || !$this->isAllowedTable($tableName)) {
                     continue;
                 }
                 
-                $columns = Schema::getColumnListing($tableName);
-                $count = DB::table($tableName)->count();
-                
-                $tables[] = [
-                    'name' => $tableName,
-                    'columns' => $columns,
-                    'columns_count' => count($columns),
-                    'rows_count' => $count,
-                ];
+                try {
+                    $columns = Schema::getColumnListing($tableName);
+                    $count = DB::table($tableName)->count();
+                    
+                    $tables[] = [
+                        'name' => $tableName,
+                        'columns' => $columns,
+                        'columns_count' => count($columns),
+                        'rows_count' => $count,
+                    ];
+                } catch (\Exception $e) {
+                    // Ignorar tablas con errores
+                    continue;
+                }
             }
+            
+            // Ordenar alfabeticamente
+            usort($tables, fn($a, $b) => strcmp($a['name'], $b['name']));
             
             return $tables;
         } catch (\Exception $e) {

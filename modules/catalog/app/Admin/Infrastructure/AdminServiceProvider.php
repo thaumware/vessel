@@ -8,7 +8,11 @@ class AdminServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
-        // Bind services if needed
+        // Merge config
+        $this->mergeConfigFrom(
+            base_path('config/admin.php'),
+            'admin'
+        );
     }
 
     public function boot(): void
@@ -18,5 +22,10 @@ class AdminServiceProvider extends ServiceProvider
         
         // Load views
         $this->loadViewsFrom(__DIR__ . '/In/Views', 'admin');
+        
+        // Publish config
+        $this->publishes([
+            base_path('config/admin.php') => config_path('admin.php'),
+        ], 'admin-config');
     }
 }
