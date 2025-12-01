@@ -41,7 +41,7 @@ class InMemoryLotRepository implements LotRepositoryInterface
     {
         return array_values(array_filter(
             $this->lots,
-            fn(Lot $lot) => $lot->getSku() === $sku
+            fn(Lot $lot) => $lot->getItemId() === $sku
         ));
     }
 
@@ -74,7 +74,7 @@ class InMemoryLotRepository implements LotRepositoryInterface
     {
         $lots = array_filter(
             $this->lots,
-            fn(Lot $lot) => $lot->getSku() === $sku 
+            fn(Lot $lot) => $lot->getItemId() === $sku 
                 && $lot->isUsable()
         );
 

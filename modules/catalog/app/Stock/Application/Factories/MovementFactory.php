@@ -17,6 +17,9 @@ use DateTimeImmutable;
  * - Conoce los casos de uso específicos del negocio
  * - Define referenceTypes específicos de la aplicación
  * - Implementa lógica de creación que no es invariante del dominio
+ * 
+ * Nota: Los parámetros usan 'itemId' (nuevo) pero también aceptan 'sku' como alias
+ * para mantener compatibilidad hacia atrás.
  */
 class MovementFactory
 {
@@ -29,11 +32,12 @@ class MovementFactory
      * Recepción de mercadería (compra, ingreso).
      */
     public function createReceipt(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
-        ?string $lotNumber = null,
-        ?DateTimeImmutable $expirationDate = null,
+        ?string $lotId = null,
+        ?string $sourceType = null,
+        ?string $sourceId = null,
         ?string $referenceId = null,
         ?string $reason = null,
         ?string $workspaceId = null
@@ -41,11 +45,12 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::RECEIPT,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
-            lotNumber: $lotNumber,
-            expirationDate: $expirationDate,
+            lotId: $lotId,
+            sourceType: $sourceType,
+            sourceId: $sourceId,
             referenceType: 'purchase_order',
             referenceId: $referenceId,
             reason: $reason,
@@ -57,20 +62,20 @@ class MovementFactory
      * Despacho/envío (venta, salida).
      */
     public function createShipment(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
-        ?string $lotNumber = null,
+        ?string $lotId = null,
         ?string $referenceId = null,
         ?string $workspaceId = null
     ): Movement {
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::SHIPMENT,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
-            lotNumber: $lotNumber,
+            lotId: $lotId,
             referenceType: 'sales_order',
             referenceId: $referenceId,
             workspaceId: $workspaceId
@@ -81,7 +86,7 @@ class MovementFactory
      * Reserva de stock para un pedido.
      */
     public function createReservation(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
         ?string $referenceId = null,
@@ -90,7 +95,7 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::RESERVE,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
             referenceType: 'sales_order',
@@ -103,7 +108,7 @@ class MovementFactory
      * Liberación de reserva.
      */
     public function createRelease(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
         ?string $referenceId = null,
@@ -112,7 +117,7 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::RELEASE,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
             referenceType: 'sales_order',
@@ -125,7 +130,7 @@ class MovementFactory
      * Ajuste de inventario (positivo o negativo).
      */
     public function createAdjustment(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $delta,
         ?string $reason = null,
@@ -138,7 +143,7 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: $type,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: abs($delta),
             referenceType: 'inventory_adjustment',
@@ -151,21 +156,21 @@ class MovementFactory
      * Transferencia entre ubicaciones (genera salida).
      */
     public function createTransferOut(
-        string $sku,
+        string $itemId,
         string $sourceLocationId,
         string $destinationLocationId,
         int $quantity,
-        ?string $lotNumber = null,
+        ?string $lotId = null,
         ?string $transferId = null,
         ?string $workspaceId = null
     ): Movement {
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::TRANSFER_OUT,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $sourceLocationId,
             quantity: $quantity,
-            lotNumber: $lotNumber,
+            lotId: $lotId,
             sourceLocationId: $sourceLocationId,
             destinationLocationId: $destinationLocationId,
             referenceType: 'transfer',
@@ -178,21 +183,21 @@ class MovementFactory
      * Transferencia entre ubicaciones (genera entrada).
      */
     public function createTransferIn(
-        string $sku,
+        string $itemId,
         string $sourceLocationId,
         string $destinationLocationId,
         int $quantity,
-        ?string $lotNumber = null,
+        ?string $lotId = null,
         ?string $transferId = null,
         ?string $workspaceId = null
     ): Movement {
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::TRANSFER_IN,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $destinationLocationId,
             quantity: $quantity,
-            lotNumber: $lotNumber,
+            lotId: $lotId,
             sourceLocationId: $sourceLocationId,
             destinationLocationId: $destinationLocationId,
             referenceType: 'transfer',
@@ -205,20 +210,20 @@ class MovementFactory
      * Conteo de inventario (no afecta stock, solo registro).
      */
     public function createCount(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $countedQuantity,
-        ?string $lotNumber = null,
+        ?string $lotId = null,
         ?string $reason = null,
         ?string $workspaceId = null
     ): Movement {
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::COUNT,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $countedQuantity,
-            lotNumber: $lotNumber,
+            lotId: $lotId,
             referenceType: 'inventory_count',
             reason: $reason,
             workspaceId: $workspaceId
@@ -229,20 +234,20 @@ class MovementFactory
      * Baja por vencimiento.
      */
     public function createExpiration(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
-        string $lotNumber,
+        string $lotId,
         ?string $reason = null,
         ?string $workspaceId = null
     ): Movement {
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::EXPIRATION,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
-            lotNumber: $lotNumber,
+            lotId: $lotId,
             referenceType: 'expiration',
             reason: $reason ?? 'Stock vencido',
             workspaceId: $workspaceId
@@ -253,7 +258,7 @@ class MovementFactory
      * Instalación (salida por servicio técnico).
      */
     public function createInstallation(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
         ?string $workOrderId = null,
@@ -263,7 +268,7 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::INSTALLATION,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
             referenceType: 'work_order',
@@ -277,7 +282,7 @@ class MovementFactory
      * Devolución de cliente (entrada).
      */
     public function createCustomerReturn(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
         ?string $returnOrderId = null,
@@ -287,7 +292,7 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::RETURN,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
             referenceType: 'return_order',
@@ -301,7 +306,7 @@ class MovementFactory
      * Baja por daño/merma.
      */
     public function createDamage(
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
         ?string $reason = null,
@@ -310,7 +315,7 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: MovementType::DAMAGE,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
             referenceType: 'damage_report',
@@ -324,11 +329,13 @@ class MovementFactory
      */
     public function create(
         MovementType $type,
-        string $sku,
+        string $itemId,
         string $locationId,
         int $quantity,
-        ?string $lotNumber = null,
-        ?DateTimeImmutable $expirationDate = null,
+        ?string $lotId = null,
+        ?string $trackedUnitId = null,
+        ?string $sourceType = null,
+        ?string $sourceId = null,
         ?string $referenceType = null,
         ?string $referenceId = null,
         ?string $reason = null,
@@ -337,11 +344,13 @@ class MovementFactory
         return new Movement(
             id: $this->idGenerator->generate(),
             type: $type,
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: $quantity,
-            lotNumber: $lotNumber,
-            expirationDate: $expirationDate,
+            lotId: $lotId,
+            trackedUnitId: $trackedUnitId,
+            sourceType: $sourceType,
+            sourceId: $sourceId,
             referenceType: $referenceType,
             referenceId: $referenceId,
             reason: $reason,

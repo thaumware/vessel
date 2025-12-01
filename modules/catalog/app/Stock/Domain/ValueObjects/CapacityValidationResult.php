@@ -26,7 +26,7 @@ final class CapacityValidationResult
         return new self(false, $errorCode, $message, $context);
     }
 
-    public static function exceedsMaxQuantity(int $current, int $requested, int $max, string $locationId): self
+    public static function exceedsMaxQuantity(float $current, float $requested, float $max, string $locationId): self
     {
         return self::invalid(
             'EXCEEDS_MAX_QUANTITY',
@@ -77,13 +77,21 @@ final class CapacityValidationResult
         );
     }
 
-    public static function mixedSkusNotAllowed(string $locationId): self
+    public static function mixedItemsNotAllowed(string $locationId): self
     {
         return self::invalid(
-            'MIXED_SKUS_NOT_ALLOWED',
-            'This location does not allow mixing different SKUs',
+            'MIXED_ITEMS_NOT_ALLOWED',
+            'This location does not allow mixing different items',
             ['location_id' => $locationId]
         );
+    }
+
+    /**
+     * @deprecated Use mixedItemsNotAllowed() instead
+     */
+    public static function mixedSkusNotAllowed(string $locationId): self
+    {
+        return self::mixedItemsNotAllowed($locationId);
     }
 
     public static function locationNotActive(string $locationId): self

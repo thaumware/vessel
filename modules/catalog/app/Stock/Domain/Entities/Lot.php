@@ -5,16 +5,20 @@ declare(strict_types=1);
 namespace App\Stock\Domain\Entities;
 
 use App\Shared\Domain\Traits\HasId;
+use App\Stock\Domain\ValueObjects\LotStatus;
 use DateTimeImmutable;
 
 /**
- * Lot - Lote de producto con trazabilidad y vencimiento.
+ * Lot - Lote de productos con trazabilidad.
  * 
- * Un lote representa un grupo de unidades del mismo SKU que comparten:
- * - Fecha de producción/recepción
- * - Fecha de vencimiento
- * - Proveedor/origen
- * - Características de calidad
+ * Un lote representa un grupo de unidades del mismo item que comparten
+ * características comunes (origen, fecha producción, atributos de calidad).
+ * 
+ * Principios:
+ * - Referencia a item_id del catálogo (no SKU directo)
+ * - Origen genérico (source_type/source_id)
+ * - Identificadores flexibles (lot_number, supplier_lot, batch_code...)
+ * - Atributos dinámicos (expiration, production_date, quality_grade...)
  */
 class Lot
 {
@@ -22,14 +26,19 @@ class Lot
 
     public function __construct(
         private string $id,
-        private string $lotNumber,
-        private string $sku,
-        private ?DateTimeImmutable $expirationDate = null,
-        private ?DateTimeImmutable $productionDate = null,
-        private ?DateTimeImmutable $receptionDate = null,
-        private ?string $supplierId = null,
-        private ?string $supplierLotNumber = null,
-        private ?string $status = 'active', // active, quarantine, expired, depleted
+        private string $itemId,
+        private LotStatus $status = LotStatus::ACTIVE,
+        
+        // Identificadores flexibles (lot_number, supplier_lot, batch_code, etc.)
+        private ?array $identifiers = null,
+        
+        // Atributos dinámicos (expiration_date, production_date, quality_grade, etc.)
+        private ?array $attributes = null,
+        
+        // Origen genérico (supplier, production, warehouse...)
+        private ?string $sourceType = null,
+        private ?string $sourceId = null,
+        
         private ?string $workspaceId = null,
         private ?array $meta = null,
         private ?DateTimeImmutable $createdAt = null,
@@ -42,44 +51,34 @@ class Lot
 
     // === Getters ===
 
-    public function getLotNumber(): string
+    public function getItemId(): string
     {
-        return $this->lotNumber;
+        return $this->itemId;
     }
 
-    public function getSku(): string
-    {
-        return $this->sku;
-    }
-
-    public function getExpirationDate(): ?DateTimeImmutable
-    {
-        return $this->expirationDate;
-    }
-
-    public function getProductionDate(): ?DateTimeImmutable
-    {
-        return $this->productionDate;
-    }
-
-    public function getReceptionDate(): ?DateTimeImmutable
-    {
-        return $this->receptionDate;
-    }
-
-    public function getSupplierId(): ?string
-    {
-        return $this->supplierId;
-    }
-
-    public function getSupplierLotNumber(): ?string
-    {
-        return $this->supplierLotNumber;
-    }
-
-    public function getStatus(): string
+    public function getStatus(): LotStatus
     {
         return $this->status;
+    }
+
+    public function getIdentifiers(): ?array
+    {
+        return $this->identifiers;
+    }
+
+    public function getAttributes(): ?array
+    {
+        return $this->attributes;
+    }
+
+    public function getSourceType(): ?string
+    {
+        return $this->sourceType;
+    }
+
+    public function getSourceId(): ?string
+    {
+        return $this->sourceId;
     }
 
     public function getWorkspaceId(): ?string
@@ -102,83 +101,122 @@ class Lot
         return $this->updatedAt;
     }
 
+    // === Identifier Helpers ===
+
+    public function getIdentifier(string $key): ?string
+    {
+        return $this->identifiers[$key] ?? null;
+    }
+
+    public function getLotNumber(): ?string
+    {
+        return $this->getIdentifier('lot_number');
+    }
+
+    public function getSupplierLotNumber(): ?string
+    {
+        return $this->getIdentifier('supplier_lot');
+    }
+
+    public function hasIdentifier(string $key): bool
+    {
+        return isset($this->identifiers[$key]);
+    }
+
+    // === Attribute Helpers ===
+
+    public function getAttribute(string $key): mixed
+    {
+        return $this->attributes[$key] ?? null;
+    }
+
+    public function getExpirationDate(): ?DateTimeImmutable
+    {
+        $value = $this->getAttribute('expiration_date');
+        return $value ? new DateTimeImmutable($value) : null;
+    }
+
+    public function getProductionDate(): ?DateTimeImmutable
+    {
+        $value = $this->getAttribute('production_date');
+        return $value ? new DateTimeImmutable($value) : null;
+    }
+
+    public function getReceptionDate(): ?DateTimeImmutable
+    {
+        $value = $this->getAttribute('reception_date');
+        return $value ? new DateTimeImmutable($value) : null;
+    }
+
+    public function getQualityGrade(): ?string
+    {
+        return $this->getAttribute('quality_grade');
+    }
+
+    public function hasAttribute(string $key): bool
+    {
+        return isset($this->attributes[$key]);
+    }
+
     // === Domain Methods ===
 
-    /**
-     * ¿Tiene fecha de vencimiento?
-     */
     public function hasExpiration(): bool
     {
-        return $this->expirationDate !== null;
+        return $this->hasAttribute('expiration_date');
     }
 
-    /**
-     * ¿Está vencido?
-     */
     public function isExpired(): bool
     {
-        if ($this->expirationDate === null) {
-            return false;
-        }
-        return $this->expirationDate < new DateTimeImmutable();
+        $expiration = $this->getExpirationDate();
+        return $expiration !== null && $expiration < new DateTimeImmutable();
     }
 
-    /**
-     * ¿Está próximo a vencer? (dentro de X días)
-     */
     public function isExpiringSoon(int $days = 30): bool
     {
-        if ($this->expirationDate === null) {
+        $expiration = $this->getExpirationDate();
+        if ($expiration === null) {
             return false;
         }
         $threshold = (new DateTimeImmutable())->modify("+{$days} days");
-        return $this->expirationDate <= $threshold && !$this->isExpired();
+        return $expiration <= $threshold && !$this->isExpired();
     }
 
-    /**
-     * Días hasta vencimiento (negativo si ya venció).
-     */
     public function daysUntilExpiration(): ?int
     {
-        if ($this->expirationDate === null) {
+        $expiration = $this->getExpirationDate();
+        if ($expiration === null) {
             return null;
         }
         $now = new DateTimeImmutable();
-        $diff = $now->diff($this->expirationDate);
-        $days = (int) $diff->format('%r%a');
-        return $days;
+        $diff = $now->diff($expiration);
+        return (int) $diff->format('%r%a');
     }
 
-    /**
-     * ¿Está activo?
-     */
     public function isActive(): bool
     {
-        return $this->status === 'active';
+        return $this->status === LotStatus::ACTIVE;
     }
 
-    /**
-     * ¿Está en cuarentena?
-     */
     public function isInQuarantine(): bool
     {
-        return $this->status === 'quarantine';
+        return $this->status === LotStatus::QUARANTINE;
     }
 
-    /**
-     * ¿Puede usarse? (activo y no vencido)
-     */
     public function isUsable(): bool
     {
         return $this->isActive() && !$this->isExpired();
     }
 
-    /**
-     * Edad del lote en días desde recepción.
-     */
-    public function getAgeInDays(): ?int
+    public function hasSource(): bool
     {
-        $referenceDate = $this->receptionDate ?? $this->productionDate ?? $this->createdAt;
+        return $this->sourceType !== null && $this->sourceId !== null;
+    }
+
+    public function getAgeInDays(): int
+    {
+        $referenceDate = $this->getReceptionDate() 
+            ?? $this->getProductionDate() 
+            ?? $this->createdAt;
         $now = new DateTimeImmutable();
         $diff = $referenceDate->diff($now);
         return (int) $diff->format('%a');
@@ -189,7 +227,7 @@ class Lot
     public function activate(): self
     {
         $clone = clone $this;
-        $clone->status = 'active';
+        $clone->status = LotStatus::ACTIVE;
         $clone->updatedAt = new DateTimeImmutable();
         return $clone;
     }
@@ -197,7 +235,7 @@ class Lot
     public function quarantine(): self
     {
         $clone = clone $this;
-        $clone->status = 'quarantine';
+        $clone->status = LotStatus::QUARANTINE;
         $clone->updatedAt = new DateTimeImmutable();
         return $clone;
     }
@@ -205,7 +243,7 @@ class Lot
     public function markAsExpired(): self
     {
         $clone = clone $this;
-        $clone->status = 'expired';
+        $clone->status = LotStatus::EXPIRED;
         $clone->updatedAt = new DateTimeImmutable();
         return $clone;
     }
@@ -213,7 +251,25 @@ class Lot
     public function markAsDepleted(): self
     {
         $clone = clone $this;
-        $clone->status = 'depleted';
+        $clone->status = LotStatus::DEPLETED;
+        $clone->updatedAt = new DateTimeImmutable();
+        return $clone;
+    }
+
+    // === Mutations ===
+
+    public function withIdentifier(string $key, string $value): self
+    {
+        $clone = clone $this;
+        $clone->identifiers = array_merge($clone->identifiers ?? [], [$key => $value]);
+        $clone->updatedAt = new DateTimeImmutable();
+        return $clone;
+    }
+
+    public function withAttribute(string $key, mixed $value): self
+    {
+        $clone = clone $this;
+        $clone->attributes = array_merge($clone->attributes ?? [], [$key => $value]);
         $clone->updatedAt = new DateTimeImmutable();
         return $clone;
     }
@@ -222,19 +278,25 @@ class Lot
 
     public static function create(
         string $id,
-        string $lotNumber,
-        string $sku,
+        string $itemId,
+        ?string $lotNumber = null,
         ?DateTimeImmutable $expirationDate = null,
-        ?string $supplierId = null,
+        ?string $sourceType = null,
+        ?string $sourceId = null,
         ?string $workspaceId = null
     ): self {
+        $identifiers = $lotNumber ? ['lot_number' => $lotNumber] : null;
+        $attributes = $expirationDate 
+            ? ['expiration_date' => $expirationDate->format('Y-m-d'), 'reception_date' => (new DateTimeImmutable())->format('Y-m-d')]
+            : ['reception_date' => (new DateTimeImmutable())->format('Y-m-d')];
+
         return new self(
             id: $id,
-            lotNumber: $lotNumber,
-            sku: $sku,
-            expirationDate: $expirationDate,
-            receptionDate: new DateTimeImmutable(),
-            supplierId: $supplierId,
+            itemId: $itemId,
+            identifiers: $identifiers,
+            attributes: $attributes,
+            sourceType: $sourceType,
+            sourceId: $sourceId,
             workspaceId: $workspaceId
         );
     }
@@ -245,14 +307,17 @@ class Lot
     {
         return [
             'id' => $this->getId(),
-            'lot_number' => $this->lotNumber,
-            'sku' => $this->sku,
-            'expiration_date' => $this->expirationDate?->format('Y-m-d'),
-            'production_date' => $this->productionDate?->format('Y-m-d'),
-            'reception_date' => $this->receptionDate?->format('Y-m-d'),
-            'supplier_id' => $this->supplierId,
-            'supplier_lot_number' => $this->supplierLotNumber,
-            'status' => $this->status,
+            'item_id' => $this->itemId,
+            'status' => $this->status->value,
+            'status_label' => $this->status->label(),
+            'identifiers' => $this->identifiers,
+            'lot_number' => $this->getLotNumber(),
+            'attributes' => $this->attributes,
+            'expiration_date' => $this->getExpirationDate()?->format('Y-m-d'),
+            'production_date' => $this->getProductionDate()?->format('Y-m-d'),
+            'reception_date' => $this->getReceptionDate()?->format('Y-m-d'),
+            'source_type' => $this->sourceType,
+            'source_id' => $this->sourceId,
             'is_expired' => $this->isExpired(),
             'is_expiring_soon' => $this->isExpiringSoon(),
             'days_until_expiration' => $this->daysUntilExpiration(),

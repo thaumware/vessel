@@ -4,6 +4,7 @@ namespace App\Stock\Infrastructure\Out\InMemory;
 
 use App\Stock\Domain\Entities\Movement;
 use App\Stock\Domain\Interfaces\MovementRepositoryInterface;
+use App\Stock\Domain\ValueObjects\MovementSearchCriteria;
 use App\Stock\Domain\ValueObjects\MovementStatus;
 use App\Stock\Domain\ValueObjects\MovementType;
 
@@ -25,6 +26,106 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
         return $this->movements[$id] ?? null;
     }
 
+    /**
+     * Búsqueda con criterios múltiples - UNA SOLA PASADA.
+     */
+    public function search(MovementSearchCriteria $criteria): array
+    {
+        $results = array_filter($this->movements, function (Movement $m) use ($criteria) {
+            // Filtro por itemId
+            if ($criteria->itemId !== null && $m->getItemId() !== $criteria->itemId) {
+                return false;
+            }
+
+            // Filtro por locationId (incluye source y destination)
+            if ($criteria->locationId !== null) {
+                $matchesLocation = $m->getLocationId() === $criteria->locationId
+                    || $m->getSourceLocationId() === $criteria->locationId
+                    || $m->getDestinationLocationId() === $criteria->locationId;
+                if (!$matchesLocation) {
+                    return false;
+                }
+            }
+
+            // Filtro por type
+            if ($criteria->type !== null && $m->getType() !== $criteria->type) {
+                return false;
+            }
+
+            // Filtro por status
+            if ($criteria->status !== null && $m->getStatus() !== $criteria->status) {
+                return false;
+            }
+
+            // Filtro por lotId
+            if ($criteria->lotId !== null && $m->getLotId() !== $criteria->lotId) {
+                return false;
+            }
+
+            // Filtro por referenceType
+            if ($criteria->referenceType !== null && $m->getReferenceType() !== $criteria->referenceType) {
+                return false;
+            }
+
+            // Filtro por referenceId
+            if ($criteria->referenceId !== null && $m->getReferenceId() !== $criteria->referenceId) {
+                return false;
+            }
+
+            // Filtro por rango de fechas
+            if ($criteria->dateFrom !== null && $m->getCreatedAt() < $criteria->dateFrom) {
+                return false;
+            }
+            if ($criteria->dateTo !== null && $m->getCreatedAt() > $criteria->dateTo) {
+                return false;
+            }
+
+            // Filtro por workspaceId
+            if ($criteria->workspaceId !== null && $m->getWorkspaceId() !== $criteria->workspaceId) {
+                return false;
+            }
+
+            return true;
+        });
+
+        // Ordenar
+        $results = array_values($results);
+        usort($results, function (Movement $a, Movement $b) use ($criteria) {
+            $comparison = $b->getCreatedAt() <=> $a->getCreatedAt();
+            return $criteria->sortDesc ? $comparison : -$comparison;
+        });
+
+        // Aplicar paginación
+        if ($criteria->limit !== null) {
+            $results = array_slice($results, $criteria->offset, $criteria->limit);
+        } elseif ($criteria->offset > 0) {
+            $results = array_slice($results, $criteria->offset);
+        }
+
+        return $results;
+    }
+
+    public function count(MovementSearchCriteria $criteria): int
+    {
+        // Para contar, usamos search sin paginación
+        $criteriaWithoutPagination = new MovementSearchCriteria(
+            itemId: $criteria->itemId,
+            locationId: $criteria->locationId,
+            type: $criteria->type,
+            status: $criteria->status,
+            lotId: $criteria->lotId,
+            referenceType: $criteria->referenceType,
+            referenceId: $criteria->referenceId,
+            dateFrom: $criteria->dateFrom,
+            dateTo: $criteria->dateTo,
+            workspaceId: $criteria->workspaceId,
+            offset: 0,
+            limit: null,
+        );
+        
+        return count($this->search($criteriaWithoutPagination));
+    }
+
     public function findByMovementId(string $movementId): ?Movement
     {
         // En esta implementación, movementId = id
@@ -35,7 +136,7 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
     {
         return array_values(array_filter(
             $this->movements,
-            fn(Movement $m) => $m->getSku() === $sku
+            fn(Movement $m) => $m->getItemId() === $sku
         ));
     }
 
@@ -85,7 +186,7 @@ class InMemoryMovementRepository implements MovementRepositoryInterface
     {
         return array_values(array_filter(
             $this->movements,
-            fn(Movement $m) => $m->getLotNumber() === $lotId
+            fn(Movement $m) => $m->getLotId() === $lotId
         ));
     }
 

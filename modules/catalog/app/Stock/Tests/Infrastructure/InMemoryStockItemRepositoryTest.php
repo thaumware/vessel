@@ -273,7 +273,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $this->assertEquals(75, $reserved->getAvailableQuantity());
     }
 
-    public function test_reserve_throws_when_insufficient_stock(): void
+    public function test_reserve_allows_negative_available(): void
     {
         $item = new StockItem(
             id: $this->generateUuid(),
@@ -287,8 +287,11 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->repository->save($item);
 
-        $this->expectException(DomainException::class);
-        $this->repository->reserve($item->getId(), 25);
+        // Permite reservar más de lo disponible
+        $reserved = $this->repository->reserve($item->getId(), 25);
+        
+        $this->assertEquals(55, $reserved->getReservedQuantity());
+        $this->assertEquals(-5, $reserved->getAvailableQuantity());
     }
 
     public function test_release(): void
@@ -311,7 +314,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $this->assertEquals(70, $released->getAvailableQuantity());
     }
 
-    public function test_release_throws_when_releasing_more_than_reserved(): void
+    public function test_release_allows_negative_reserved(): void
     {
         $item = new StockItem(
             id: $this->generateUuid(),
@@ -325,7 +328,10 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->repository->save($item);
 
-        $this->expectException(DomainException::class);
-        $this->repository->release($item->getId(), 20);
+        // Permite liberar más de lo reservado
+        $released = $this->repository->release($item->getId(), 20);
+        
+        $this->assertEquals(-10, $released->getReservedQuantity());
+        $this->assertEquals(110, $released->getAvailableQuantity());
     }
 }

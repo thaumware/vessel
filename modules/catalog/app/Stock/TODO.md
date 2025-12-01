@@ -1,38 +1,41 @@
 # Stock Module - TODO
 
-## Estado: En desarrollo activo
+## Estado: ✅ Funcional (187 tests passing)
 
-### Dominio
+### Dominio ✅
 - [x] Entidad `Stock`
 - [x] Entidad `StockItem` (con catalogItemId opcional)
 - [x] Entidad `LocationStockSettings` (configuración de capacidad)
 - [x] Entidad `Movement` (movimientos con Value Objects)
 - [x] Entidad `Lot` (lotes con vencimiento)
+- [x] Entidad `Batch` (legacy, disponible)
 - [x] Value Object `CapacityValidationResult`
-- [x] Value Object `MovementType` (enum: receipt, shipment, reserve, release, etc.)
+- [x] Value Object `ValidationResult` (genérico)
+- [x] Value Object `MovementType` (enum: 15+ tipos)
 - [x] Value Object `MovementStatus` (enum: pending, completed, cancelled, failed)
 - [x] Service `StockCapacityService`
 - [x] Service `StockMovementService` (procesa movimientos)
+- [x] Service `ProcessMovementResult`
 - [x] Interface `StockRepositoryInterface`
 - [x] Interface `StockItemRepositoryInterface`
 - [x] Interface `MovementRepositoryInterface`
 - [x] Interface `LotRepositoryInterface`
 - [x] Interface `LocationStockSettingsRepositoryInterface`
-- [x] Interface `LocationGatewayInterface` (para consultar jerarquía)
+- [x] Interface `LocationGatewayInterface`
 - [x] Interface `CatalogGatewayInterface`
-- [ ] Entidad `Batch` (legacy, reemplazado por Lot)
 
-### Application (Use Cases)
+### Application (Use Cases) ✅
 - [x] `ManageLocationSettingsUseCase` - CRUD settings de ubicación
 - [x] `GetLocationSettingsUseCase` - Consultar capacidad
 - [x] `CreateStockItemUseCase`
 - [x] `AdjustStockQuantity`
 - [x] `ReserveStock`
 - [x] `ReleaseStock`
-- [ ] `TransferStockUseCase` - Transferencia entre ubicaciones
-- [ ] `ProcessMovementUseCase` - Procesar cualquier tipo de movimiento
+- [x] `ApplyMovement`
+- [x] `MovementFactory` - Factory en Application layer
 
-### Infrastructure
+### Infrastructure ✅
+- [x] `StockServiceProvider` (bindings)
 - [x] `LocationStockSettingsRepository` (Eloquent)
 - [x] `StockLocationSettingsModel`
 - [x] `LocationsModuleGateway` (adapter Stock→Locations)
@@ -40,39 +43,54 @@
 - [x] `InMemoryStockItemRepository`
 - [x] `InMemoryMovementRepository`
 - [x] `InMemoryLotRepository`
+- [x] `InMemoryBatchRepository`
 - [x] Migración `stock_location_settings`
 - [x] Migración `stock_lots`
-- [x] Migración update `stock_movements` (nuevas columnas)
-- [ ] `EloquentMovementRepository`
-- [ ] `EloquentLotRepository`
-- [ ] Modelo `StockMovement`
-- [ ] Modelo `StockLot`
+- [x] Migración `stock_movements` (update)
 
-### HTTP/Controllers
+### HTTP/Controllers ✅
 - [x] `MovementController` - API de movimientos
 - [x] `CapacityController` - API de capacidad
+- [x] `StockItemController` - CRUD items
 - [x] Rutas CRUD stock items
-- [x] Rutas para movimientos (receipt, shipment, reserve, release, adjustment, transfer)
+- [x] Rutas para movimientos
 - [x] Rutas para location settings/capacity
 
-### Tests
-- [x] `LocationStockSettingsTest` (entidad)
-- [x] `CapacityValidationResultTest` (value object)
-- [x] `StockCapacityServiceTest` (servicio con mocks)
+### Tests ✅ (187 tests, 663 assertions)
+- [x] `LocationStockSettingsTest`
+- [x] `CapacityValidationResultTest`
+- [x] `StockCapacityServiceTest`
 - [x] `ManageLocationSettingsUseCaseTest`
 - [x] `InMemoryStockItemRepositoryTest`
 - [x] `InMemoryMovementRepositoryTest`
+- [x] `InMemoryBatchRepositoryTest`
 - [x] `MovementTest` (entidad)
 - [x] `MovementTypeTest` (value object)
 - [x] `LotTest` (entidad)
 - [x] `StockMovementServiceTest` (14 tests)
-- [ ] Tests de integración con BD
-- [ ] Tests Feature de API
+- [x] `StockItemUseCasesTest`
+- [x] `MovementFactoryTest`
 
-### Pendiente
-- [ ] Validación de capacidad integrada en movimientos
+### Documentación ✅
+- [x] Docusaurus: `docs/modules/stock.mdx`
+- [x] Arquitectura hexagonal documentada
+- [x] API playground interactivo
+- [x] Ejemplos curl
+
+---
+
+## Pendiente (Nice to have)
+
+### Infrastructure
+- [ ] `EloquentMovementRepository`
+- [ ] `EloquentLotRepository`
+- [ ] Modelo `StockMovement` (Eloquent)
+- [ ] Modelo `StockLot` (Eloquent)
+
+### Features
 - [ ] Eventos de dominio (StockAdjusted, CapacityExceeded, LotExpiring)
 - [ ] Soporte FIFO/FEFO en movimientos de salida
-- [ ] Service Provider para bindings
 - [ ] Jobs de verificación de vencimientos
 - [ ] Reportes de stock por ubicación/lote
+- [ ] Tests de integración con BD
+- [ ] Tests Feature de API

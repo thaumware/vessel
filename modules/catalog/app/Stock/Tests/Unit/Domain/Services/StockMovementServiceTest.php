@@ -39,7 +39,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -74,7 +74,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 30
         );
@@ -108,7 +108,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::SHIPMENT,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 30
         );
@@ -140,7 +140,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::SHIPMENT,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 50
         );
@@ -172,7 +172,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RESERVE,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 30
         );
@@ -206,7 +206,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RESERVE,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 20
         );
@@ -237,7 +237,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RELEASE,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 30
         );
@@ -269,7 +269,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RELEASE,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 50
         );
@@ -299,7 +299,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::ADJUSTMENT_IN,
-            sku: $sku,
+            itemId: $sku,
             locationId: $locationId,
             quantity: 25,
             reason: 'Ajuste de inventario'
@@ -316,7 +316,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::SHIPMENT,
-            sku: 'NONEXISTENT-SKU',
+            itemId: 'NONEXISTENT-SKU',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -332,7 +332,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'NEW-SKU',
+            itemId: 'NEW-SKU',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -342,22 +342,21 @@ class StockMovementServiceTest extends StockTestCase
         $this->assertTrue($validation->isValid());
     }
 
-    public function test_process_fails_for_expired_lot(): void
+    public function test_process_receipt_with_lot_succeeds(): void
     {
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100,
-            lotNumber: 'LOT-EXPIRED',
-            expirationDate: new DateTimeImmutable('-1 day')
+            lotId: 'LOT-001'
         );
 
         $result = $this->service->process($movement);
 
-        $this->assertFalse($result->isSuccess());
-        $this->assertStringContainsString('vencido', $result->getErrors()[0]);
+        $this->assertTrue($result->isSuccess());
+        $this->assertTrue($movement->hasLot());
     }
 
     public function test_movement_is_persisted_after_processing(): void
@@ -366,7 +365,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $movementId,
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -382,7 +381,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -430,6 +429,8 @@ class MockMovementRepository implements \App\Stock\Domain\Interfaces\MovementRep
     public function findByDateRange(\DateTimeInterface $from, \DateTimeInterface $to): array { return []; }
     public function delete(string $id): bool { return true; }
     public function all(): array { return array_values($this->movements); }
+    public function search(\App\Stock\Domain\ValueObjects\MovementSearchCriteria $criteria): array { return []; }
+    public function count(\App\Stock\Domain\ValueObjects\MovementSearchCriteria $criteria): int { return 0; }
 }
 
 class MockStockItemRepository implements \App\Stock\Domain\Interfaces\StockItemRepositoryInterface

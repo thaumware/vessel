@@ -21,8 +21,8 @@
         <testsuite name="Uom">
             <directory>app/Uom/Tests</directory>
         </testsuite>
-        <testsuite name="Admin">
-            <directory>app/Admin/Tests</directory>
+        <testsuite name="Auth">
+            <directory>app/Auth/Tests</directory>
         </testsuite>
         
         <!-- Global test suites -->

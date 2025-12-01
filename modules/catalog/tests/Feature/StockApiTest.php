@@ -10,10 +10,12 @@ use Tests\TestCase;
  * These tests verify that routes are properly defined and controllers respond.
  * For full integration tests with database, use Integration test suite.
  * 
- * API Routes:
- * - GET    /api/v1/stock/items/list
+ * API Routes (CRUD pattern):
+ * - GET    /api/v1/stock/items/read
  * - POST   /api/v1/stock/items/create
  * - GET    /api/v1/stock/items/show/{id}
+ * - PUT    /api/v1/stock/items/update/{id}
+ * - DELETE /api/v1/stock/items/delete/{id}
  * - POST   /api/v1/stock/items/adjust
  * - POST   /api/v1/stock/items/reserve/{id}
  * - POST   /api/v1/stock/items/release/{id}
@@ -23,7 +25,7 @@ class StockApiTest extends TestCase
     public function test_list_stock_items_endpoint_exists(): void
     {
         $response = $this->withAdapter('stock', 'local')
-            ->getJson('/api/v1/stock/items/list');
+            ->getJson('/api/v1/stock/items/read');
 
         // Route exists and responds (500 = controller reached but db error, 200 = success)
         $this->assertContains($response->status(), [200, 500]);

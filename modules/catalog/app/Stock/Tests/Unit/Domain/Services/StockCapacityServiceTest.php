@@ -248,7 +248,7 @@ class StockCapacityServiceTest extends TestCase
         $result = $this->service->canAcceptStock($locationId, 10, 'SKU-2');
 
         $this->assertFalse($result->isValid());
-        $this->assertEquals('MIXED_SKUS_NOT_ALLOWED', $result->getErrorCode());
+        $this->assertEquals('MIXED_ITEMS_NOT_ALLOWED', $result->getErrorCode());
     }
 
     public function test_accepts_same_sku_when_mixed_skus_not_allowed(): void
@@ -311,7 +311,7 @@ class StockCapacityServiceTest extends TestCase
         $this->assertEquals(95, $total); // 40 + 20 + 35
     }
 
-    public function test_get_unique_skus(): void
+    public function test_get_unique_item_ids(): void
     {
         $locationId = 'loc-1';
 
@@ -324,11 +324,11 @@ class StockCapacityServiceTest extends TestCase
                 new Stock('SKU-1', $locationId, null, 10), // Duplicate SKU
             ]);
 
-        $skus = $this->service->getUniqueSkus($locationId);
+        $itemIds = $this->service->getUniqueItemIds($locationId);
 
-        $this->assertCount(2, $skus);
-        $this->assertContains('SKU-1', $skus);
-        $this->assertContains('SKU-2', $skus);
+        $this->assertCount(2, $itemIds);
+        $this->assertContains('SKU-1', $itemIds);
+        $this->assertContains('SKU-2', $itemIds);
     }
 
     public function test_get_available_capacity_with_settings(): void
@@ -429,6 +429,6 @@ class StockCapacityServiceTest extends TestCase
         $this->assertEquals(100, $stats['max_quantity']);
         $this->assertEquals(25, $stats['available_quantity']); // 100 - 75
         $this->assertEquals(75.0, $stats['usage_percent']);
-        $this->assertEquals(2, $stats['unique_skus']);
+        $this->assertEquals(2, $stats['unique_items']);
     }
 }

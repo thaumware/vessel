@@ -10,12 +10,16 @@ use App\Stock\Domain\ValueObjects\MovementType;
 use DateTimeImmutable;
 
 /**
- * Movement - Registro de movimiento de stock.
+ * Movement - Registro inmutable de movimiento de stock.
  * 
- * Entidad pura de dominio que representa un movimiento.
- * El tipo de movimiento (MovementType) determina cómo se afectan las cantidades.
+ * FUENTE DE VERDAD del sistema de inventario.
+ * StockLevel se calcula agregando movements.
  * 
- * Para crear movimientos específicos del negocio, usar MovementFactory en Application.
+ * Principios:
+ * - Inmutable una vez completado
+ * - Sin datos redundantes calculables (balance se calcula)
+ * - Referencias genéricas (source_type/id, reference_type/id)
+ * - Tracking flexible (lot_id, tracked_unit_id)
  */
 class Movement
 {
@@ -24,18 +28,28 @@ class Movement
     public function __construct(
         private string $id,
         private MovementType $type,
-        private string $sku,
+        private string $itemId,
         private string $locationId,
-        private int $quantity,
+        private float $quantity,
         private MovementStatus $status = MovementStatus::PENDING,
-        private ?string $lotNumber = null,
-        private ?DateTimeImmutable $expirationDate = null,
+        
+        // Tracking (nullable - si aplica)
+        private ?string $lotId = null,
+        private ?string $trackedUnitId = null,
+        
+        // Para transferencias
         private ?string $sourceLocationId = null,
         private ?string $destinationLocationId = null,
+        
+        // Origen genérico (supplier, production, warehouse, customer...)
+        private ?string $sourceType = null,
+        private ?string $sourceId = null,
+        
+        // Documento asociado (purchase_order, sales_order, return...)
         private ?string $referenceType = null,
         private ?string $referenceId = null,
+        
         private ?string $reason = null,
-        private ?int $balanceAfter = null,
         private ?string $performedBy = null,
         private ?string $workspaceId = null,
         private ?array $meta = null,
@@ -59,9 +73,9 @@ class Movement
         return $this->status;
     }
 
-    public function getSku(): string
+    public function getItemId(): string
     {
-        return $this->sku;
+        return $this->itemId;
     }
 
     public function getLocationId(): string
@@ -69,19 +83,19 @@ class Movement
         return $this->locationId;
     }
 
-    public function getQuantity(): int
+    public function getQuantity(): float
     {
         return $this->quantity;
     }
 
-    public function getLotNumber(): ?string
+    public function getLotId(): ?string
     {
-        return $this->lotNumber;
+        return $this->lotId;
     }
 
-    public function getExpirationDate(): ?DateTimeImmutable
+    public function getTrackedUnitId(): ?string
     {
-        return $this->expirationDate;
+        return $this->trackedUnitId;
     }
 
     public function getSourceLocationId(): ?string
@@ -92,6 +106,16 @@ class Movement
     public function getDestinationLocationId(): ?string
     {
         return $this->destinationLocationId;
+    }
+
+    public function getSourceType(): ?string
+    {
+        return $this->sourceType;
+    }
+
+    public function getSourceId(): ?string
+    {
+        return $this->sourceId;
     }
 
     public function getReferenceType(): ?string
@@ -107,11 +131,6 @@ class Movement
     public function getReason(): ?string
     {
         return $this->reason;
-    }
-
-    public function getBalanceAfter(): ?int
-    {
-        return $this->balanceAfter;
     }
 
     public function getPerformedBy(): ?string
@@ -144,7 +163,7 @@ class Movement
     /**
      * Delta efectivo para stock (positivo suma, negativo resta).
      */
-    public function getEffectiveDelta(): int
+    public function getEffectiveDelta(): float
     {
         return $this->quantity * $this->type->getQuantityMultiplier();
     }
@@ -152,7 +171,7 @@ class Movement
     /**
      * Delta efectivo para reservas.
      */
-    public function getReservationDelta(): int
+    public function getReservationDelta(): float
     {
         return $this->quantity * $this->type->getReservationMultiplier();
     }
@@ -179,18 +198,27 @@ class Movement
 
     public function hasLot(): bool
     {
-        return $this->lotNumber !== null;
+        return $this->lotId !== null;
     }
 
-    public function hasExpiration(): bool
+    public function hasTrackedUnit(): bool
     {
-        return $this->expirationDate !== null;
+        return $this->trackedUnitId !== null;
     }
 
-    public function isExpired(): bool
+    public function hasTracking(): bool
     {
-        return $this->expirationDate !== null 
-            && $this->expirationDate < new DateTimeImmutable();
+        return $this->lotId !== null || $this->trackedUnitId !== null;
+    }
+
+    public function hasSource(): bool
+    {
+        return $this->sourceType !== null && $this->sourceId !== null;
+    }
+
+    public function hasReference(): bool
+    {
+        return $this->referenceType !== null && $this->referenceId !== null;
     }
 
     public function canProcess(): bool
@@ -210,13 +238,6 @@ class Movement
     }
 
     // === Status Transitions (inmutables) ===
-
-    public function withBalanceAfter(int $balance): self
-    {
-        $clone = clone $this;
-        $clone->balanceAfter = $balance;
-        return $clone;
-    }
 
     public function markAsCompleted(): self
     {
@@ -249,18 +270,19 @@ class Movement
             'type' => $this->type->value,
             'type_label' => $this->type->label(),
             'status' => $this->status->value,
-            'sku' => $this->sku,
+            'item_id' => $this->itemId,
             'location_id' => $this->locationId,
             'quantity' => $this->quantity,
             'effective_delta' => $this->getEffectiveDelta(),
-            'lot_number' => $this->lotNumber,
-            'expiration_date' => $this->expirationDate?->format('Y-m-d'),
+            'lot_id' => $this->lotId,
+            'tracked_unit_id' => $this->trackedUnitId,
             'source_location_id' => $this->sourceLocationId,
             'destination_location_id' => $this->destinationLocationId,
+            'source_type' => $this->sourceType,
+            'source_id' => $this->sourceId,
             'reference_type' => $this->referenceType,
             'reference_id' => $this->referenceId,
             'reason' => $this->reason,
-            'balance_after' => $this->balanceAfter,
             'performed_by' => $this->performedBy,
             'workspace_id' => $this->workspaceId,
             'meta' => $this->meta,

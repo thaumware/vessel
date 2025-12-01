@@ -23,7 +23,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RECEIPT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 100
         );
@@ -41,7 +41,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::SHIPMENT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 50
         );
@@ -58,7 +58,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RESERVE,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 10,
             referenceId: 'order-123'
@@ -76,7 +76,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RELEASE,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 10
         );
@@ -90,7 +90,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::ADJUSTMENT_IN,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 25,
             reason: 'Inventario físico'
@@ -106,7 +106,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::ADJUSTMENT_OUT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 15,
             reason: 'Merma detectada'
@@ -121,7 +121,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::TRANSFER_OUT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'warehouse-1',
             quantity: 30,
             sourceLocationId: 'warehouse-1',
@@ -140,7 +140,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::TRANSFER_IN,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'store-1',
             quantity: 30,
             sourceLocationId: 'warehouse-1',
@@ -157,7 +157,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::COUNT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 100
         );
@@ -167,41 +167,35 @@ class MovementTest extends TestCase
         $this->assertFalse($movement->affectsQuantity());
     }
 
-    public function test_receipt_with_lot_and_expiration(): void
+    public function test_receipt_with_lot(): void
     {
-        $expiration = new DateTimeImmutable('+30 days');
-        
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RECEIPT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 100,
-            lotNumber: 'LOT-2024-001',
-            expirationDate: $expiration
+            lotId: 'LOT-2024-001'
         );
 
         $this->assertTrue($movement->hasLot());
-        $this->assertEquals('LOT-2024-001', $movement->getLotNumber());
-        $this->assertTrue($movement->hasExpiration());
-        $this->assertEquals($expiration, $movement->getExpirationDate());
-        $this->assertFalse($movement->isExpired());
+        $this->assertEquals('LOT-2024-001', $movement->getLotId());
     }
 
-    public function test_expired_movement(): void
+    public function test_receipt_with_tracked_unit(): void
     {
-        $expiration = new DateTimeImmutable('-1 day');
-        
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RECEIPT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
-            quantity: 100,
-            expirationDate: $expiration
+            quantity: 1,
+            trackedUnitId: 'UNIT-001'
         );
 
-        $this->assertTrue($movement->isExpired());
+        $this->assertTrue($movement->hasTrackedUnit());
+        $this->assertEquals('UNIT-001', $movement->getTrackedUnitId());
+        $this->assertTrue($movement->hasTracking());
     }
 
     public function test_status_transitions(): void
@@ -209,7 +203,7 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RECEIPT,
-            sku: 'SKU-1',
+            itemId: 'SKU-1',
             locationId: 'loc-1',
             quantity: 100
         );
@@ -230,20 +224,38 @@ class MovementTest extends TestCase
         $this->assertEquals(MovementStatus::CANCELLED, $cancelled->getStatus());
     }
 
-    public function test_with_balance_after(): void
+    public function test_source_tracking(): void
     {
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RECEIPT,
-            sku: 'SKU-1',
+            itemId: 'SKU-1',
             locationId: 'loc-1',
-            quantity: 100
+            quantity: 100,
+            sourceType: 'supplier',
+            sourceId: 'SUP-001'
         );
-        $this->assertNull($movement->getBalanceAfter());
 
-        $withBalance = $movement->withBalanceAfter(150);
-        $this->assertEquals(150, $withBalance->getBalanceAfter());
-        $this->assertNull($movement->getBalanceAfter()); // Inmutable
+        $this->assertTrue($movement->hasSource());
+        $this->assertEquals('supplier', $movement->getSourceType());
+        $this->assertEquals('SUP-001', $movement->getSourceId());
+    }
+
+    public function test_reference_tracking(): void
+    {
+        $movement = new Movement(
+            id: 'mov-1',
+            type: MovementType::RECEIPT,
+            itemId: 'SKU-1',
+            locationId: 'loc-1',
+            quantity: 100,
+            referenceType: 'purchase_order',
+            referenceId: 'PO-001'
+        );
+
+        $this->assertTrue($movement->hasReference());
+        $this->assertEquals('purchase_order', $movement->getReferenceType());
+        $this->assertEquals('PO-001', $movement->getReferenceId());
     }
 
     public function test_to_array(): void
@@ -251,10 +263,10 @@ class MovementTest extends TestCase
         $movement = new Movement(
             id: 'mov-1',
             type: MovementType::RECEIPT,
-            sku: 'PROD-001',
+            itemId: 'PROD-001',
             locationId: 'loc-1',
             quantity: 100,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             reason: 'Test receipt'
         );
 
@@ -264,11 +276,12 @@ class MovementTest extends TestCase
         $this->assertEquals('receipt', $array['type']);
         $this->assertEquals('Recepción', $array['type_label']);
         $this->assertEquals('pending', $array['status']);
-        $this->assertEquals('PROD-001', $array['sku']);
+        $this->assertEquals('PROD-001', $array['item_id']);
         $this->assertEquals('loc-1', $array['location_id']);
         $this->assertEquals(100, $array['quantity']);
         $this->assertEquals(100, $array['effective_delta']);
-        $this->assertEquals('LOT-001', $array['lot_number']);
+        $this->assertEquals('LOT-001', $array['lot_id']);
         $this->assertEquals('Test receipt', $array['reason']);
     }
+
 }

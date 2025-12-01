@@ -84,12 +84,12 @@ class CapacityValidationResultTest extends TestCase
         $this->assertEquals('loc-1', $result->getContext()['location_id']);
     }
 
-    public function test_mixed_skus_not_allowed(): void
+    public function test_mixed_items_not_allowed(): void
     {
-        $result = CapacityValidationResult::mixedSkusNotAllowed('loc-1');
+        $result = CapacityValidationResult::mixedItemsNotAllowed('loc-1');
 
         $this->assertTrue($result->isInvalid());
-        $this->assertEquals('MIXED_SKUS_NOT_ALLOWED', $result->getErrorCode());
+        $this->assertEquals('MIXED_ITEMS_NOT_ALLOWED', $result->getErrorCode());
         $this->assertEquals('loc-1', $result->getContext()['location_id']);
     }
 

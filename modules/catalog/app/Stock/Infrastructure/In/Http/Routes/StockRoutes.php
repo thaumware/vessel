@@ -5,6 +5,7 @@ use App\Stock\Infrastructure\In\Http\Controllers\StockController;
 use App\Stock\Infrastructure\In\Http\Controllers\StockItemController;
 use App\Stock\Infrastructure\In\Http\Controllers\UnitController;
 use App\Stock\Infrastructure\In\Http\Controllers\BatchController;
+use App\Stock\Infrastructure\In\Http\Controllers\LotController;
 use App\Stock\Infrastructure\In\Http\MovementController;
 use App\Stock\Infrastructure\In\Http\CapacityController;
 
@@ -12,8 +13,8 @@ Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
 
     // === StockItems (existencia real vinculada al catálogo) ===
     Route::prefix('items')->group(function () {
-        // CRUD básico
-        Route::get('/list', [StockItemController::class, 'list']);
+        // CRUD
+        Route::get('/read', [StockItemController::class, 'list']);
         Route::get('/show/{id}', [StockItemController::class, 'show']);
         Route::post('/create', [StockItemController::class, 'create']);
         Route::put('/update/{id}', [StockItemController::class, 'update']);
@@ -69,6 +70,27 @@ Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
         Route::get('/list', [BatchController::class, 'list']);
         Route::get('/show/{id}', [BatchController::class, 'show']);
         Route::post('/create', [BatchController::class, 'create']);
+    });
+
+    // === Lots (lotes con trazabilidad) ===
+    Route::prefix('lots')->group(function () {
+        // CRUD
+        Route::get('/read', [LotController::class, 'list']);
+        Route::get('/show/{id}', [LotController::class, 'show']);
+        Route::post('/create', [LotController::class, 'create']);
+        Route::put('/update/{id}', [LotController::class, 'update']);
+        Route::delete('/delete/{id}', [LotController::class, 'delete']);
+        
+        // Búsqueda por número de lote
+        Route::get('/by-number/{lotNumber}', [LotController::class, 'findByLotNumber']);
+        
+        // Cambios de estado
+        Route::post('/quarantine/{id}', [LotController::class, 'quarantine']);
+        Route::post('/activate/{id}', [LotController::class, 'activate']);
+        Route::post('/deplete/{id}', [LotController::class, 'deplete']);
+        
+        // Alertas de vencimiento
+        Route::get('/expiring-soon', [LotController::class, 'expiringSoon']);
     });
 
     // === Current stock (vista agregada por ubicación) ===

@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Admin\Infrastructure\In\Http\Controllers;
+declare(strict_types=1);
 
-use App\Admin\Infrastructure\Middleware\AdminAuthMiddleware;
+namespace App\Auth\Infrastructure\In\Http\Controllers;
+
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Artisan;
@@ -25,50 +25,8 @@ class AdminPanelController
         'taxonomy_',
         'pricing_',
         'portal',
+        'sessions',
     ];
-
-    /**
-     * Mostrar formulario de login
-     */
-    public function showLogin(): View
-    {
-        return view('admin::login');
-    }
-
-    /**
-     * Procesar autenticacion
-     */
-    public function authenticate(Request $request): RedirectResponse
-    {
-        $username = $request->input('username', '');
-        $password = $request->input('password', '');
-
-        if (AdminAuthMiddleware::verifyCredentials($username, $password)) {
-            $request->session()->put('admin_authenticated', true);
-            $request->session()->put('admin_username', $username);
-            
-            // Si "remember" esta marcado, extender la sesion
-            if ($request->boolean('remember')) {
-                $request->session()->put('admin_remember', true);
-            }
-
-            return redirect()->route('admin.dashboard');
-        }
-
-        return redirect()->route('admin.login')
-            ->with('error', 'Credenciales invalidas');
-    }
-
-    /**
-     * Cerrar sesion
-     */
-    public function logout(Request $request): RedirectResponse
-    {
-        $request->session()->forget(['admin_authenticated', 'admin_username', 'admin_remember']);
-        
-        return redirect()->route('admin.login')
-            ->with('success', 'Sesion cerrada correctamente');
-    }
 
     /**
      * Panel principal de administración
@@ -86,7 +44,7 @@ class AdminPanelController
             ];
         }, $database['tables']);
         
-        return view('admin::dashboard', [
+        return view('auth::dashboard', [
             'database' => $database,
             'tables' => $tables,
             'seeders' => $seeders,
@@ -329,55 +287,6 @@ class AdminPanelController
     }
 
     /**
-     * Obtener estado de modulos
-     */
-    private function getModulesStatus(): array
-    {
-        $modules = [
-            'Items' => [
-                'path' => 'app/Items',
-                'provider' => 'App\Items\Infrastructure\ItemsServiceProvider',
-                'description' => 'Catalogo de productos',
-            ],
-            'Locations' => [
-                'path' => 'app/Locations',
-                'provider' => 'App\Locations\Infrastructure\LocationsServiceProvider',
-                'description' => 'Ubicaciones y direcciones',
-            ],
-            'Stock' => [
-                'path' => 'app/Stock',
-                'provider' => 'App\Stock\Infrastructure\StockServiceProvider',
-                'description' => 'Gestion de inventario',
-            ],
-            'Uom' => [
-                'path' => 'app/Uom',
-                'provider' => 'App\Uom\Infrastructure\UomServiceProvider',
-                'description' => 'Unidades de medida',
-            ],
-            'Taxonomy' => [
-                'path' => 'app/Taxonomy',
-                'provider' => 'App\Taxonomy\Infrastructure\TaxonomyServiceProvider',
-                'description' => 'Categorias y taxonomias',
-            ],
-            'Pricing' => [
-                'path' => 'app/Pricing',
-                'provider' => 'App\Pricing\Infrastructure\PricingServiceProvider',
-                'description' => 'Precios y tarifas',
-            ],
-        ];
-        
-        foreach ($modules as $name => &$info) {
-            $info['exists'] = is_dir(base_path($info['path']));
-            $info['has_tests'] = is_dir(base_path($info['path'] . '/Tests'));
-            $info['has_domain'] = is_dir(base_path($info['path'] . '/Domain'));
-            $info['has_application'] = is_dir(base_path($info['path'] . '/Application'));
-            $info['has_infrastructure'] = is_dir(base_path($info['path'] . '/Infrastructure'));
-        }
-        
-        return $modules;
-    }
-
-    /**
      * Obtener informacion de base de datos
      */
     private function getDatabaseInfo(): array
@@ -451,7 +360,7 @@ class AdminPanelController
             ['name' => 'Locations', 'label' => 'Locations Module'],
             ['name' => 'Uom', 'label' => 'UoM Module'],
             ['name' => 'Taxonomy', 'label' => 'Taxonomy Module'],
-            ['name' => 'Admin', 'label' => 'Admin Module'],
+            ['name' => 'Auth', 'label' => 'Auth Module'],
             ['name' => 'Feature', 'label' => 'Feature Tests'],
             ['name' => 'Integration', 'label' => 'Integration Tests'],
         ];

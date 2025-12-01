@@ -17,10 +17,9 @@ use App\Stock\Domain\ValueObjects\ValidationResult;
  * Servicio de dominio para procesar movimientos de stock.
  * 
  * Coordina la lógica de negocio de movimientos:
- * - Valida pre-condiciones
+ * - Valida pre-condiciones (configurable)
  * - Ejecuta el movimiento
  * - Actualiza stock items y lotes
- * - Registra balance after
  */
 class StockMovementService
 {
@@ -28,7 +27,8 @@ class StockMovementService
         private MovementRepositoryInterface $movementRepository,
         private StockItemRepositoryInterface $stockItemRepository,
         private ?LotRepositoryInterface $lotRepository = null,
-        private ?StockCapacityService $capacityService = null
+        private ?StockCapacityService $capacityService = null,
+        private bool $allowNegativeStock = false
     ) {
     }
 
@@ -49,9 +49,6 @@ class StockMovementService
 
         // Procesar según tipo de movimiento
         $stockItem = $this->applyMovement($stockItem, $movement);
-
-        // Actualizar balance en movimiento
-        $movement = $movement->withBalanceAfter($stockItem->getQuantity());
 
         // Marcar como completado
         $movement = $movement->markAsCompleted();
@@ -85,9 +82,9 @@ class StockMovementService
             $result = $result->merge($this->validateOutbound($movement));
         }
 
-        // Verificar producto no vencido
-        if ($movement->isExpired()) {
-            $result = $result->addError("El lote está vencido y no puede procesarse");
+        // Verificar lote no vencido (si tiene lote asociado)
+        if ($movement->hasLot() && $this->lotRepository !== null) {
+            $result = $result->merge($this->validateLotExpiration($movement));
         }
 
         // Validar capacidad para ingresos
@@ -111,11 +108,16 @@ class StockMovementService
 
     private function validateOutbound(Movement $movement): ValidationResult
     {
+        // Si permite stock negativo, no validar
+        if ($this->allowNegativeStock) {
+            return ValidationResult::valid();
+        }
+
         $stockItem = $this->findStockItem($movement);
 
         if ($stockItem === null) {
             return ValidationResult::withError(
-                "No hay stock de {$movement->getSku()} en la ubicación"
+                "No hay stock de {$movement->getItemId()} en la ubicación"
             );
         }
 
@@ -137,7 +139,7 @@ class StockMovementService
         $capacityResult = $this->capacityService->canAcceptStock(
             locationId: $movement->getLocationId(),
             quantity: $movement->getQuantity(),
-            sku: $movement->getSku()
+            itemId: $movement->getItemId()
         );
 
         if ($capacityResult->isInvalid()) {
@@ -151,6 +153,11 @@ class StockMovementService
 
     private function validateReservation(Movement $movement): ValidationResult
     {
+        // Si permite stock negativo, no validar
+        if ($this->allowNegativeStock) {
+            return ValidationResult::valid();
+        }
+
         $stockItem = $this->findStockItem($movement);
 
         if ($stockItem === null) {
@@ -168,6 +175,11 @@ class StockMovementService
 
     private function validateRelease(Movement $movement): ValidationResult
     {
+        // Si permite stock negativo, no validar
+        if ($this->allowNegativeStock) {
+            return ValidationResult::valid();
+        }
+
         $stockItem = $this->findStockItem($movement);
 
         if ($stockItem === null) {
@@ -183,12 +195,32 @@ class StockMovementService
         return ValidationResult::valid();
     }
 
+    private function validateLotExpiration(Movement $movement): ValidationResult
+    {
+        if ($this->lotRepository === null || !$movement->hasLot()) {
+            return ValidationResult::valid();
+        }
+
+        $lot = $this->lotRepository->findByLotNumber($movement->getLotId());
+        
+        if ($lot === null) {
+            // Si el lote no existe aún, no hay validación de expiración
+            return ValidationResult::valid();
+        }
+
+        if ($lot->isExpired()) {
+            return ValidationResult::withError("El lote está vencido y no puede procesarse");
+        }
+
+        return ValidationResult::valid();
+    }
+
     // === Helpers ===
 
     private function findStockItem(Movement $movement): ?StockItem
     {
         return $this->stockItemRepository->findBySkuAndLocation(
-            $movement->getSku(),
+            $movement->getItemId(),
             $movement->getLocationId()
         );
     }
@@ -218,21 +250,21 @@ class StockMovementService
         // Solo crear para movimientos de entrada
         if (!$movement->isInbound()) {
             throw new \DomainException(
-                "No existe stock de {$movement->getSku()} en la ubicación"
+                "No existe stock de {$movement->getItemId()} en la ubicación"
             );
         }
 
         return new StockItem(
             id: $this->generateId(),
-            sku: $movement->getSku(),
+            sku: $movement->getItemId(),
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $movement->getLocationId(),
             locationType: 'default',
             quantity: 0,
             reservedQuantity: 0,
-            lotNumber: $movement->getLotNumber(),
-            expirationDate: $movement->getExpirationDate(),
+            lotNumber: $movement->getLotId(),
+            expirationDate: null,
             serialNumber: null,
             workspaceId: $movement->getWorkspaceId()
         );
@@ -244,14 +276,13 @@ class StockMovementService
             return;
         }
 
-        $lot = $this->lotRepository->findByLotNumber($movement->getLotNumber());
+        $lot = $this->lotRepository->findByLotNumber($movement->getLotId());
 
         if ($lot === null) {
-            $lot = Lot::create(
+            $lot = new Lot(
                 id: $this->generateId(),
-                lotNumber: $movement->getLotNumber(),
-                sku: $movement->getSku(),
-                expirationDate: $movement->getExpirationDate(),
+                itemId: $movement->getItemId(),
+                identifiers: ['lot_number' => $movement->getLotId()],
                 workspaceId: $movement->getWorkspaceId()
             );
             $this->lotRepository->save($lot);

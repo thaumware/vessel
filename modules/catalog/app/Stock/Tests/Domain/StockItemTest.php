@@ -86,7 +86,7 @@ class StockItemTest extends StockTestCase
         $this->assertEquals(0, $item->getReservedQuantity());
     }
 
-    public function test_reserve_throws_when_insufficient_stock(): void
+    public function test_reserve_allows_negative_available_stock(): void
     {
         $item = new StockItem(
             id: $this->generateUuid(),
@@ -98,10 +98,11 @@ class StockItemTest extends StockTestCase
             reservedQuantity: 30,
         );
 
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('Cannot reserve 25 units. Only 20 available.');
+        // Permite reservar más de lo disponible (negativo)
+        $reserved = $item->reserve(25);
         
-        $item->reserve(25);
+        $this->assertEquals(55, $reserved->getReservedQuantity());
+        $this->assertEquals(-5, $reserved->getAvailableQuantity()); // Stock negativo disponible
     }
 
     public function test_release_increases_available_quantity(): void
@@ -122,7 +123,7 @@ class StockItemTest extends StockTestCase
         $this->assertEquals(70, $released->getAvailableQuantity());
     }
 
-    public function test_release_throws_when_releasing_more_than_reserved(): void
+    public function test_release_allows_negative_reserved(): void
     {
         $item = new StockItem(
             id: $this->generateUuid(),
@@ -134,10 +135,11 @@ class StockItemTest extends StockTestCase
             reservedQuantity: 10,
         );
 
-        $this->expectException(DomainException::class);
-        $this->expectExceptionMessage('Cannot release 15 units. Only 10 reserved.');
+        // Permite liberar más de lo reservado (negativo)
+        $released = $item->release(15);
         
-        $item->release(15);
+        $this->assertEquals(-5, $released->getReservedQuantity()); // Reserva negativa
+        $this->assertEquals(105, $released->getAvailableQuantity());
     }
 
     public function test_adjust_quantity_adds_delta(): void

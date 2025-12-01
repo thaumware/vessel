@@ -3,6 +3,7 @@
 namespace App\Stock\Domain\Interfaces;
 
 use App\Stock\Domain\Entities\Movement;
+use App\Stock\Domain\ValueObjects\MovementSearchCriteria;
 use App\Stock\Domain\ValueObjects\MovementStatus;
 use App\Stock\Domain\ValueObjects\MovementType;
 
@@ -11,6 +12,21 @@ interface MovementRepositoryInterface
     public function save(Movement $movement): Movement;
 
     public function findById(string $id): ?Movement;
+
+    /**
+     * Búsqueda con criterios múltiples (una sola query).
+     * Este es el método preferido para búsquedas complejas.
+     * 
+     * @return Movement[]
+     */
+    public function search(MovementSearchCriteria $criteria): array;
+
+    /**
+     * Cuenta resultados para los criterios dados.
+     */
+    public function count(MovementSearchCriteria $criteria): int;
+
+    // === Métodos legacy (usar search() para nuevas implementaciones) ===
 
     public function findByMovementId(string $movementId): ?Movement;
 

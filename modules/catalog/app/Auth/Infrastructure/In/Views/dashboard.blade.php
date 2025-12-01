@@ -41,25 +41,11 @@
                     </div>
                     <div class="flex items-center gap-3">
                         <span class="px-3 py-1 bg-emerald-500/10 text-emerald-400 text-xs font-medium rounded-full border border-emerald-500/20">
-                            v1.0.0
+                            {{ app()->environment() }}
                         </span>
                         <span class="px-3 py-1 bg-blue-500/10 text-blue-400 text-xs font-medium rounded-full border border-blue-500/20">
                             Laravel {{ app()->version() }}
                         </span>
-                        <div class="h-6 w-px bg-gray-700"></div>
-                        <span class="text-sm text-gray-400">
-                            {{ session('admin_username', 'admin') }}
-                        </span>
-                        <form method="POST" action="{{ route('admin.logout') }}" class="inline">
-                            @csrf
-                            <button type="submit" 
-                                    class="px-3 py-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 text-xs font-medium rounded-lg border border-red-500/20 transition-colors flex items-center gap-1.5">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
-                                </svg>
-                                Salir
-                            </button>
-                        </form>
                     </div>
                 </div>
             </div>

@@ -1,13 +1,13 @@
 <?php
 
-namespace App\Admin\Tests;
+namespace App\Auth\Tests;
 
 use PHPUnit\Framework\TestCase;
 
 /**
- * Base TestCase for Admin module tests.
+ * Base TestCase for Auth module tests.
  */
-abstract class AdminTestCase extends TestCase
+abstract class AuthTestCase extends TestCase
 {
     protected function generateUuid(): string
     {

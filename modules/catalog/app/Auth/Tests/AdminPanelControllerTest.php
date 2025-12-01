@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Admin\Tests;
+namespace App\Auth\Tests;
 
-use App\Admin\Infrastructure\In\Http\Controllers\AdminPanelController;
+use App\Auth\Infrastructure\In\Http\Controllers\AdminPanelController;
 
-class AdminPanelControllerTest extends AdminTestCase
+class AdminPanelControllerTest extends AuthTestCase
 {
     private AdminPanelController $controller;
 

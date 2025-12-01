@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace App\Stock\Tests\Unit\Domain\Entities;
 
 use App\Stock\Domain\Entities\Lot;
+use App\Stock\Domain\ValueObjects\LotStatus;
 use DateTimeImmutable;
 use PHPUnit\Framework\TestCase;
 
@@ -12,27 +13,28 @@ class LotTest extends TestCase
 {
     public function test_create_lot(): void
     {
-        $lot = Lot::create(
+        $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-2024-001',
-            sku: 'PROD-001',
-            expirationDate: new DateTimeImmutable('+60 days')
+            itemId: 'PROD-001',
+            status: LotStatus::ACTIVE,
+            identifiers: ['lot_number' => 'LOT-2024-001'],
+            attributes: ['expiration_date' => (new DateTimeImmutable('+60 days'))->format('Y-m-d')]
         );
 
         $this->assertEquals('lot-1', $lot->getId());
+        $this->assertEquals('PROD-001', $lot->getItemId());
         $this->assertEquals('LOT-2024-001', $lot->getLotNumber());
-        $this->assertEquals('PROD-001', $lot->getSku());
         $this->assertTrue($lot->hasExpiration());
         $this->assertFalse($lot->isExpired());
-        $this->assertEquals('active', $lot->getStatus());
+        $this->assertEquals(LotStatus::ACTIVE, $lot->getStatus());
     }
 
     public function test_lot_without_expiration(): void
     {
-        $lot = Lot::create(
+        $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-2024-001',
-            sku: 'PROD-001'
+            itemId: 'PROD-001',
+            identifiers: ['lot_number' => 'LOT-2024-001']
         );
 
         $this->assertFalse($lot->hasExpiration());
@@ -44,9 +46,9 @@ class LotTest extends TestCase
     {
         $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-2024-001',
-            sku: 'PROD-001',
-            expirationDate: new DateTimeImmutable('-5 days')
+            itemId: 'PROD-001',
+            identifiers: ['lot_number' => 'LOT-2024-001'],
+            attributes: ['expiration_date' => (new DateTimeImmutable('-5 days'))->format('Y-m-d')]
         );
 
         $this->assertTrue($lot->isExpired());
@@ -58,9 +60,9 @@ class LotTest extends TestCase
     {
         $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-2024-001',
-            sku: 'PROD-001',
-            expirationDate: new DateTimeImmutable('+15 days')
+            itemId: 'PROD-001',
+            identifiers: ['lot_number' => 'LOT-2024-001'],
+            attributes: ['expiration_date' => (new DateTimeImmutable('+15 days'))->format('Y-m-d')]
         );
 
         $this->assertTrue($lot->isExpiringSoon(30));
@@ -72,9 +74,9 @@ class LotTest extends TestCase
     {
         $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-2024-001',
-            sku: 'PROD-001',
-            expirationDate: new DateTimeImmutable('+10 days')
+            itemId: 'PROD-001',
+            identifiers: ['lot_number' => 'LOT-2024-001'],
+            attributes: ['expiration_date' => (new DateTimeImmutable('+10 days'))->format('Y-m-d')]
         );
 
         $days = $lot->daysUntilExpiration();
@@ -84,7 +86,11 @@ class LotTest extends TestCase
 
     public function test_status_active(): void
     {
-        $lot = Lot::create('lot-1', 'LOT-001', 'SKU-001');
+        $lot = new Lot(
+            id: 'lot-1',
+            itemId: 'SKU-001',
+            identifiers: ['lot_number' => 'LOT-001']
+        );
 
         $this->assertTrue($lot->isActive());
         $this->assertFalse($lot->isInQuarantine());
@@ -93,7 +99,11 @@ class LotTest extends TestCase
 
     public function test_status_quarantine(): void
     {
-        $lot = Lot::create('lot-1', 'LOT-001', 'SKU-001');
+        $lot = new Lot(
+            id: 'lot-1',
+            itemId: 'SKU-001',
+            identifiers: ['lot_number' => 'LOT-001']
+        );
         $quarantined = $lot->quarantine();
 
         $this->assertTrue($lot->isActive()); // Inmutable
@@ -103,13 +113,17 @@ class LotTest extends TestCase
 
     public function test_status_transitions(): void
     {
-        $lot = Lot::create('lot-1', 'LOT-001', 'SKU-001');
+        $lot = new Lot(
+            id: 'lot-1',
+            itemId: 'SKU-001',
+            identifiers: ['lot_number' => 'LOT-001']
+        );
 
         $expired = $lot->markAsExpired();
-        $this->assertEquals('expired', $expired->getStatus());
+        $this->assertEquals(LotStatus::EXPIRED, $expired->getStatus());
 
         $depleted = $lot->markAsDepleted();
-        $this->assertEquals('depleted', $depleted->getStatus());
+        $this->assertEquals(LotStatus::DEPLETED, $depleted->getStatus());
 
         $reactivated = $expired->activate();
         $this->assertTrue($reactivated->isActive());
@@ -119,9 +133,9 @@ class LotTest extends TestCase
     {
         $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-001',
-            sku: 'SKU-001',
-            receptionDate: new DateTimeImmutable('-10 days')
+            itemId: 'SKU-001',
+            identifiers: ['lot_number' => 'LOT-001'],
+            attributes: ['reception_date' => (new DateTimeImmutable('-10 days'))->format('Y-m-d')]
         );
 
         $age = $lot->getAgeInDays();
@@ -131,20 +145,20 @@ class LotTest extends TestCase
 
     public function test_to_array(): void
     {
-        $lot = Lot::create(
+        $lot = new Lot(
             id: 'lot-1',
-            lotNumber: 'LOT-2024-001',
-            sku: 'PROD-001',
-            expirationDate: new DateTimeImmutable('+30 days'),
-            supplierId: 'sup-1'
+            itemId: 'PROD-001',
+            identifiers: ['lot_number' => 'LOT-2024-001'],
+            attributes: ['expiration_date' => (new DateTimeImmutable('+30 days'))->format('Y-m-d')],
+            sourceType: 'supplier',
+            sourceId: 'sup-1'
         );
 
         $array = $lot->toArray();
 
         $this->assertEquals('lot-1', $array['id']);
         $this->assertEquals('LOT-2024-001', $array['lot_number']);
-        $this->assertEquals('PROD-001', $array['sku']);
-        $this->assertEquals('sup-1', $array['supplier_id']);
+        $this->assertEquals('PROD-001', $array['item_id']);
         $this->assertEquals('active', $array['status']);
         $this->assertFalse($array['is_expired']);
         $this->assertIsInt($array['days_until_expiration']);

@@ -33,22 +33,24 @@ class MovementFactoryTest extends TestCase
         $this->idGenerator->setNextId('receipt-001');
 
         $movement = $this->factory->createReceipt(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 100,
-            lotNumber: 'LOT-001',
-            expirationDate: new DateTimeImmutable('+30 days'),
+            lotId: 'LOT-001',
+            sourceType: 'supplier',
+            sourceId: 'SUP-001',
             referenceId: 'PO-001',
             reason: 'Initial stock'
         );
 
         $this->assertEquals('receipt-001', $movement->getId());
         $this->assertEquals(MovementType::RECEIPT, $movement->getType());
-        $this->assertEquals('SKU-001', $movement->getSku());
+        $this->assertEquals('ITEM-001', $movement->getItemId());
         $this->assertEquals('loc-1', $movement->getLocationId());
         $this->assertEquals(100, $movement->getQuantity());
-        $this->assertEquals('LOT-001', $movement->getLotNumber());
-        $this->assertNotNull($movement->getExpirationDate());
+        $this->assertEquals('LOT-001', $movement->getLotId());
+        $this->assertEquals('supplier', $movement->getSourceType());
+        $this->assertEquals('SUP-001', $movement->getSourceId());
         $this->assertEquals('purchase_order', $movement->getReferenceType());
         $this->assertEquals('PO-001', $movement->getReferenceId());
         $this->assertEquals('Initial stock', $movement->getReason());
@@ -60,10 +62,10 @@ class MovementFactoryTest extends TestCase
         $this->idGenerator->setNextId('ship-001');
 
         $movement = $this->factory->createShipment(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 50,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             referenceId: 'SO-001'
         );
 
@@ -80,7 +82,7 @@ class MovementFactoryTest extends TestCase
         $this->idGenerator->setNextId('res-001');
 
         $movement = $this->factory->createReservation(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 10,
             referenceId: 'ORDER-001'
@@ -96,7 +98,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_release(): void
     {
         $movement = $this->factory->createRelease(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 10,
             referenceId: 'ORDER-001'
@@ -110,7 +112,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_adjustment_positive(): void
     {
         $movement = $this->factory->createAdjustment(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             delta: 25,
             reason: 'Found extra stock'
@@ -126,7 +128,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_adjustment_negative(): void
     {
         $movement = $this->factory->createAdjustment(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             delta: -15,
             reason: 'Shrinkage detected'
@@ -141,11 +143,11 @@ class MovementFactoryTest extends TestCase
     public function test_create_transfer_out(): void
     {
         $movement = $this->factory->createTransferOut(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             sourceLocationId: 'warehouse-1',
             destinationLocationId: 'store-1',
             quantity: 30,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             transferId: 'TRF-001'
         );
 
@@ -161,7 +163,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_transfer_in(): void
     {
         $movement = $this->factory->createTransferIn(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             sourceLocationId: 'warehouse-1',
             destinationLocationId: 'store-1',
             quantity: 30,
@@ -177,10 +179,10 @@ class MovementFactoryTest extends TestCase
     public function test_create_count(): void
     {
         $movement = $this->factory->createCount(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             countedQuantity: 100,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             reason: 'Monthly inventory'
         );
 
@@ -194,27 +196,27 @@ class MovementFactoryTest extends TestCase
     public function test_create_expiration(): void
     {
         $movement = $this->factory->createExpiration(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 50,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             reason: 'Expired milk'
         );
 
         $this->assertEquals(MovementType::EXPIRATION, $movement->getType());
         $this->assertEquals(-50, $movement->getEffectiveDelta());
         $this->assertEquals('expiration', $movement->getReferenceType());
-        $this->assertEquals('LOT-001', $movement->getLotNumber());
+        $this->assertEquals('LOT-001', $movement->getLotId());
         $this->assertEquals('Expired milk', $movement->getReason());
     }
 
     public function test_create_expiration_has_default_reason(): void
     {
         $movement = $this->factory->createExpiration(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 50,
-            lotNumber: 'LOT-001'
+            lotId: 'LOT-001'
         );
 
         $this->assertEquals('Stock vencido', $movement->getReason());
@@ -223,7 +225,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_installation(): void
     {
         $movement = $this->factory->createInstallation(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 1,
             workOrderId: 'WO-001',
@@ -240,7 +242,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_installation_has_default_reason(): void
     {
         $movement = $this->factory->createInstallation(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 1
         );
@@ -251,7 +253,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_customer_return(): void
     {
         $movement = $this->factory->createCustomerReturn(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 1,
             returnOrderId: 'RMA-001',
@@ -268,7 +270,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_customer_return_has_default_reason(): void
     {
         $movement = $this->factory->createCustomerReturn(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 1
         );
@@ -279,7 +281,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_damage(): void
     {
         $movement = $this->factory->createDamage(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 5,
             reason: 'Water damage'
@@ -294,7 +296,7 @@ class MovementFactoryTest extends TestCase
     public function test_create_damage_has_default_reason(): void
     {
         $movement = $this->factory->createDamage(
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 5
         );
@@ -306,11 +308,12 @@ class MovementFactoryTest extends TestCase
     {
         $movement = $this->factory->create(
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: 'loc-1',
             quantity: 100,
-            lotNumber: 'LOT-001',
-            expirationDate: new DateTimeImmutable('+30 days'),
+            lotId: 'LOT-001',
+            sourceType: 'production',
+            sourceId: 'BATCH-001',
             referenceType: 'custom_type',
             referenceId: 'REF-001',
             reason: 'Custom movement'
@@ -319,6 +322,8 @@ class MovementFactoryTest extends TestCase
         $this->assertEquals(MovementType::RECEIPT, $movement->getType());
         $this->assertEquals('custom_type', $movement->getReferenceType());
         $this->assertEquals('REF-001', $movement->getReferenceId());
+        $this->assertEquals('production', $movement->getSourceType());
+        $this->assertEquals('BATCH-001', $movement->getSourceId());
         $this->assertEquals('Custom movement', $movement->getReason());
     }
 
@@ -326,9 +331,9 @@ class MovementFactoryTest extends TestCase
     {
         $this->idGenerator->setPrefix('mov-');
 
-        $m1 = $this->factory->createReceipt('SKU-1', 'loc-1', 10);
-        $m2 = $this->factory->createReceipt('SKU-2', 'loc-1', 20);
-        $m3 = $this->factory->createReceipt('SKU-3', 'loc-1', 30);
+        $m1 = $this->factory->createReceipt('ITEM-1', 'loc-1', 10);
+        $m2 = $this->factory->createReceipt('ITEM-2', 'loc-1', 20);
+        $m3 = $this->factory->createReceipt('ITEM-3', 'loc-1', 30);
 
         $this->assertEquals('mov-1', $m1->getId());
         $this->assertEquals('mov-2', $m2->getId());

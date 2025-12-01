@@ -11,14 +11,19 @@ use App\Stock\Domain\Interfaces\UnitRepositoryInterface;
 use App\Stock\Domain\Interfaces\CatalogGatewayInterface;
 use App\Stock\Domain\Interfaces\LocationStockSettingsRepositoryInterface;
 use App\Stock\Domain\Interfaces\LocationGatewayInterface;
+use App\Stock\Domain\Interfaces\LotRepositoryInterface;
 use App\Stock\Domain\Services\StockCapacityService;
 use App\Stock\Infrastructure\Out\Gateways\PortalCatalogGateway;
 use App\Stock\Infrastructure\Adapters\LocationsModuleGateway;
+use App\Shared\Domain\Interfaces\IdGeneratorInterface;
+use App\Shared\Infrastructure\Services\UuidGenerator;
 
 class StockServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        // === Shared Bindings ===
+        $this->app->bind(IdGeneratorInterface::class, UuidGenerator::class);
         // === Gateway Bindings (Infrastructure implementations) ===
         $this->app->singleton(
             CatalogGatewayInterface::class,
@@ -47,9 +52,10 @@ class StockServiceProvider extends ServiceProvider
             \App\Stock\Infrastructure\Out\Models\Eloquent\StockRepository::class
         );
 
+        // Movement Repository: usa InMemory por ahora (Eloquent pendiente)
         $this->app->bind(
             MovementRepositoryInterface::class,
-            \App\Stock\Infrastructure\Out\Models\Eloquent\MovementRepository::class
+            \App\Stock\Infrastructure\Out\InMemory\InMemoryMovementRepository::class
         );
 
         $this->app->bind(
@@ -61,6 +67,12 @@ class StockServiceProvider extends ServiceProvider
         $this->app->bind(
             LocationStockSettingsRepositoryInterface::class,
             \App\Stock\Infrastructure\Out\Models\Eloquent\LocationStockSettingsRepository::class
+        );
+
+        // Lot Repository (para gestión de lotes con trazabilidad)
+        $this->app->bind(
+            LotRepositoryInterface::class,
+            \App\Stock\Infrastructure\Out\InMemory\InMemoryLotRepository::class
         );
 
         // === Domain Services ===

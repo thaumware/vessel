@@ -24,7 +24,7 @@ class InMemoryMovementRepositoryTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -48,7 +48,7 @@ class InMemoryMovementRepositoryTest extends StockTestCase
         $movement = new Movement(
             id: $id,
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -237,12 +237,11 @@ class InMemoryMovementRepositoryTest extends StockTestCase
         return new Movement(
             id: $overrides['id'] ?? $this->generateUuid(),
             type: $overrides['type'] ?? MovementType::RECEIPT,
-            sku: $overrides['sku'] ?? 'SKU-' . mt_rand(1000, 9999),
+            itemId: $overrides['itemId'] ?? $overrides['sku'] ?? 'SKU-' . mt_rand(1000, 9999),
             locationId: $overrides['locationId'] ?? $this->generateUuid(),
             quantity: $overrides['quantity'] ?? 100,
             status: $overrides['status'] ?? MovementStatus::PENDING,
-            lotNumber: $overrides['lotNumber'] ?? null,
-            expirationDate: $overrides['expirationDate'] ?? null,
+            lotId: $overrides['lotId'] ?? $overrides['lotNumber'] ?? null,
             sourceLocationId: $overrides['sourceLocationId'] ?? null,
             destinationLocationId: $overrides['destinationLocationId'] ?? null,
             referenceType: $overrides['referenceType'] ?? null,
@@ -256,7 +255,7 @@ class InMemoryMovementRepositoryTest extends StockTestCase
         return new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-' . mt_rand(1000, 9999),
+            itemId: 'SKU-' . mt_rand(1000, 9999),
             locationId: $this->generateUuid(),
             quantity: 100,
             createdAt: $createdAt

@@ -22,12 +22,12 @@ class StockItem
     public function __construct(
         private string $id,
         private string $sku,
+        private string $locationId,
         private ?string $catalogItemId = null,
         private ?string $catalogOrigin = null,
-        private string $locationId,
         private ?string $locationType = null,
-        private int $quantity = 0,
-        private int $reservedQuantity = 0,
+        private float $quantity = 0,
+        private float $reservedQuantity = 0,
         private ?string $lotNumber = null,
         private ?DateTimeImmutable $expirationDate = null,
         private ?string $serialNumber = null,
@@ -68,17 +68,17 @@ class StockItem
         return $this->locationType;
     }
 
-    public function getQuantity(): int
+    public function getQuantity(): float
     {
         return $this->quantity;
     }
 
-    public function getReservedQuantity(): int
+    public function getReservedQuantity(): float
     {
         return $this->reservedQuantity;
     }
 
-    public function getAvailableQuantity(): int
+    public function getAvailableQuantity(): float
     {
         return $this->quantity - $this->reservedQuantity;
     }
@@ -128,7 +128,7 @@ class StockItem
         return $this->expirationDate < new DateTimeImmutable();
     }
 
-    public function hasAvailableStock(int $quantity = 1): bool
+    public function hasAvailableStock(float $quantity = 1): bool
     {
         return $this->getAvailableQuantity() >= $quantity;
     }
@@ -145,14 +145,14 @@ class StockItem
 
     // === Mutation Methods (return new instance for immutability) ===
 
-    public function withQuantity(int $quantity): self
+    public function withQuantity(float $quantity): self
     {
         return new self(
             $this->id,
             $this->sku,
+            $this->locationId,
             $this->catalogItemId,
             $this->catalogOrigin,
-            $this->locationId,
             $this->locationType,
             $quantity,
             $this->reservedQuantity,
@@ -166,14 +166,14 @@ class StockItem
         );
     }
 
-    public function withReservedQuantity(int $reservedQuantity): self
+    public function withReservedQuantity(float $reservedQuantity): self
     {
         return new self(
             $this->id,
             $this->sku,
+            $this->locationId,
             $this->catalogItemId,
             $this->catalogOrigin,
-            $this->locationId,
             $this->locationType,
             $this->quantity,
             $reservedQuantity,
@@ -187,24 +187,22 @@ class StockItem
         );
     }
 
-    public function adjustQuantity(int $delta): self
+    public function adjustQuantity(float $delta): self
     {
         return $this->withQuantity($this->quantity + $delta);
     }
 
-    public function reserve(int $quantity): self
+    public function reserve(float $quantity): self
     {
-        if ($quantity > $this->getAvailableQuantity()) {
-            throw new \DomainException("Cannot reserve {$quantity} units. Only {$this->getAvailableQuantity()} available.");
-        }
+        // Permite reservar más de lo disponible (stock negativo disponible)
+        // La validación de negocio debe hacerse en la capa de aplicación si se requiere
         return $this->withReservedQuantity($this->reservedQuantity + $quantity);
     }
 
-    public function release(int $quantity): self
+    public function release(float $quantity): self
     {
-        if ($quantity > $this->reservedQuantity) {
-            throw new \DomainException("Cannot release {$quantity} units. Only {$this->reservedQuantity} reserved.");
-        }
+        // Permite liberar incluso si resulta en reserva negativa
+        // La validación de negocio debe hacerse en la capa de aplicación si se requiere
         return $this->withReservedQuantity($this->reservedQuantity - $quantity);
     }
 

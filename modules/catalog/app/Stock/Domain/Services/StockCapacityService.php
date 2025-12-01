@@ -34,14 +34,14 @@ class StockCapacityService
      * Valida si una ubicacion puede aceptar stock adicional.
      *
      * @param string $locationId ID de la ubicacion
-     * @param int $quantity Cantidad a agregar
-     * @param string|null $sku SKU del item (para validar mezcla de SKUs)
+     * @param float $quantity Cantidad a agregar
+     * @param string|null $itemId ID del item (para validar mezcla de items)
      * @param string|null $itemType Tipo de item (para validar tipos permitidos)
      */
     public function canAcceptStock(
         string $locationId,
-        int $quantity,
-        ?string $sku = null,
+        float $quantity,
+        ?string $itemId = null,
         ?string $itemType = null
     ): CapacityValidationResult {
         $settings = $this->settingsRepository->findByLocationId($locationId);
@@ -72,9 +72,9 @@ class StockCapacityService
             }
         }
 
-        // Validar mezcla de SKUs
-        if (!$settings->allowsMixedSkus() && $sku !== null) {
-            $result = $this->validateMixedSkus($locationId, $sku);
+        // Validar mezcla de items
+        if (!$settings->allowsMixedSkus() && $itemId !== null) {
+            $result = $this->validateMixedItems($locationId, $itemId);
             if ($result->isInvalid()) {
                 return $result;
             }
@@ -86,10 +86,10 @@ class StockCapacityService
     /**
      * Obtiene el total de stock para una ubicacion y todos sus descendientes.
      */
-    public function getTotalStockForLocationTree(string $locationId): int
+    public function getTotalStockForLocationTree(string $locationId): float
     {
         $locationIds = $this->getLocationTreeIds($locationId);
-        $total = 0;
+        $total = 0.0;
 
         foreach ($locationIds as $id) {
             $stocks = $this->stockRepository->getByLocation($id);
@@ -102,31 +102,31 @@ class StockCapacityService
     }
 
     /**
-     * Obtiene los SKUs unicos en una ubicacion.
+     * Obtiene los IDs de items unicos en una ubicacion.
      *
      * @return string[]
      */
-    public function getUniqueSkus(string $locationId): array
+    public function getUniqueItemIds(string $locationId): array
     {
         $stocks = $this->stockRepository->getByLocation($locationId);
-        $skus = [];
+        $itemIds = [];
 
         foreach ($stocks as $stock) {
-            $sku = $stock->sku();
-            if (!in_array($sku, $skus, true)) {
-                $skus[] = $sku;
+            $itemId = $stock->sku(); // TODO: Cambiar a itemId cuando Stock entity se actualice
+            if (!in_array($itemId, $itemIds, true)) {
+                $itemIds[] = $itemId;
             }
         }
 
-        return $skus;
+        return $itemIds;
     }
 
     /**
      * Obtiene el espacio disponible en una ubicacion.
      *
-     * @return int|null null si no hay limite configurado
+     * @return float|null null si no hay limite configurado
      */
-    public function getAvailableCapacity(string $locationId): ?int
+    public function getAvailableCapacity(string $locationId): ?float
     {
         $settings = $this->settingsRepository->findByLocationId($locationId);
 
@@ -175,8 +175,8 @@ class StockCapacityService
             'max_quantity' => $maxQuantity,
             'available_quantity' => $availableQuantity,
             'usage_percent' => $usagePercent,
-            'unique_skus' => count($this->getUniqueSkus($locationId)),
-            'allow_mixed_skus' => $settings?->allowsMixedSkus() ?? true,
+            'unique_items' => count($this->getUniqueItemIds($locationId)),
+            'allow_mixed_items' => $settings?->allowsMixedSkus() ?? true, // TODO: rename setting
             'fifo_enforced' => $settings?->isFifoEnforced() ?? false,
             'is_active' => $settings?->isActive() ?? true,
         ];
@@ -192,7 +192,7 @@ class StockCapacityService
 
     private function validateMaxQuantity(
         string $locationId,
-        int $requestedQuantity,
+        float $requestedQuantity,
         LocationStockSettings $settings
     ): CapacityValidationResult {
         $currentStock = $this->getTotalStockForLocationTree($locationId);
@@ -210,16 +210,16 @@ class StockCapacityService
         return CapacityValidationResult::valid();
     }
 
-    private function validateMixedSkus(string $locationId, string $newSku): CapacityValidationResult
+    private function validateMixedItems(string $locationId, string $newItemId): CapacityValidationResult
     {
-        $existingSkus = $this->getUniqueSkus($locationId);
+        $existingItemIds = $this->getUniqueItemIds($locationId);
 
-        // Si no hay SKUs existentes o el nuevo SKU ya existe, OK
-        if (empty($existingSkus) || in_array($newSku, $existingSkus, true)) {
+        // Si no hay items existentes o el nuevo item ya existe, OK
+        if (empty($existingItemIds) || in_array($newItemId, $existingItemIds, true)) {
             return CapacityValidationResult::valid();
         }
 
-        return CapacityValidationResult::mixedSkusNotAllowed($locationId);
+        return CapacityValidationResult::mixedItemsNotAllowed($locationId);
     }
 
     /**

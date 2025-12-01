@@ -16,7 +16,7 @@ class ProcessMovementResult
         private bool $success,
         private Movement $movement,
         private ?StockItem $stockItem = null,
-        private ?int $previousBalance = null,
+        private ?float $previousBalance = null,
         private array $errors = []
     ) {
     }
@@ -24,7 +24,7 @@ class ProcessMovementResult
     public static function success(
         Movement $movement,
         StockItem $stockItem,
-        int $previousBalance
+        float $previousBalance
     ): self {
         return new self(
             success: true,
@@ -58,17 +58,17 @@ class ProcessMovementResult
         return $this->stockItem;
     }
 
-    public function getPreviousBalance(): ?int
+    public function getPreviousBalance(): ?float
     {
         return $this->previousBalance;
     }
 
-    public function getNewBalance(): ?int
+    public function getNewBalance(): ?float
     {
         return $this->stockItem?->getQuantity();
     }
 
-    public function getDelta(): ?int
+    public function getDelta(): ?float
     {
         if ($this->previousBalance === null || $this->stockItem === null) {
             return null;

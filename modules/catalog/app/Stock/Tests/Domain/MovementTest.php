@@ -20,10 +20,10 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $this->generateUuid(),
             quantity: 100,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             referenceType: 'purchase_order',
             referenceId: 'PO-001',
             reason: 'Initial stock',
@@ -32,11 +32,11 @@ class MovementTest extends StockTestCase
             meta: ['source' => 'api']
         );
 
-        $this->assertEquals('SKU-001', $movement->getSku());
+        $this->assertEquals('ITEM-001', $movement->getItemId());
         $this->assertEquals(100, $movement->getQuantity());
         $this->assertEquals(MovementType::RECEIPT, $movement->getType());
         $this->assertEquals(MovementStatus::PENDING, $movement->getStatus());
-        $this->assertEquals('LOT-001', $movement->getLotNumber());
+        $this->assertEquals('LOT-001', $movement->getLotId());
         $this->assertEquals('purchase_order', $movement->getReferenceType());
         $this->assertEquals('PO-001', $movement->getReferenceId());
     }
@@ -46,7 +46,7 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -62,7 +62,7 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::SHIPMENT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $this->generateUuid(),
             quantity: 50
         );
@@ -81,7 +81,7 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::TRANSFER_OUT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $sourceId,
             quantity: 25,
             sourceLocationId: $sourceId,
@@ -102,7 +102,7 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $this->generateUuid(),
             quantity: 10
         );
@@ -118,10 +118,10 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $this->generateUuid(),
             quantity: 100,
-            lotNumber: 'LOT-001',
+            lotId: 'LOT-001',
             reason: 'Test'
         );
 
@@ -131,11 +131,11 @@ class MovementTest extends StockTestCase
         $this->assertArrayHasKey('type', $array);
         $this->assertArrayHasKey('type_label', $array);
         $this->assertArrayHasKey('status', $array);
-        $this->assertArrayHasKey('sku', $array);
+        $this->assertArrayHasKey('item_id', $array);
         $this->assertArrayHasKey('location_id', $array);
         $this->assertArrayHasKey('quantity', $array);
         $this->assertArrayHasKey('effective_delta', $array);
-        $this->assertArrayHasKey('lot_number', $array);
+        $this->assertArrayHasKey('lot_id', $array);
         $this->assertArrayHasKey('reason', $array);
         $this->assertArrayHasKey('created_at', $array);
     }
@@ -147,7 +147,7 @@ class MovementTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            sku: 'SKU-001',
+            itemId: 'ITEM-001',
             locationId: $this->generateUuid(),
             quantity: 10,
             meta: $meta
