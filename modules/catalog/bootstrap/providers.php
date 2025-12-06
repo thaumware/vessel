@@ -1,9 +1,9 @@
 <?php
 
 use App\AppServiceProvider;
+use App\Catalog\Infrastructure\CatalogServiceProvider;
 use App\Shared\Providers\PortalServiceProvider;
 use App\Auth\Infrastructure\AuthServiceProvider;
-use App\Items\Infrastructure\ItemsServiceProvider;
 use App\Locations\Infrastructure\LocationsServiceProvider;
 use App\Pricing\Infrastructure\PricingServiceProvider;
 use App\Stock\Infrastructure\StockServiceProvider;
@@ -18,7 +18,7 @@ return [
     AuthServiceProvider::class,
     
     // Module providers
-    ItemsServiceProvider::class,
+    CatalogServiceProvider::class,
     LocationsServiceProvider::class,
     PricingServiceProvider::class,
     StockServiceProvider::class,
