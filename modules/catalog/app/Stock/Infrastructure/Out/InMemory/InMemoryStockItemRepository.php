@@ -46,7 +46,7 @@ class InMemoryStockItemRepository implements StockItemRepositoryInterface
     {
         return new StockItem(
             id: $data['id'],
-            sku: $data['sku'],
+            itemId: $data['sku'],
             catalogItemId: $data['catalog_item_id'],
             catalogOrigin: $data['catalog_origin'],
             locationId: $data['location_id'],
@@ -74,18 +74,18 @@ class InMemoryStockItemRepository implements StockItemRepositoryInterface
         return $this->items[$id] ?? null;
     }
 
-    public function findBySku(string $sku): array
+    public function findByItemId(string $itemId): array
     {
         return array_values(array_filter(
             $this->items,
-            fn(StockItem $item) => $item->getSku() === $sku
+            fn(StockItem $item) => $item->getItemId() === $itemId
         ));
     }
 
-    public function findBySkuAndLocation(string $sku, string $locationId): ?StockItem
+    public function findByItemAndLocation(string $itemId, string $locationId): ?StockItem
     {
         foreach ($this->items as $item) {
-            if ($item->getSku() === $sku && $item->getLocationId() === $locationId) {
+            if ($item->getItemId() === $itemId && $item->getLocationId() === $locationId) {
                 return $item;
             }
         }
@@ -118,8 +118,8 @@ class InMemoryStockItemRepository implements StockItemRepositoryInterface
             $result = array_filter($result, fn($item) => $item->getLocationId() === $filters['location_id']);
         }
 
-        if (isset($filters['sku'])) {
-            $result = array_filter($result, fn($item) => $item->getSku() === $filters['sku']);
+        if (isset($filters['item_id'])) {
+            $result = array_filter($result, fn($item) => $item->getItemId() === $filters['item_id']);
         }
 
         if (isset($filters['catalog_item_id'])) {
@@ -150,12 +150,12 @@ class InMemoryStockItemRepository implements StockItemRepositoryInterface
         unset($this->items[$id]);
     }
 
-    public function adjustQuantity(string $sku, string $locationId, int $delta): StockItem
+    public function adjustQuantity(string $itemId, string $locationId, int $delta): StockItem
     {
-        $item = $this->findBySkuAndLocation($sku, $locationId);
+        $item = $this->findByItemAndLocation($itemId, $locationId);
 
         if (!$item) {
-            throw new \RuntimeException("StockItem not found for SKU: {$sku} at location: {$locationId}");
+            throw new \RuntimeException("StockItem not found for item: {$itemId} at location: {$locationId}");
         }
 
         $updated = $item->adjustQuantity($delta);

@@ -32,10 +32,9 @@ class CreateItemTest extends CatalogTestCase
                     && $item->getName() === $data['name']
                     && $item->getDescription() === $data['description']
                     && $item->getUomId() === $data['uomId']
-                    && $item->getNotes() === $data['notes']
-                    && $item->getStatus() === $data['status']
-                    && $item->getWorkspaceId() === $data['workspaceId']
-                    && $item->getTermIds() === $data['termIds'];
+                        && $item->getNotes() === $data['notes']
+                        && $item->getStatusValue() === $data['status']
+                        && $item->getWorkspaceId() === $data['workspaceId'];
             }));
 
         $result = $this->useCase->execute(
@@ -46,7 +45,6 @@ class CreateItemTest extends CatalogTestCase
             notes: $data['notes'],
             status: $data['status'],
             workspaceId: $data['workspaceId'],
-            termIds: $data['termIds'],
         );
 
         $this->assertInstanceOf(Item::class, $result);
@@ -71,7 +69,7 @@ class CreateItemTest extends CatalogTestCase
         $this->assertEquals($id, $result->getId());
         $this->assertEquals($name, $result->getName());
         $this->assertNull($result->getDescription());
-        $this->assertEquals('active', $result->getStatus());
+        $this->assertEquals('active', $result->getStatusValue());
     }
 
     public function test_defaults_to_active_status(): void
@@ -83,7 +81,7 @@ class CreateItemTest extends CatalogTestCase
             name: 'Test Item'
         );
 
-        $this->assertEquals('active', $result->getStatus());
+        $this->assertEquals('active', $result->getStatusValue());
     }
 
     public function test_can_create_draft_item(): void
@@ -96,22 +94,12 @@ class CreateItemTest extends CatalogTestCase
             status: 'draft'
         );
 
-        $this->assertEquals('draft', $result->getStatus());
+        $this->assertEquals('draft', $result->getStatusValue());
     }
 
     public function test_can_create_item_with_terms(): void
     {
-        $termIds = [$this->generateUuid(), $this->generateUuid()];
-
-        $this->repository->method('save');
-
-        $result = $this->useCase->execute(
-            id: $this->generateUuid(),
-            name: 'Item with Terms',
-            termIds: $termIds
-        );
-
-        $this->assertEquals($termIds, $result->getTermIds());
+        $this->markTestSkipped('Taxonomy terms now handled by ItemClassification service, not Item entity');
     }
 
     public function test_returns_created_item(): void

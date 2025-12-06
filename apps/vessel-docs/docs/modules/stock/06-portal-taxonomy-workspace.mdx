@@ -1,0 +1,40 @@
+---
+title: Stock + Portal + Taxonomy + Workspace
+sidebar_position: 6
+---
+
+Cómo integrar el módulo de Stock con Portal para enriquecer catálogo/UOM/taxonomía, respetando `workspace_id`.
+
+## Flujo resumido
+1) Portal registra origen `catalog_items` (tabla/endpoint o fixture).
+2) Stock registra movimientos con `item_id` y `workspace_id`.
+3) `RelationLoader` adjunta `portal_catalog_items` a cada modelo (en tests via `PortalJsonAdapter`).
+4) Los kardex se generan por workspace aplicando filtro `workspace_id`.
+
+## Ejemplo mínimo (tests)
+```php
+$adapter = new PortalJsonAdapter(__DIR__.'/portal_catalog.json', workspaceId: 'plant-01');
+$registry = new PortalRegistry($adapter);
+$loader = new RelationLoader($adapter, $adapter);
+$registry->register('catalog_items', 'portal_catalog', 'fixture');
+$registry->link('BEARING-6204', 'StockItem', 'catalog_items', 'BEARING-6204', ['workspace_id' => 'plant-01']);
+$models = [(object)['id' => 'BEARING-6204']];
+$enriched = $loader->attach($models); // portal_catalog_items presente
+```
+
+## Dataset realista multi-tenant (fixtures)
+- `inventory_seed_multitenant.json`: movimientos para `plant-01` y `plant-02` con UOM, referencias y taxonomía simple.
+- `kardex_expected_multitenant_plant01.csv` y `kardex_expected_multitenant_plant02.csv`: balances esperados por workspace.
+
+## Prueba clave
+`InventoryMultitenantKardexTest` procesa el dataset y genera kardex separados por workspace; valida que los balances no se mezclan.
+
+## Reglas prácticas
+- Siempre pasar `workspace_id` al crear `Movement` y al registrar links en Portal.
+- Filtra queries por `workspace_id` (ver `MovementSearchCriteria`); en producción, haz lo mismo en tus adapters (DB/HTTP).
+- Usa `portal_catalog.json` como ejemplo de enriquecimiento (taxonomía + metadata + UOM).
+
+## Próximos pasos
+1) Llevar Portal al flujo de casos de uso de Stock en producción (adapter real que filtre workspace y permisos).
+2) Añadir políticas de acceso cuando se definan roles.
+3) Replicar el patrón para Locations (gateway vía Portal) para transfers multi-tenant.

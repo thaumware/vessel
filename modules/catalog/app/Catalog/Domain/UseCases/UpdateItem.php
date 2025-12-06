@@ -18,7 +18,6 @@ class UpdateItem
         ?string $uomId = null,
         ?string $notes = null,
         ?string $status = null,
-        ?array $termIds = null,
     ): ?Item {
         $existing = $this->repository->findById($id);
 
@@ -34,7 +33,6 @@ class UpdateItem
             notes: $notes ?? $existing->getNotes(),
             status: $status ?? $existing->getStatus(),
             workspaceId: $existing->getWorkspaceId(),
-            termIds: $termIds ?? $existing->getTermIds(),
         );
 
         $this->repository->update($updated);

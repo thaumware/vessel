@@ -1,0 +1,38 @@
+{
+  "items": {
+    "BEARING-6204": {
+      "name": "Bearing 6204",
+      "uom": "ea",
+      "taxonomy": {
+        "categorias": ["repuestos", "rodamientos"],
+        "marcas": ["skf"],
+        "tags": ["mro", "mantenimiento"]
+      },
+      "metadata": {
+        "supplier": "ACME Bearings",
+        "supplier_certifications": ["iso9001", "iso14001"],
+        "origin_country": "SE"
+      }
+    },
+    "OIL-ISO46": {
+      "name": "Hydraulic Oil ISO46",
+      "uom": "kg",
+      "taxonomy": {
+        "categorias": ["consumibles", "lubricantes"],
+        "marcas": ["mobil"],
+        "tags": ["hidraulico", "mantenimiento"]
+      },
+      "metadata": {
+        "supplier": "Global Oils",
+        "supplier_certifications": ["iso9001"],
+        "container": "drum",
+        "hazmat": true
+      }
+    }
+  },
+  "uoms": {
+    "ea": {"base": "ea", "ratio": 1, "precision": 0},
+    "kg": {"base": "kg", "ratio": 1, "precision": 3},
+    "g": {"base": "kg", "ratio": 0.001, "precision": 3}
+  }
+}

@@ -24,9 +24,11 @@ abstract class StockTestCase extends TestCase
 
     protected function createStockItemData(array $overrides = []): array
     {
+        $itemId = 'TEST-SKU-' . mt_rand(1000, 9999);
+
         return array_merge([
             'id' => $this->generateUuid(),
-            'sku' => 'TEST-SKU-' . mt_rand(1000, 9999),
+            'itemId' => $itemId,
             'catalogItemId' => $this->generateUuid(),
             'catalogOrigin' => 'catalog_items',
             'locationId' => $this->generateUuid(),

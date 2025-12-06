@@ -11,8 +11,8 @@ interface StockRepositoryInterface
     public function save(Stock $stock): Stock;
 
     /**
-     * Adjust quantity for a SKU at a location by a delta (positive or negative).
+     * Adjust quantity for an itemId at a location by a delta (positive or negative).
      * Returns the resulting Stock entity.
      */
-    public function adjustQuantity(string $sku, string $locationId, int $delta, ?string $locationType = null): Stock;
+    public function adjustQuantity(string $itemId, string $locationId, int $delta, ?string $locationType = null): Stock;
 }

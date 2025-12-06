@@ -2,7 +2,6 @@
 
 namespace App\Catalog\Infrastructure\Out\Models;
 
-use App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermModel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -30,18 +29,4 @@ class EloquentItem extends Model
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
     ];
-
-    /**
-     * Relación M:M con Terms (Taxonomy)
-     * Permite asociar múltiples marcas, categorías, etc.
-     */
-    public function terms()
-    {
-        return $this->belongsToMany(
-            TermModel::class,
-            'catalog_item_terms',
-            'item_id',
-            'term_id'
-        );
-    }
 }

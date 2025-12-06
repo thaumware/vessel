@@ -5,15 +5,15 @@ namespace App\Stock\Domain\Entities;
 final class Batch
 {
 	private string $id;
-	private string $sku;
+	private string $itemId;
 	private string $locationId;
 	private int $quantity;
 	private ?string $lotNumber;
 
-	public function __construct(string $id, string $sku, string $locationId, int $quantity, ?string $lotNumber = null)
+	public function __construct(string $id, string $itemId, string $locationId, int $quantity, ?string $lotNumber = null)
 	{
 		$this->id = $id;
-		$this->sku = $sku;
+		$this->itemId = $itemId;
 		$this->locationId = $locationId;
 		$this->quantity = $quantity;
 		$this->lotNumber = $lotNumber;
@@ -24,9 +24,17 @@ final class Batch
 		return $this->id;
 	}
 
+	public function itemId(): string
+	{
+		return $this->itemId;
+	}
+
+	/**
+	 * @deprecated usar itemId(); alias legado
+	 */
 	public function sku(): string
 	{
-		return $this->sku;
+		return $this->itemId;
 	}
 
 	public function locationId(): string
@@ -48,7 +56,8 @@ final class Batch
 	{
 		return [
 			'id' => $this->id,
-			'sku' => $this->sku,
+			'item_id' => $this->itemId,
+			'sku' => $this->itemId,
 			'location_id' => $this->locationId,
 			'quantity' => $this->quantity,
 			'lot_number' => $this->lotNumber,

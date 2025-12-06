@@ -21,10 +21,6 @@ class EloquentItemRepository implements ItemRepositoryInterface
             'workspace_id' => $item->getWorkspaceId(),
         ]);
 
-        // Sync M:M relationship with terms
-        if (!empty($item->getTermIds())) {
-            $model->terms()->sync($item->getTermIds());
-        }
     }
 
     public function update(Item $item): void
@@ -40,14 +36,12 @@ class EloquentItemRepository implements ItemRepositoryInterface
                 'status' => $item->getStatus(),
             ]);
 
-            // Sync M:M relationship with terms
-            $model->terms()->sync($item->getTermIds());
         }
     }
 
     public function findById(string $id): ?Item
     {
-        $model = EloquentItem::with('terms')->find($id);
+        $model = EloquentItem::find($id);
 
         if (!$model) {
             return null;
@@ -58,7 +52,7 @@ class EloquentItemRepository implements ItemRepositoryInterface
 
     public function findAll(PaginationParams $params): PaginatedResult
     {
-        $query = EloquentItem::with('terms');
+        $query = EloquentItem::query();
         
         $total = $query->count();
         $lastPage = (int) ceil($total / $params->perPage);
@@ -87,8 +81,6 @@ class EloquentItemRepository implements ItemRepositoryInterface
             return false;
         }
 
-        // Detach all terms before delete
-        $model->terms()->detach();
         $model->delete();
         return true;
     }
@@ -103,7 +95,6 @@ class EloquentItemRepository implements ItemRepositoryInterface
             notes: $model->notes,
             status: $model->status ?? 'active',
             workspaceId: $model->workspace_id,
-            termIds: $model->terms->pluck('id')->toArray(),
         );
     }
 }

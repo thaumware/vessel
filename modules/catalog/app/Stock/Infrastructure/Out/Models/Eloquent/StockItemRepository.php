@@ -14,17 +14,17 @@ class StockItemRepository implements StockItemRepositoryInterface
         return $model ? $this->toDomain($model) : null;
     }
 
-    public function findBySku(string $sku): array
+    public function findByItemId(string $itemId): array
     {
-        return StockItemModel::where('sku', $sku)
+        return StockItemModel::where('sku', $itemId)
             ->get()
             ->map(fn($model) => $this->toDomain($model))
             ->toArray();
     }
 
-    public function findBySkuAndLocation(string $sku, string $locationId): ?StockItem
+    public function findByItemAndLocation(string $itemId, string $locationId): ?StockItem
     {
-        $model = StockItemModel::where('sku', $sku)
+        $model = StockItemModel::where('sku', $itemId)
             ->where('location_id', $locationId)
             ->first();
 
@@ -56,8 +56,8 @@ class StockItemRepository implements StockItemRepositoryInterface
             $query->where('location_id', $filters['location_id']);
         }
 
-        if (isset($filters['sku'])) {
-            $query->where('sku', $filters['sku']);
+        if (isset($filters['item_id'])) {
+            $query->where('sku', $filters['item_id']);
         }
 
         if (isset($filters['catalog_item_id'])) {
@@ -80,7 +80,7 @@ class StockItemRepository implements StockItemRepositoryInterface
     {
         StockItemModel::create([
             'id' => $stockItem->getId(),
-            'sku' => $stockItem->getSku(),
+            'sku' => $stockItem->getItemId(),
             'catalog_item_id' => $stockItem->getCatalogItemId(),
             'catalog_origin' => $stockItem->getCatalogOrigin(),
             'location_id' => $stockItem->getLocationId(),
@@ -100,7 +100,7 @@ class StockItemRepository implements StockItemRepositoryInterface
     public function update(StockItem $stockItem): StockItem
     {
         StockItemModel::where('id', $stockItem->getId())->update([
-            'sku' => $stockItem->getSku(),
+            'sku' => $stockItem->getItemId(),
             'catalog_item_id' => $stockItem->getCatalogItemId(),
             'catalog_origin' => $stockItem->getCatalogOrigin(),
             'location_id' => $stockItem->getLocationId(),
@@ -122,15 +122,15 @@ class StockItemRepository implements StockItemRepositoryInterface
         StockItemModel::destroy($id);
     }
 
-    public function adjustQuantity(string $sku, string $locationId, int $delta): StockItem
+    public function adjustQuantity(string $itemId, string $locationId, int $delta): StockItem
     {
-        $model = StockItemModel::where('sku', $sku)
+        $model = StockItemModel::where('sku', $itemId)
             ->where('location_id', $locationId)
             ->lockForUpdate()
             ->first();
 
         if (!$model) {
-            throw new \RuntimeException("StockItem not found for SKU: {$sku} at location: {$locationId}");
+            throw new \RuntimeException("StockItem not found for item: {$itemId} at location: {$locationId}");
         }
 
         $model->quantity = $model->quantity + $delta;
@@ -180,7 +180,7 @@ class StockItemRepository implements StockItemRepositoryInterface
     {
         return new StockItem(
             id: $model->id,
-            sku: $model->sku,
+            itemId: $model->sku,
             catalogItemId: $model->catalog_item_id,
             catalogOrigin: $model->catalog_origin,
             locationId: $model->location_id,

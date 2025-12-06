@@ -146,7 +146,6 @@ class InMemoryItemRepositoryTest extends CatalogTestCase
             notes: $data['notes'],
             status: $data['status'],
             workspaceId: $data['workspaceId'],
-            termIds: $data['termIds'],
         );
 
         $this->repository->save($item);
@@ -156,9 +155,8 @@ class InMemoryItemRepositoryTest extends CatalogTestCase
         $this->assertEquals($data['description'], $found->getDescription());
         $this->assertEquals($data['uomId'], $found->getUomId());
         $this->assertEquals($data['notes'], $found->getNotes());
-        $this->assertEquals($data['status'], $found->getStatus());
+        $this->assertEquals($data['status'], $found->getStatusValue());
         $this->assertEquals($data['workspaceId'], $found->getWorkspaceId());
-        $this->assertEquals($data['termIds'], $found->getTermIds());
     }
 
     public function test_save_replaces_existing_item_with_same_id(): void

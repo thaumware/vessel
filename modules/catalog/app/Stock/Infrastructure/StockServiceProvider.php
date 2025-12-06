@@ -3,6 +3,7 @@
 namespace App\Stock\Infrastructure;
 
 use Illuminate\Support\ServiceProvider;
+use Illuminate\Support\Facades\Broadcast;
 use App\Stock\Domain\Interfaces\StockItemRepositoryInterface;
 use App\Stock\Domain\Interfaces\StockRepositoryInterface;
 use App\Stock\Domain\Interfaces\MovementRepositoryInterface;
@@ -16,12 +17,18 @@ use App\Stock\Domain\Services\StockCapacityService;
 use App\Stock\Infrastructure\Out\Gateways\PortalCatalogGateway;
 use App\Stock\Infrastructure\Out\Gateways\LocationsModuleGateway;
 use App\Shared\Domain\Interfaces\IdGeneratorInterface;
+use App\Shared\Infrastructure\ModuleRegistry;
 use App\Shared\Infrastructure\Services\UuidGenerator;
 
 class StockServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        /** @var ModuleRegistry $modules */
+        $modules = $this->app->make(ModuleRegistry::class);
+        if (!$modules->enabled('stock')) {
+            return;
+        }
         // === Shared Bindings ===
         $this->app->bind(IdGeneratorInterface::class, UuidGenerator::class);
         // === Gateway Bindings (Infrastructure implementations) ===
@@ -101,6 +108,11 @@ class StockServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        /** @var ModuleRegistry $modules */
+        $modules = $this->app->make(ModuleRegistry::class);
+        if (!$modules->enabled('stock')) {
+            return;
+        }
         // Register middleware alias for module-specific adapter usage
         $this->app['router']->aliasMiddleware('stock_adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':stock');
 
@@ -109,5 +121,10 @@ class StockServiceProvider extends ServiceProvider
 
         // Register routes from Stock module
         $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/StockRoutes.php');
+
+        if ($modules->wsEnabled('stock')) {
+            Broadcast::routes(['middleware' => ['api']]);
+            $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/StockChannels.php');
+        }
     }
 }

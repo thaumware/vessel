@@ -1,0 +1,113 @@
+[
+  {
+    "movement_id": "mov-p1-001",
+    "item_id": "VALVE-100",
+    "location_id": "WH-A",
+    "movement_type": "receipt",
+    "quantity": 50,
+    "uom": "ea",
+    "timestamp": "2024-03-01T08:00:00Z",
+    "workspace_id": "plant-01",
+    "taxonomy": ["maintenance"],
+    "meta": {"supplier": "FlowCorp"}
+  },
+  {
+    "movement_id": "mov-p1-002",
+    "item_id": "VALVE-100",
+    "location_id": "WH-A",
+    "movement_type": "shipment",
+    "quantity": 5,
+    "uom": "ea",
+    "timestamp": "2024-03-02T09:00:00Z",
+    "workspace_id": "plant-01"
+  },
+  {
+    "movement_id": "mov-p1-003",
+    "item_id": "PUMP-200",
+    "location_id": "WH-A",
+    "movement_type": "receipt",
+    "quantity": 20,
+    "uom": "ea",
+    "timestamp": "2024-03-02T10:00:00Z",
+    "workspace_id": "plant-01",
+    "taxonomy": ["rotating"],
+    "meta": {"manufacturer": "PumpCo"}
+  },
+  {
+    "movement_id": "mov-p1-004",
+    "item_id": "PUMP-200",
+    "location_id": "WH-A",
+    "movement_type": "reserve",
+    "quantity": 4,
+    "uom": "ea",
+    "timestamp": "2024-03-02T12:00:00Z",
+    "workspace_id": "plant-01"
+  },
+  {
+    "movement_id": "mov-p1-005",
+    "item_id": "PUMP-200",
+    "location_id": "WH-A",
+    "movement_type": "shipment",
+    "quantity": 3,
+    "uom": "ea",
+    "timestamp": "2024-03-03T08:00:00Z",
+    "workspace_id": "plant-01"
+  },
+  {
+    "movement_id": "mov-p2-001",
+    "item_id": "SENSOR-TX",
+    "location_id": "DC-1",
+    "movement_type": "receipt",
+    "quantity": 30,
+    "uom": "ea",
+    "timestamp": "2024-03-01T08:00:00Z",
+    "workspace_id": "plant-02",
+    "taxonomy": ["instrumentation"],
+    "meta": {"supplier": "SenseWare"}
+  },
+  {
+    "movement_id": "mov-p2-002",
+    "item_id": "SENSOR-TX",
+    "location_id": "DC-1",
+    "movement_type": "adjustment_in",
+    "quantity": 2,
+    "uom": "ea",
+    "timestamp": "2024-03-01T12:00:00Z",
+    "workspace_id": "plant-02",
+    "meta": {"note": "cycle count"}
+  },
+  {
+    "movement_id": "mov-p2-003",
+    "item_id": "SENSOR-TX",
+    "location_id": "DC-1",
+    "movement_type": "reserve",
+    "quantity": 5,
+    "uom": "ea",
+    "timestamp": "2024-03-02T09:00:00Z",
+    "workspace_id": "plant-02"
+  },
+  {
+    "movement_id": "mov-p2-004",
+    "item_id": "SENSOR-TX",
+    "location_id": "DC-1",
+    "movement_type": "shipment",
+    "quantity": 6,
+    "uom": "ea",
+    "timestamp": "2024-03-02T14:00:00Z",
+    "workspace_id": "plant-02",
+    "reference_type": "sales_order",
+    "reference_id": "SO-123"
+  },
+  {
+    "movement_id": "mov-p2-005",
+    "item_id": "SENSOR-TX",
+    "location_id": "DC-1",
+    "movement_type": "return",
+    "quantity": 1,
+    "uom": "ea",
+    "timestamp": "2024-03-03T11:00:00Z",
+    "workspace_id": "plant-02",
+    "reference_type": "rma",
+    "reference_id": "RMA-9"
+  }
+]

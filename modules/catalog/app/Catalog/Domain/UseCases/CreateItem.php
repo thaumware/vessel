@@ -19,7 +19,6 @@ class CreateItem
         ?string $notes = null,
         string $status = 'active',
         ?string $workspaceId = null,
-        array $termIds = [],
     ): Item {
         $item = new Item(
             id: $id,
@@ -29,7 +28,6 @@ class CreateItem
             notes: $notes,
             status: $status,
             workspaceId: $workspaceId,
-            termIds: $termIds,
         );
 
         $this->repository->save($item);

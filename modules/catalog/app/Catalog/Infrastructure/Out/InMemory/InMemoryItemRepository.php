@@ -32,7 +32,6 @@ class InMemoryItemRepository implements ItemRepositoryInterface
                     notes: $itemData['notes'] ?? null,
                     status: $itemData['status'] ?? 'active',
                     workspaceId: $itemData['workspace_id'] ?? null,
-                    termIds: $itemData['term_ids'] ?? [],
                 );
                 $this->items[$item->getId()] = $item;
             }

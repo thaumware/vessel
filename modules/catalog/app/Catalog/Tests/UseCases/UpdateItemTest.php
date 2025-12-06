@@ -82,28 +82,7 @@ class UpdateItemTest extends CatalogTestCase
             status: 'archived'
         );
 
-        $this->assertEquals('archived', $result->getStatus());
-    }
-
-    public function test_updates_item_term_ids(): void
-    {
-        $existingItem = new Item(
-            id: $this->generateUuid(),
-            name: 'Test',
-            termIds: []
-        );
-
-        $newTermIds = [$this->generateUuid(), $this->generateUuid()];
-
-        $this->repository->method('findById')->willReturn($existingItem);
-        $this->repository->method('update');
-
-        $result = $this->useCase->execute(
-            id: $existingItem->getId(),
-            termIds: $newTermIds
-        );
-
-        $this->assertEquals($newTermIds, $result->getTermIds());
+        $this->assertEquals('archived', $result->getStatusValue());
     }
 
     public function test_returns_null_when_item_not_found(): void
@@ -137,7 +116,6 @@ class UpdateItemTest extends CatalogTestCase
             notes: $data['notes'],
             status: $data['status'],
             workspaceId: $data['workspaceId'],
-            termIds: $data['termIds'],
         );
 
         $this->repository->method('findById')->willReturn($existingItem);
@@ -152,9 +130,8 @@ class UpdateItemTest extends CatalogTestCase
         $this->assertEquals($data['description'], $result->getDescription());
         $this->assertEquals($data['uomId'], $result->getUomId());
         $this->assertEquals($data['notes'], $result->getNotes());
-        $this->assertEquals($data['status'], $result->getStatus());
+        $this->assertEquals($data['status'], $result->getStatusValue());
         $this->assertEquals($data['workspaceId'], $result->getWorkspaceId());
-        $this->assertEquals($data['termIds'], $result->getTermIds());
     }
 
     public function test_can_update_multiple_fields_at_once(): void
@@ -178,7 +155,7 @@ class UpdateItemTest extends CatalogTestCase
 
         $this->assertEquals('Updated', $result->getName());
         $this->assertEquals('Updated desc', $result->getDescription());
-        $this->assertEquals('draft', $result->getStatus());
+        $this->assertEquals('draft', $result->getStatusValue());
     }
 
     public function test_can_clear_optional_fields(): void

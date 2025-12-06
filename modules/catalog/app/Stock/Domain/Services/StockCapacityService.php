@@ -112,7 +112,7 @@ class StockCapacityService
         $itemIds = [];
 
         foreach ($stocks as $stock) {
-            $itemId = $stock->sku(); // TODO: Cambiar a itemId cuando Stock entity se actualice
+            $itemId = $stock->itemId();
             if (!in_array($itemId, $itemIds, true)) {
                 $itemIds[] = $itemId;
             }

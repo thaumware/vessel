@@ -1,0 +1,40 @@
+[
+  {
+    "item_id": "BEARING-6204",
+    "item_type": "catalog_item",
+    "location_id": "WH-MAIN",
+    "movement_type": "receipt",
+    "quantity": 40,
+    "uom": "ea",
+    "timestamp": "2024-02-01T08:00:00Z",
+    "taxonomy": {
+      "categorias": ["repuestos", "rodamientos"],
+      "marcas": ["skf"],
+      "tags": ["mro", "mantenimiento"]
+    },
+    "metadata": {
+      "supplier": "ACME Bearings",
+      "supplier_certifications": ["iso9001", "iso14001"],
+      "machine_family": "compressor"
+    }
+  },
+  {
+    "item_id": "OIL-ISO46",
+    "item_type": "catalog_item",
+    "location_id": "WH-MAIN",
+    "movement_type": "receipt",
+    "quantity": 20,
+    "uom": "kg",
+    "timestamp": "2024-02-02T10:00:00Z",
+    "taxonomy": {
+      "categorias": ["consumibles", "lubricantes"],
+      "marcas": ["mobil"],
+      "tags": ["hidraulico", "mantenimiento"]
+    },
+    "metadata": {
+      "supplier": "Global Oils",
+      "supplier_certifications": ["iso9001"],
+      "container": "drum"
+    }
+  }
+]

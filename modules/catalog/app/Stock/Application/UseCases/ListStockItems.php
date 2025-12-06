@@ -16,7 +16,7 @@ class ListStockItems
     /**
      * Listar StockItems con filtros opcionales
      * 
-     * @param array $filters Filtros: location_id, sku, catalog_item_id, catalog_origin
+    * @param array $filters Filtros: location_id, item_id (alias sku), catalog_item_id, catalog_origin
      * @param bool $withCatalog Adjuntar datos del catálogo
      * @param int $limit Límite de resultados
      * @param int $offset Offset para paginación

@@ -3,6 +3,7 @@
 use App\AppServiceProvider;
 use App\Catalog\Infrastructure\CatalogServiceProvider;
 use App\Shared\Providers\PortalServiceProvider;
+use App\Shared\Providers\HealthServiceProvider;
 use App\Auth\Infrastructure\AuthServiceProvider;
 use App\Locations\Infrastructure\LocationsServiceProvider;
 use App\Pricing\Infrastructure\PricingServiceProvider;
@@ -13,6 +14,7 @@ use App\Uom\Infrastructure\UomServiceProvider;
 return [
     AppServiceProvider::class,
     PortalServiceProvider::class,
+    HealthServiceProvider::class,
     
     // Auth module (admin panel + sessions)
     AuthServiceProvider::class,

@@ -12,7 +12,7 @@ class BatchRepository implements BatchRepositoryInterface
         $model = BatchModel::updateOrCreate(
             ['id' => $batch->id()],
             [
-                'sku' => $batch->sku(),
+                'sku' => $batch->itemId(), // legacy column name, stores itemId
                 'location_id' => $batch->locationId(),
                 'quantity' => $batch->quantity(),
                 'lot_number' => $batch->lotNumber(),
@@ -33,14 +33,22 @@ class BatchRepository implements BatchRepositoryInterface
         return new Batch($model->id, $model->sku, $model->location_id, (int)$model->quantity, $model->lot_number);
     }
 
-    public function findBySkuAndLocation(string $sku, string $locationId): ?Batch
+    public function findByItemAndLocation(string $itemId, string $locationId): ?Batch
     {
-        $model = BatchModel::where('sku', $sku)->where('location_id', $locationId)->first();
+        $model = BatchModel::where('sku', $itemId)->where('location_id', $locationId)->first();
 
         if (!$model) {
             return null;
         }
 
         return new Batch($model->id, $model->sku, $model->location_id, (int)$model->quantity, $model->lot_number);
+    }
+
+    /**
+     * @deprecated use findByItemAndLocation()
+     */
+    public function findBySkuAndLocation(string $sku, string $locationId): ?Batch
+    {
+        return $this->findByItemAndLocation($sku, $locationId);
     }
 }

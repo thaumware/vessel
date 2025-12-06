@@ -38,14 +38,14 @@ class StockMovementEdgeCasesTest extends StockTestCase
 
     private function createStockItem(
         string $id,
-        string $sku,
+        string $itemId,
         string $locationId,
         float $quantity,
         float $reservedQuantity = 0
     ): StockItem {
         return new StockItem(
             id: $id,
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: 'cat-' . $id,
             catalogOrigin: 'internal',
             locationId: $locationId,
@@ -135,7 +135,7 @@ class StockMovementEdgeCasesTest extends StockTestCase
         $this->assertTrue($result->isSuccess());
         
         // Verificar que se creo el stock
-        $item = $this->stockItemRepo->findBySkuAndLocation('NEW-PROD', 'loc-001');
+        $item = $this->stockItemRepo->findByItemAndLocation('NEW-PROD', 'loc-001');
         $this->assertNotNull($item);
         $this->assertEquals(50.0, $item->getQuantity());
     }
@@ -420,7 +420,7 @@ class StockMovementEdgeCasesTest extends StockTestCase
 
         $this->assertTrue($result->isSuccess());
         
-        $item = $this->stockItemRepo->findBySkuAndLocation('BULK-001', 'loc-001');
+        $item = $this->stockItemRepo->findByItemAndLocation('BULK-001', 'loc-001');
         $this->assertNotNull($item);
         $this->assertEquals(2.5, $item->getQuantity());
     }

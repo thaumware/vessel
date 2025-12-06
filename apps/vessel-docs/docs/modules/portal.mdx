@@ -1,0 +1,51 @@
+---
+title: Portal (relaciones externas)
+sidebar_position: 20
+---
+
+Portal conecta modelos locales con datos externos (catálogo, UOM, metadata) sin acoplarse a BD o HTTP específicos. En este repositorio usamos el paquete `packages/portal`.
+
+## Conceptos clave
+- **Origin**: fuente registrada (tabla o endpoint). Ej: `catalog_items`.
+- **Portal link**: vínculo entre modelo local (`model_id`, `model_type`) y `external_id` en un origin. Puede llevar `metadata` (ej. `workspace_id`).
+- **RelationLoader**: resuelve en batch y adjunta `portal_{origin}` en los modelos.
+- **Adapter**: implementa `StorageAdapter` + `DataFetcher` para guardar vínculos y traer datos (DB/HTTP o fixture).
+
+## Uso mínimo
+```php
+use Thaumware\Portal\Portal;
+use Thaumware\Portal\Adapters\IlluminateAdapter; // en Laravel
+
+Portal::install(new IlluminateAdapter(DB::connection(), Http::class, Schema::class));
+Portal::register('catalog_items', 'catalog_items', 'table');
+Portal::link('ITEM-1', 'StockItem', 'catalog_items', 'ITEM-1', ['workspace_id' => 'plant-01']);
+$stockItems = Portal::attach($stockItems); // añade $item->portal_catalog_items
+```
+
+## Adapter de pruebas (fixture)
+En Stock tests usamos `PortalJsonAdapter` (`modules/catalog/app/Stock/Tests/Support/PortalJsonAdapter.php`). Carga `portal_catalog.json` y simula origen `catalog_items` sin BD/HTTP.
+
+```php
+$adapter = new PortalJsonAdapter(__DIR__.'/portal_catalog.json', workspaceId: 'plant-01');
+$registry = new PortalRegistry($adapter);
+$loader = new RelationLoader($adapter, $adapter);
+$registry->register('catalog_items', 'portal_catalog', 'fixture');
+$registry->link('BEARING-6204', 'StockItem', 'catalog_items', 'BEARING-6204', ['workspace_id' => 'plant-01']);
+$models = [(object)['id' => 'BEARING-6204']];
+$enriched = $loader->attach($models);
+// $enriched[0]->portal_catalog_items => taxonomía, metadata, UOM
+```
+
+## Multitenancy / workspace
+- Las tablas migradas incluyen `workspace_id` en `portal_origins` y `portals`.
+- En el adapter de pruebas, el `workspaceId` del constructor filtra lo que se adjunta; vínculos de otro workspace se bloquean (ver `PortalWorkspaceIsolationTest`).
+- En producción, asegura que tu `StorageAdapter` y `DataFetcher` filtren por `workspace_id` para evitar fugas entre tenants.
+
+## Tests relevantes
+- `PortalIntegrationTest`: enriquece items desde `portal_catalog.json`.
+- `PortalWorkspaceIsolationTest`: valida que enlaces de otro workspace no se adjuntan.
+
+## Next steps sugeridos
+1) Integrar Portal en los casos de uso de Stock para que todo enriquecimiento (taxonomy/UOM/metadata) provenga del portal.
+2) Implementar un adapter real (DB/HTTP) que respete `workspace_id` y permisos.
+3) Añadir políticas/permisos según roles cuando estén definidos.

@@ -1,0 +1,10 @@
+movement_id,date,item_id,location_id,type,quantity,uom,balance,reference_type,reference_id
+mov-101,2024-01-01 08:00:00,BEARING-6204,WH-MAIN,receipt,100,ea,100,purchase_order,PO-9001
+mov-102,2024-01-02 09:00:00,BEARING-6204,WH-MAIN,reserve,20,ea,100,work_order,WO-7001
+mov-103,2024-01-02 15:00:00,BEARING-6204,WH-MAIN,shipment,30,ea,70,work_order,WO-7001
+mov-104,2024-01-03 10:00:00,BOLT-M8X30,WH-MAIN,receipt,500,ea,500,purchase_order,PO-9002
+mov-105,2024-01-03 12:00:00,BOLT-M8X30,WH-MAIN,transfer_out,200,ea,300,kanban,KAN-55
+mov-106,2024-01-03 12:05:00,BOLT-M8X30,LINE-01,transfer_in,200,ea,200,kanban,KAN-55
+mov-107,2024-01-04 09:00:00,LUBE-ISO46,WH-MAIN,receipt,50,kg,50,purchase_order,PO-9003
+mov-108,2024-01-04 13:00:00,LUBE-ISO46,WH-MAIN,consumption,5,kg,45,work_order,WO-7100
+mov-109,2024-01-05 10:00:00,BEARING-6204,WH-MAIN,return,10,ea,80,qa_return,RMA-42

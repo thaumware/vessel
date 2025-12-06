@@ -56,12 +56,12 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_receipt_adds_to_existing_stock(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         // Pre-existing stock
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -74,7 +74,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RECEIPT,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 30
         );
@@ -90,12 +90,12 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_shipment_reduces_stock(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         // Pre-existing stock
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -108,7 +108,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::SHIPMENT,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 30
         );
@@ -123,11 +123,11 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_shipment_fails_with_insufficient_stock(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -140,7 +140,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::SHIPMENT,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 50
         );
@@ -155,11 +155,11 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_reserve_increases_reserved_quantity(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -172,7 +172,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RESERVE,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 30
         );
@@ -189,11 +189,11 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_reserve_fails_with_insufficient_available(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -206,7 +206,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RESERVE,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 20
         );
@@ -220,11 +220,11 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_release_decreases_reserved_quantity(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -237,7 +237,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RELEASE,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 30
         );
@@ -252,11 +252,11 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_release_fails_when_releasing_more_than_reserved(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -269,7 +269,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::RELEASE,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 50
         );
@@ -282,11 +282,11 @@ class StockMovementServiceTest extends StockTestCase
     public function test_process_adjustment_positive(): void
     {
         $locationId = $this->generateUuid();
-        $sku = 'SKU-001';
+        $itemId = 'SKU-001';
 
         $existingItem = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $locationId,
@@ -299,7 +299,7 @@ class StockMovementServiceTest extends StockTestCase
         $movement = new Movement(
             id: $this->generateUuid(),
             type: MovementType::ADJUSTMENT_IN,
-            itemId: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 25,
             reason: 'Ajuste de inventario'
@@ -448,24 +448,66 @@ class MockStockItemRepository implements \App\Stock\Domain\Interfaces\StockItemR
         return $this->items[$id] ?? null;
     }
 
-    public function findBySkuAndLocation(string $sku, string $locationId): ?StockItem
+    public function findByItemId(string $itemId): array
+    {
+        return array_values(array_filter($this->items, fn(StockItem $i) => $i->getItemId() === $itemId));
+    }
+
+    public function findByItemAndLocation(string $itemId, string $locationId): ?StockItem
     {
         foreach ($this->items as $item) {
-            if ($item->getSku() === $sku && $item->getLocationId() === $locationId) {
+            if ($item->getItemId() === $itemId && $item->getLocationId() === $locationId) {
                 return $item;
             }
         }
         return null;
     }
 
-    public function findBySku(string $sku): array { return []; }
-    public function findByLocation(string $locationId): array { return []; }
+    public function findByLocation(string $locationId): array
+    {
+        return array_values(array_filter($this->items, fn(StockItem $i) => $i->getLocationId() === $locationId));
+    }
+
     public function findByCatalogItemId(string $catalogItemId, string $catalogOrigin): array { return []; }
+
     public function search(array $filters = [], int $limit = 50, int $offset = 0): array { return []; }
+
     public function update(StockItem $item): StockItem { return $this->save($item); }
-    public function delete(string $id): void { }
-    public function adjustQuantity(string $sku, string $locationId, int $delta): StockItem { throw new \Exception('Not implemented'); }
-    public function reserve(string $id, int $quantity): StockItem { throw new \Exception('Not implemented'); }
-    public function release(string $id, int $quantity): StockItem { throw new \Exception('Not implemented'); }
+
+    public function delete(string $id): void { unset($this->items[$id]); }
+
+    public function adjustQuantity(string $itemId, string $locationId, int $delta): StockItem
+    {
+        $found = $this->findByItemAndLocation($itemId, $locationId);
+        if (!$found) {
+            throw new \RuntimeException('StockItem not found');
+        }
+        $updated = $found->adjustQuantity($delta);
+        $this->save($updated);
+        return $updated;
+    }
+
+    public function reserve(string $id, int $quantity): StockItem
+    {
+        $found = $this->findById($id);
+        if (!$found) {
+            throw new \RuntimeException('StockItem not found');
+        }
+        $updated = $found->reserve($quantity);
+        $this->save($updated);
+        return $updated;
+    }
+
+    public function release(string $id, int $quantity): StockItem
+    {
+        $found = $this->findById($id);
+        if (!$found) {
+            throw new \RuntimeException('StockItem not found');
+        }
+        $updated = $found->release($quantity);
+        $this->save($updated);
+        return $updated;
+    }
+
     public function findWithCatalogItems(array $ids): array { return []; }
 }

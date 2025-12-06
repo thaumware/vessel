@@ -13,14 +13,14 @@ class BatchTest extends StockTestCase
 
         $batch = new Batch(
             id: $data['id'],
-            sku: $data['sku'],
+            itemId: $data['sku'],
             locationId: $data['locationId'],
             quantity: $data['quantity'],
             lotNumber: $data['lotNumber']
         );
 
         $this->assertEquals($data['id'], $batch->id());
-        $this->assertEquals($data['sku'], $batch->sku());
+        $this->assertEquals($data['sku'], $batch->itemId());
         $this->assertEquals($data['locationId'], $batch->locationId());
         $this->assertEquals($data['quantity'], $batch->quantity());
         $this->assertEquals($data['lotNumber'], $batch->lotNumber());
@@ -30,7 +30,7 @@ class BatchTest extends StockTestCase
     {
         $batch = new Batch(
             id: $this->generateUuid(),
-            sku: 'SKU-001',
+            itemId: 'SKU-001',
             locationId: $this->generateUuid(),
             quantity: 100
         );
@@ -44,7 +44,7 @@ class BatchTest extends StockTestCase
 
         $batch = new Batch(
             id: $data['id'],
-            sku: $data['sku'],
+            itemId: $data['sku'],
             locationId: $data['locationId'],
             quantity: $data['quantity'],
             lotNumber: $data['lotNumber']
@@ -63,7 +63,7 @@ class BatchTest extends StockTestCase
     {
         $batch = new Batch(
             id: $this->generateUuid(),
-            sku: 'SKU',
+            itemId: 'SKU',
             locationId: $this->generateUuid(),
             quantity: 10,
             lotNumber: 'LOT-001'
@@ -81,7 +81,7 @@ class BatchTest extends StockTestCase
     {
         $batch = new Batch(
             id: $this->generateUuid(),
-            sku: 'SKU-EMPTY',
+            itemId: 'SKU-EMPTY',
             locationId: $this->generateUuid(),
             quantity: 0
         );

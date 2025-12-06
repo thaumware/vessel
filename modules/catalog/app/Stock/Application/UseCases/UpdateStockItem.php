@@ -27,7 +27,7 @@ class UpdateStockItem
         // Crear nueva instancia con datos actualizados (inmutabilidad)
         $updated = new StockItem(
             id: $existing->getId(),
-            sku: $data['sku'] ?? $existing->getSku(),
+            itemId: $data['item_id'] ?? $data['sku'] ?? $existing->getItemId(),
             catalogItemId: $data['catalog_item_id'] ?? $existing->getCatalogItemId(),
             catalogOrigin: $data['catalog_origin'] ?? $existing->getCatalogOrigin(),
             locationId: $data['location_id'] ?? $existing->getLocationId(),

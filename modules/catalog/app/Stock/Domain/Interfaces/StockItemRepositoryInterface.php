@@ -12,14 +12,14 @@ interface StockItemRepositoryInterface
     public function findById(string $id): ?StockItem;
 
     /**
-     * Obtener stock por SKU
+     * Obtener stock por itemId (ID canónico de catálogo)
      */
-    public function findBySku(string $sku): array;
+    public function findByItemId(string $itemId): array;
 
     /**
-     * Obtener stock por SKU y ubicación específica
+     * Obtener stock por itemId y ubicación específica
      */
-    public function findBySkuAndLocation(string $sku, string $locationId): ?StockItem;
+    public function findByItemAndLocation(string $itemId, string $locationId): ?StockItem;
 
     /**
      * Obtener todo el stock de una ubicación
@@ -55,7 +55,7 @@ interface StockItemRepositoryInterface
      * Ajustar cantidad de stock (incrementar/decrementar)
      * Retorna el StockItem actualizado
      */
-    public function adjustQuantity(string $sku, string $locationId, int $delta): StockItem;
+    public function adjustQuantity(string $itemId, string $locationId, int $delta): StockItem;
 
     /**
      * Reservar cantidad de stock

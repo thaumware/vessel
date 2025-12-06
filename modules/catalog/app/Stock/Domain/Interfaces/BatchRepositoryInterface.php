@@ -10,5 +10,5 @@ interface BatchRepositoryInterface
 
     public function findById(string $id): ?Batch;
 
-    public function findBySkuAndLocation(string $sku, string $locationId): ?Batch;
+    public function findByItemAndLocation(string $itemId, string $locationId): ?Batch;
 }

@@ -14,7 +14,6 @@ return [
         'notes' => 'Stock inicial: 10 unidades',
         'status' => 'active',
         'workspace_id' => null,
-        'term_ids' => [], // Sin taxonomía asignada
     ],
     [
         'id' => 'item-2',
@@ -24,7 +23,6 @@ return [
         'notes' => null,
         'status' => 'active',
         'workspace_id' => null,
-        'term_ids' => [],
     ],
     [
         'id' => 'item-3',
@@ -34,7 +32,6 @@ return [
         'notes' => null,
         'status' => 'active',
         'workspace_id' => null,
-        'term_ids' => [],
     ],
     [
         'id' => 'item-4',
@@ -44,7 +41,6 @@ return [
         'notes' => null,
         'status' => 'draft',
         'workspace_id' => null,
-        'term_ids' => [],
     ],
     [
         'id' => 'item-5',
@@ -54,6 +50,5 @@ return [
         'notes' => null,
         'status' => 'active',
         'workspace_id' => null,
-        'term_ids' => [],
     ],
 ];

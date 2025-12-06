@@ -2,6 +2,11 @@
 
 use Illuminate\Support\Str;
 
+$testDriver = env('DB_TEST_CONNECTION', env('DB_CONNECTION', 'sqlite'));
+$testDbDefault = $testDriver === 'sqlite'
+    ? env('DB_TEST_DATABASE', database_path('database.testing.sqlite'))
+    : env('DB_TEST_DATABASE', env('DB_DATABASE', 'vessel_test'));
+
 return [
 
     /*
@@ -54,6 +59,27 @@ return [
             'unix_socket' => env('DB_SOCKET', ''),
             'charset' => env('DB_CHARSET', 'utf8mb4'),
             'collation' => env('DB_COLLATION', 'utf8mb4_unicode_ci'),
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                PDO::MYSQL_ATTR_SSL_CA => env('MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+            'foreign_key_constraints' => env('DB_TEST_FOREIGN_KEYS', false),
+        ],
+
+        'testing' => [
+            'driver' => $testDriver,
+            'url' => env('DB_TEST_URL', env('DB_URL')),
+            'host' => env('DB_TEST_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('DB_TEST_PORT', env('DB_PORT', '3306')),
+            'database' => $testDbDefault,
+            'username' => env('DB_TEST_USERNAME', env('DB_USERNAME', 'root')),
+            'password' => env('DB_TEST_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('DB_TEST_SOCKET', env('DB_SOCKET', '')),
+            'charset' => env('DB_TEST_CHARSET', env('DB_CHARSET', 'utf8mb4')),
+            'collation' => env('DB_TEST_COLLATION', env('DB_COLLATION', 'utf8mb4_unicode_ci')),
             'prefix' => '',
             'prefix_indexes' => true,
             'strict' => true,

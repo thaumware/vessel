@@ -7,9 +7,26 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up()
     {
-        Schema::table('locations_locations', function (Blueprint $table) {
-            $table->dropForeign(['address_id']);
-        });
+        // Older installs had the FK; fresh schema no longer creates it, so guard to avoid errors
+        $hasFk = false;
+        try {
+            $connection = Schema::getConnection()->getDoctrineSchemaManager();
+            $foreignKeys = $connection->listTableForeignKeys('locations_locations');
+            foreach ($foreignKeys as $fk) {
+                if ($fk->getLocalColumns() === ['address_id']) {
+                    $hasFk = true;
+                    break;
+                }
+            }
+        } catch (\Throwable $e) {
+            $hasFk = false;
+        }
+
+        if ($hasFk) {
+            Schema::table('locations_locations', function (Blueprint $table) {
+                $table->dropForeign(['address_id']);
+            });
+        }
     }
 
     public function down()

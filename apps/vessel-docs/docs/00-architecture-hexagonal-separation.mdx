@@ -1,0 +1,346 @@
+---
+sidebar_position: 0
+---
+
+# Arquitectura Hexagonal - Separación Domain/Infra
+
+## 📊 Análisis de Dependencias
+
+### ✅ Correcto: Infrastructure → Domain
+```
+Infrastructure
+    ↓
+Domain (Interfaces)
+    ↓
+Domain (Entidades)
+
+✅ Infrastructure DEPENDE de Domain (es lo correcto)
+❌ Domain NO depende de Infrastructure (está protegido)
+```
+
+### Verificación Real - Stock Module
+
+**Domain (Puro):**
+```php
+// app/Stock/Domain/Interfaces/CatalogGatewayInterface.php
+interface CatalogGatewayInterface {
+    public function linkToCatalog(StockItem $stockItem): void;
+    public function attachCatalogData(iterable $stockItems): array;
+}
+
+// app/Stock/Domain/Entities/Movement.php
+class Movement {
+    public function __construct(
+        private string $id,
+        private MovementType $type,        // Domain ValueObject
+        private string $itemId,
+        private float $quantity,
+        private MovementStatus $status = MovementStatus::PENDING,
+        // ... solo tipos de dominio
+    ) { }
+}
+```
+
+**No hay**: `use Infrastructure\*` o `use Models\*`
+
+---
+
+**Infrastructure (Adaptador):**
+```php
+// app/Stock/Infrastructure/Out/Models/Eloquent/StockItemRepository.php
+class StockItemRepository implements StockItemRepositoryInterface {
+    use App\Stock\Domain\Entities\StockItem;
+    use App\Stock\Domain\Interfaces\StockItemRepositoryInterface;
+    //                        ↑ Importa desde Domain ✅
+    
+    public function findById(string $id): ?StockItem {
+        $model = StockItemModel::find($id);
+        return $model ? $this->toDomain($model) : null;
+                         //    ↑ Convierte Eloquent → Domain
+    }
+    
+    private function toDomain(StockItemModel $model): StockItem {
+        return new StockItem(
+            id: $model->id,
+            sku: $model->sku,
+            locationId: $model->location_id,
+            quantity: (float) $model->quantity,
+            // ... mapeo desde DB a entidad de dominio
+        );
+    }
+}
+```
+
+---
+
+## 🎯 Patrones de Separación Observados
+
+### 1. **Repository Pattern - Mapeo Perfecto**
+
+```
+┌─────────────────────────────────────────┐
+│         APPLICATION LAYER               │
+│  (UseCases, Services, Controllers)      │
+│  ✓ Usa Domain Entities                  │
+│  ✓ Usa Domain Interfaces                │
+└──────────────────┬──────────────────────┘
+                   │ (pide a través de interface)
+                   ▼
+        ┌──────────────────────┐
+        │  DOMAIN LAYER        │
+        │  Interface           │
+        │ (repositoryInterface)│
+        │ ✓ Puro, sin detalles │
+        │ ✓ agnóstico a BD     │
+        └──────────────────────┘
+                   ▲
+                   │ (implementa)
+                   │
+┌──────────────────┴──────────────────────┐
+│    INFRASTRUCTURE LAYER                 │
+│  EloquentStockItemRepository             │
+│                                          │
+│  - Usa Eloquent Models                  │
+│  - Mapea DB ↔ Domain Entities          │
+│  - Implementa Domain Interfaces          │
+│                                          │
+│  ✓ Conoce detalles de BD                │
+│  ✓ No contamina Domain                  │
+└──────────────────────────────────────────┘
+```
+
+### 2. **Gateway Pattern - Comunicación Inter-módulos**
+
+```
+Stock Domain              Catalog Domain
+     ↑                         ↑
+     │ (usa Interface)         │
+     │                         │
+┌────┴────────────────────┐    │
+│ CatalogGatewayInterface │    │
+└────┬────────────────────┘    │
+     │ (implementa)            │
+     │                         │
+Stock Infrastructure          │
+     │                         │
+┌────┴──────────────────────────┴────┐
+│  PortalCatalogGateway             │
+│  - Llamadas a Portal              │
+│  - Vincula Stock ↔ Catalog        │
+│  - NO accede directo a Catalog DB │
+└───────────────────────────────────┘
+```
+
+### 3. **Adapter Middleware - Intercambiabilidad**
+
+```
+HTTP Request
+     │
+     ▼
+AdapterMiddleware (determina adapter)
+     │
+     ├─ "X-STOCK-ADAPTER: local"  ──→ InMemoryRepository
+     │
+     └─ (default) ────────────────→ EloquentRepository
+                                       │
+                                       ▼
+                                    Domain Layer
+                                    (sin cambios)
+```
+
+**Importancia:** Domain NO sabe cuál repositorio está usando.
+
+---
+
+## 📈 Complejidad vs Claridad
+
+### **Score: 7/10 - Bien, pero tiene densidad**
+
+| Aspecto | Evaluación | Notas |
+|---------|-----------|-------|
+| **Separación Domain/Infra** | ✅ Excelente | Domain completamente limpio |
+| **Curva de aprendizaje** | ⚠️ Media | Muchas capas, pero ordenadas |
+| **Entendibilidad rápida** | ⚠️ Media | Necesita tiempo para mapear flujo |
+| **Facilidad de cambios** | ✅ Buena | Cambios en Infra no afectan Domain |
+| **Testing** | ✅ Excelente | Mocks fáciles por interfaces |
+
+---
+
+## 📚 Flujo de Entendimiento (Recomendado)
+
+### Paso 1: Entender Domain
+```
+1. Leer: Domain/Interfaces/StockItemRepositoryInterface.php
+   → "¿Qué operaciones necesita Stock?"
+   
+2. Leer: Domain/Entities/StockItem.php
+   → "¿Qué datos maneja Stock?"
+   
+3. Leer: Domain/Services/StockCapacityService.php
+   → "¿Qué lógica de negocio hay?"
+```
+
+**Resultado:** Entiendes la lógica sin tocar DB.
+
+### Paso 2: Entender Infrastructure
+```
+4. Leer: Infrastructure/Out/Models/Eloquent/StockItemRepository.php
+   → "¿Cómo persiste en BD?"
+   
+5. Leer: Infrastructure/In/Http/Controllers/StockController.php
+   → "¿Cómo recibe requests?"
+```
+
+**Resultado:** Entiendes cómo funciona realmente.
+
+### Paso 3: Conectar
+```
+6. Leer: Infrastructure/StockServiceProvider.php
+   → "$app->bind(Interface, Implementation)"
+   
+7. Entiendes: Domain Interface se realiza en Infrastructure
+```
+
+---
+
+## ⚙️ Complejidad: Desglose
+
+### **NO ES complejo porque:**
+✅ Domain es simple (entidades + servicios)
+✅ Infrastructure es repetitivo pero predecible
+✅ Separación es clara: In/Out y Models/Gateways
+✅ Bindings DI centralizados en ServiceProvider
+
+### **SÍ TIENE densidad porque:**
+⚠️ Muchas carpetas y niveles (5-6 niveles)
+⚠️ Muchas interfaces vs implementaciones
+⚠️ Necesita entender: Domain → Interface → Impl → Routes
+⚠️ Mapeos Eloquent ↔ Domain requieren lectura
+
+---
+
+## 🎓 Ejemplo Práctico: Crear un Item de Stock
+
+### Entender el flujo:
+
+```
+┌─────────────────────────────────────────────────────┐
+│ 1. HTTP REQUEST                                     │
+│    POST /api/v1/stock/items/create                  │
+│    Body: { sku: "PROD-001", quantity: 100 }        │
+└────────────────────┬────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────┐
+│ 2. CONTROLLER (Infrastructure/In)                   │
+│    app/Stock/Infrastructure/In/Http/Controller      │
+│    → Valida request                                 │
+│    → Llama UseCase                                  │
+└────────────────────┬────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────┐
+│ 3. USECASE (Application Layer)                      │
+│    app/Stock/Application/UseCases/CreateStockItem  │
+│    → Lógica de aplicación                           │
+│    → Llama repositorio por INTERFAZ (Domain)        │
+└────────────────────┬────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────┐
+│ 4. DOMAIN INTERFACE                                 │
+│    app/Stock/Domain/Interfaces/                     │
+│    StockItemRepositoryInterface::save()             │
+│    (es solo firma, sin implementación)              │
+└────────────────────┬────────────────────────────────┘
+                     │ (se resuelve en runtime)
+                     │ (DI container busca implementación)
+                     │
+┌────────────────────▼────────────────────────────────┐
+│ 5. INFRASTRUCTURE IMPLEMENTATION                    │
+│    app/Stock/Infrastructure/Out/Models/Eloquent/   │
+│    StockItemRepository::save()                      │
+│    → Crea StockItemModel                            │
+│    → Guarda en BD                                   │
+└────────────────────┬────────────────────────────────┘
+                     │
+┌────────────────────▼────────────────────────────────┐
+│ 6. DATABASE                                         │
+│    INSERT INTO stock_items (...)                    │
+└─────────────────────────────────────────────────────┘
+```
+
+**Puntos clave:**
+- Domain no ve la BD
+- Infrastructure no contamina Domain
+- Cambiar Eloquent → Doctrine solo toca Step 5
+
+---
+
+## 🔍 Revisar Acoplamiento
+
+### Stock + Locations (LocationGateway)
+
+**ACTUAL - Algo acoplado:**
+```php
+// app/Stock/Infrastructure/Out/Gateways/LocationsModuleGateway.php
+class LocationsModuleGateway implements LocationGatewayInterface {
+    public function __construct(
+        private LocationRepository $locationRepository  // ← Repositorio directo
+    ) { }
+    
+    public function getChildren(string $locationId) {
+        return $this->locationRepository->findByFilters([
+            'parent_id' => $locationId
+        ]);
+    }
+}
+```
+
+**Problema:** Si Locations es microservicio remoto, esto no funciona.
+
+**MEJOR - Usar Portal uniformemente:**
+```php
+class PortalLocationGateway implements LocationGatewayInterface {
+    public function __construct(
+        private Portal $portal
+    ) { }
+    
+    public function getChildren(string $locationId) {
+        return $this->portal->query('locations', [
+            'parent_id' => $locationId
+        ])->get();
+    }
+}
+```
+
+**Beneficio:** Funciona con BD local, Portal, HTTP, etc.
+
+---
+
+## 📋 Resumen: ¿Fácil o Complejo?
+
+### Para **entender** la arquitectura:
+**7-8/10 en facilidad** - Patrón claro, bien ejecutado, pero requiere tiempo.
+
+### Para **modificar** código:
+**8-9/10 en facilidad** - Cambios locales, impacto bajo, tests fáciles.
+
+### Para **agregar** nuevas características:
+**7/10 en facilidad** - Copiar patrón de otro módulo, ajustar.
+
+### Para **debuggear**:
+**6/10 en facilidad** - Muchos niveles, requiere entender el flujo completo.
+
+---
+
+## ✅ Conclusión
+
+**Domain/Infrastructure está BIEN SEPARADO:**
+
+```
+✅ Domain = Puro (sin dependencias de Infra)
+✅ Infrastructure = Implementa (depende de Domain)
+✅ No hay ciclos de dependencia
+✅ Testeable sin mockar BD
+✅ Intercambiable (InMemory vs Eloquent)
+```
+
+**Mejora sugerida:** Generalizar LocationGateway a usar Portal como CatalogGateway.

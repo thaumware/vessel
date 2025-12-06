@@ -4,8 +4,12 @@ use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
+use App\Shared\Console\Commands\AutoUpdateCommand;
 
 return Application::configure(basePath: dirname(__DIR__))
+    ->withCommands([
+        AutoUpdateCommand::class,
+    ])
     ->withMiddleware(function (Middleware $middleware): void {
         // CORS middleware para todas las peticiones
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);

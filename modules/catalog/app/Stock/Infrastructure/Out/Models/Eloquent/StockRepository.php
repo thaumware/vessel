@@ -27,17 +27,17 @@ class StockRepository implements StockRepositoryInterface
     public function save(Stock $stock): Stock
     {
         $model = StockModel::updateOrCreate(
-            ['sku' => $stock->sku(), 'location_id' => $stock->locationId(), 'location_type' => $stock->locationType()],
+            ['sku' => $stock->itemId(), 'location_id' => $stock->locationId(), 'location_type' => $stock->locationType()],
             ['quantity' => $stock->quantity()]
         );
 
         return new Stock($model->sku, $model->location_id, $model->location_type ?? null, (int)$model->quantity);
     }
 
-    public function adjustQuantity(string $sku, string $locationId, int $delta, ?string $locationType = null): Stock
+    public function adjustQuantity(string $itemId, string $locationId, int $delta, ?string $locationType = null): Stock
     {
         // Use DB-level atomic increment/decrement and ensure non-negative quantity
-        $attributes = ['sku' => $sku, 'location_id' => $locationId];
+        $attributes = ['sku' => $itemId, 'location_id' => $locationId];
         if ($locationType !== null) {
             $attributes['location_type'] = $locationType;
         }

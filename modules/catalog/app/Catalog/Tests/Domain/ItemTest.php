@@ -19,7 +19,6 @@ class ItemTest extends CatalogTestCase
             notes: $data['notes'],
             status: $data['status'],
             workspaceId: $data['workspaceId'],
-            termIds: $data['termIds'],
         );
 
         $this->assertEquals($data['id'], $item->getId());
@@ -27,9 +26,8 @@ class ItemTest extends CatalogTestCase
         $this->assertEquals($data['description'], $item->getDescription());
         $this->assertEquals($data['uomId'], $item->getUomId());
         $this->assertEquals($data['notes'], $item->getNotes());
-        $this->assertEquals($data['status'], $item->getStatus());
+        $this->assertEquals($data['status'], $item->getStatusValue());
         $this->assertEquals($data['workspaceId'], $item->getWorkspaceId());
-        $this->assertEquals($data['termIds'], $item->getTermIds());
     }
 
     public function test_can_create_item_with_minimal_fields(): void
@@ -47,9 +45,8 @@ class ItemTest extends CatalogTestCase
         $this->assertNull($item->getDescription());
         $this->assertNull($item->getUomId());
         $this->assertNull($item->getNotes());
-        $this->assertEquals('active', $item->getStatus());
+        $this->assertEquals('active', $item->getStatusValue());
         $this->assertNull($item->getWorkspaceId());
-        $this->assertEquals([], $item->getTermIds());
     }
 
     public function test_item_defaults_to_active_status(): void
@@ -59,18 +56,12 @@ class ItemTest extends CatalogTestCase
             name: 'Test Item'
         );
 
-        $this->assertEquals('active', $item->getStatus());
+        $this->assertEquals('active', $item->getStatusValue());
     }
 
     public function test_item_defaults_to_empty_term_ids(): void
     {
-        $item = new Item(
-            id: $this->generateUuid(),
-            name: 'Test Item'
-        );
-
-        $this->assertIsArray($item->getTermIds());
-        $this->assertEmpty($item->getTermIds());
+        $this->markTestSkipped('Item no longer stores taxonomy term IDs directly.');
     }
 
     public function test_to_array_returns_correct_structure(): void
@@ -85,7 +76,6 @@ class ItemTest extends CatalogTestCase
             notes: $data['notes'],
             status: $data['status'],
             workspaceId: $data['workspaceId'],
-            termIds: $data['termIds'],
         );
 
         $array = $item->toArray();
@@ -97,7 +87,7 @@ class ItemTest extends CatalogTestCase
         $this->assertArrayHasKey('notes', $array);
         $this->assertArrayHasKey('status', $array);
         $this->assertArrayHasKey('workspace_id', $array);
-        $this->assertArrayHasKey('term_ids', $array);
+        $this->assertArrayNotHasKey('term_ids', $array);
     }
 
     public function test_to_array_uses_snake_case_keys(): void
@@ -107,7 +97,6 @@ class ItemTest extends CatalogTestCase
             name: 'Test',
             uomId: $this->generateUuid(),
             workspaceId: $this->generateUuid(),
-            termIds: [$this->generateUuid()],
         );
 
         $array = $item->toArray();
@@ -116,7 +105,7 @@ class ItemTest extends CatalogTestCase
         $this->assertArrayNotHasKey('uomId', $array);
         $this->assertArrayHasKey('workspace_id', $array);
         $this->assertArrayNotHasKey('workspaceId', $array);
-        $this->assertArrayHasKey('term_ids', $array);
+        $this->assertArrayNotHasKey('term_ids', $array);
         $this->assertArrayNotHasKey('termIds', $array);
     }
 
@@ -128,7 +117,7 @@ class ItemTest extends CatalogTestCase
             status: 'draft'
         );
 
-        $this->assertEquals('draft', $item->getStatus());
+        $this->assertEquals('draft', $item->getStatusValue());
     }
 
     public function test_can_create_item_with_archived_status(): void
@@ -139,24 +128,11 @@ class ItemTest extends CatalogTestCase
             status: 'archived'
         );
 
-        $this->assertEquals('archived', $item->getStatus());
+        $this->assertEquals('archived', $item->getStatusValue());
     }
 
     public function test_can_create_item_with_multiple_term_ids(): void
     {
-        $termIds = [
-            $this->generateUuid(),
-            $this->generateUuid(),
-            $this->generateUuid(),
-        ];
-
-        $item = new Item(
-            id: $this->generateUuid(),
-            name: 'Item with Terms',
-            termIds: $termIds
-        );
-
-        $this->assertCount(3, $item->getTermIds());
-        $this->assertEquals($termIds, $item->getTermIds());
+        $this->markTestSkipped('Taxonomy terms are managed via ItemClassification, not inside Item.');
     }
 }

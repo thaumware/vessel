@@ -23,10 +23,10 @@ class InMemoryBatchRepository implements BatchRepositoryInterface
         return $this->batches[$id] ?? null;
     }
 
-    public function findBySkuAndLocation(string $sku, string $locationId): ?Batch
+    public function findByItemAndLocation(string $itemId, string $locationId): ?Batch
     {
         foreach ($this->batches as $batch) {
-            if ($batch->sku() === $sku && $batch->locationId() === $locationId) {
+            if ($batch->itemId() === $itemId && $batch->locationId() === $locationId) {
                 return $batch;
             }
         }
@@ -37,7 +37,7 @@ class InMemoryBatchRepository implements BatchRepositoryInterface
     {
         return array_values(array_filter(
             $this->batches,
-            fn(Batch $batch) => $batch->sku() === $sku
+            fn(Batch $batch) => $batch->itemId() === $sku
         ));
     }
 

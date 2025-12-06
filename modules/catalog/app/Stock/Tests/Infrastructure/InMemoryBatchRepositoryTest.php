@@ -21,7 +21,7 @@ class InMemoryBatchRepositoryTest extends StockTestCase
         $data = $this->createBatchData();
         $batch = new Batch(
             id: $data['id'],
-            sku: $data['sku'],
+            itemId: $data['sku'],
             locationId: $data['locationId'],
             quantity: $data['quantity'],
             lotNumber: $data['lotNumber']
@@ -32,7 +32,7 @@ class InMemoryBatchRepositoryTest extends StockTestCase
 
         $this->assertNotNull($found);
         $this->assertEquals($data['id'], $found->id());
-        $this->assertEquals($data['sku'], $found->sku());
+        $this->assertEquals($data['sku'], $found->itemId());
     }
 
     public function test_find_by_id_returns_null_for_nonexistent(): void
@@ -43,43 +43,43 @@ class InMemoryBatchRepositoryTest extends StockTestCase
 
     public function test_find_by_sku_and_location(): void
     {
-        $sku = 'TEST-SKU';
+        $itemId = 'TEST-SKU';
         $locationId = $this->generateUuid();
 
         $batch = new Batch(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             locationId: $locationId,
             quantity: 100
         );
 
         $this->repository->save($batch);
-        $found = $this->repository->findBySkuAndLocation($sku, $locationId);
+        $found = $this->repository->findByItemAndLocation($itemId, $locationId);
 
         $this->assertNotNull($found);
-        $this->assertEquals($sku, $found->sku());
+        $this->assertEquals($itemId, $found->itemId());
         $this->assertEquals($locationId, $found->locationId());
     }
 
     public function test_find_by_sku_and_location_returns_null_when_not_found(): void
     {
-        $found = $this->repository->findBySkuAndLocation('NONEXISTENT', $this->generateUuid());
+        $found = $this->repository->findByItemAndLocation('NONEXISTENT', $this->generateUuid());
         $this->assertNull($found);
     }
 
     public function test_find_by_sku(): void
     {
-        $sku = 'COMMON-SKU';
+        $itemId = 'COMMON-SKU';
 
-        $this->repository->save(new Batch($this->generateUuid(), $sku, $this->generateUuid(), 50));
-        $this->repository->save(new Batch($this->generateUuid(), $sku, $this->generateUuid(), 30));
+        $this->repository->save(new Batch($this->generateUuid(), $itemId, $this->generateUuid(), 50));
+        $this->repository->save(new Batch($this->generateUuid(), $itemId, $this->generateUuid(), 30));
         $this->repository->save(new Batch($this->generateUuid(), 'OTHER-SKU', $this->generateUuid(), 20));
 
-        $found = $this->repository->findBySku($sku);
+        $found = $this->repository->findBySku($itemId);
 
         $this->assertCount(2, $found);
         foreach ($found as $batch) {
-            $this->assertEquals($sku, $batch->sku());
+            $this->assertEquals($itemId, $batch->itemId());
         }
     }
 
@@ -135,11 +135,11 @@ class InMemoryBatchRepositoryTest extends StockTestCase
     public function test_clear_removes_all_batches(): void
     {
         $this->repository->save(new Batch($this->generateUuid(), 'SKU-1', $this->generateUuid(), 50));
+        $this->repository->save(new Batch($this->generateUuid(), 'SKU-1', $this->generateUuid(), 50));
         $this->repository->save(new Batch($this->generateUuid(), 'SKU-2', $this->generateUuid(), 30));
-
         $this->repository->clear();
-
         $this->assertEmpty($this->repository->findBySku('SKU-1'));
+        $this->assertEmpty($this->repository->findBySku('SKU-2'));
         $this->assertEmpty($this->repository->findBySku('SKU-2'));
     }
 }

@@ -21,9 +21,15 @@ class CreateStockItem
             throw new \InvalidArgumentException('ID is required');
         }
 
+        $itemId = $data['item_id'] ?? $data['sku'] ?? null;
+
+        if (!$itemId) {
+            throw new \InvalidArgumentException('item_id is required');
+        }
+
         $stockItem = new StockItem(
             id: $data['id'],
-            sku: $data['sku'],
+            itemId: $itemId,
             catalogItemId: $data['catalog_item_id'],
             catalogOrigin: $data['catalog_origin'] ?? $this->catalogGateway->getDefaultOriginName(),
             locationId: $data['location_id'],

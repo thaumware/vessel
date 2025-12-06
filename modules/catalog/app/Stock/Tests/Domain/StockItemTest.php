@@ -15,7 +15,7 @@ class StockItemTest extends StockTestCase
         
         $item = new StockItem(
             id: $data['id'],
-            sku: $data['sku'],
+            itemId: $data['itemId'],
             catalogItemId: $data['catalogItemId'],
             catalogOrigin: $data['catalogOrigin'],
             locationId: $data['locationId'],
@@ -25,7 +25,7 @@ class StockItemTest extends StockTestCase
         );
 
         $this->assertEquals($data['id'], $item->getId());
-        $this->assertEquals($data['sku'], $item->getSku());
+        $this->assertEquals($data['itemId'], $item->getItemId());
         $this->assertEquals($data['catalogItemId'], $item->getCatalogItemId());
         $this->assertEquals($data['catalogOrigin'], $item->getCatalogOrigin());
         $this->assertEquals($data['locationId'], $item->getLocationId());
@@ -38,7 +38,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -53,7 +53,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -70,7 +70,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -90,7 +90,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -109,7 +109,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -127,7 +127,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -146,7 +146,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -166,7 +166,7 @@ class StockItemTest extends StockTestCase
         $futureDate = new DateTimeImmutable('+30 days');
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -178,7 +178,7 @@ class StockItemTest extends StockTestCase
         $pastDate = new DateTimeImmutable('-1 day');
         $expiredItem = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -189,7 +189,7 @@ class StockItemTest extends StockTestCase
         // No expiration date
         $noExpiry = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -201,7 +201,7 @@ class StockItemTest extends StockTestCase
     {
         $tracked = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -211,7 +211,7 @@ class StockItemTest extends StockTestCase
 
         $notTracked = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -223,7 +223,7 @@ class StockItemTest extends StockTestCase
     {
         $tracked = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -233,7 +233,7 @@ class StockItemTest extends StockTestCase
 
         $notTracked = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -245,7 +245,7 @@ class StockItemTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: 'cat-123',
             catalogOrigin: 'catalog_items',
             locationId: 'loc-456',
@@ -258,6 +258,8 @@ class StockItemTest extends StockTestCase
 
         $array = $item->toArray();
 
+        $this->assertArrayHasKey('item_id', $array);
+        $this->assertArrayHasKey('sku', $array);
         $this->assertArrayHasKey('catalog_item_id', $array);
         $this->assertArrayHasKey('catalog_origin', $array);
         $this->assertArrayHasKey('location_id', $array);
@@ -269,6 +271,8 @@ class StockItemTest extends StockTestCase
         $this->assertArrayHasKey('created_at', $array);
         $this->assertArrayHasKey('updated_at', $array);
         
+        $this->assertEquals('TEST-SKU', $array['item_id']);
+        $this->assertEquals('TEST-SKU', $array['sku']);
         $this->assertEquals(75, $array['available_quantity']);
     }
 
@@ -276,7 +280,7 @@ class StockItemTest extends StockTestCase
     {
         $original = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),

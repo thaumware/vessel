@@ -15,13 +15,13 @@ class AdjustStockQuantity
     /**
      * Ajustar cantidad de stock (incrementar o decrementar)
      * 
-     * @param string $sku SKU del producto
+    * @param string $itemId ID canónico del item (alias sku legado)
      * @param string $locationId ID de la ubicación
      * @param int $delta Cantidad a ajustar (positivo: incrementar, negativo: decrementar)
      * @return StockItem StockItem actualizado
      */
-    public function execute(string $sku, string $locationId, int $delta): StockItem
+    public function execute(string $itemId, string $locationId, int $delta): StockItem
     {
-        return $this->repository->adjustQuantity($sku, $locationId, $delta);
+        return $this->repository->adjustQuantity($itemId, $locationId, $delta);
     }
 }

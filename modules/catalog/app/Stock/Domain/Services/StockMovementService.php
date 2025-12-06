@@ -219,7 +219,7 @@ class StockMovementService
 
     private function findStockItem(Movement $movement): ?StockItem
     {
-        return $this->stockItemRepository->findBySkuAndLocation(
+        return $this->stockItemRepository->findByItemAndLocation(
             $movement->getItemId(),
             $movement->getLocationId()
         );
@@ -256,7 +256,7 @@ class StockMovementService
 
         return new StockItem(
             id: $this->generateId(),
-            sku: $movement->getItemId(),
+            itemId: $movement->getItemId(),
             catalogItemId: null,
             catalogOrigin: null,
             locationId: $movement->getLocationId(),

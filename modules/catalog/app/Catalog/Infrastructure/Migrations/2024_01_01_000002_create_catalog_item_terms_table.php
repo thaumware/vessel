@@ -19,15 +19,9 @@ return new class extends Migration
 
             $table->primary(['item_id', 'term_id']);
 
-            $table->foreign('item_id')
-                ->references('id')
-                ->on('catalog_items')
-                ->onDelete('cascade');
-
-            $table->foreign('term_id')
-                ->references('id')
-                ->on('catalog_terms')
-                ->onDelete('cascade');
+            // Avoid hard FK coupling; use indexes only to keep setup resilient to ordering
+            $table->index('item_id');
+            $table->index('term_id');
         });
     }
 

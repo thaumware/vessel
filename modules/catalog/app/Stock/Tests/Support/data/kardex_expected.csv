@@ -1,0 +1,4 @@
+movement_id,date,item_id,location_id,type,quantity,balance
+mov-001,2024-01-01 10:00:00,ITEM-100,WH-1,receipt,50,50
+mov-002,2024-01-02 11:30:00,ITEM-100,WH-1,receipt,20,70
+mov-003,2024-01-03 08:00:00,ITEM-200,WH-2,receipt,10,10

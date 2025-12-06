@@ -1,0 +1,23 @@
+[
+  {
+    "movement_id": "mov-001",
+    "item_id": "ITEM-100",
+    "location_id": "WH-1",
+    "quantity": 50,
+    "timestamp": "2024-01-01T10:00:00Z"
+  },
+  {
+    "movement_id": "mov-002",
+    "item_id": "ITEM-100",
+    "location_id": "WH-1",
+    "quantity": 20,
+    "timestamp": "2024-01-02T11:30:00Z"
+  },
+  {
+    "movement_id": "mov-003",
+    "item_id": "ITEM-200",
+    "location_id": "WH-2",
+    "quantity": 10,
+    "timestamp": "2024-01-03T08:00:00Z"
+  }
+]

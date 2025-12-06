@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Catalog Admin Panel</title>
+    <title>Vessel Admin Panel</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
@@ -19,9 +19,12 @@
     </style>
 </head>
 <body class="h-full bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-gray-100">
-    <div x-data="adminPanel()" 
-         x-init="tables = JSON.parse($el.dataset.tables)"
-         data-tables="{{ json_encode($tables ?? []) }}"
+        <div x-data="adminPanel()" 
+            x-init="tables = JSON.parse($el.dataset.tables)"
+            data-tables="{{ json_encode($tables ?? []) }}"
+            data-missing="{{ json_encode($missingTables ?? []) }}"
+            data-needs-setup="{{ $needsAdminSetup ? 'true' : 'false' }}"
+            data-config="{{ json_encode($configEntries ?? []) }}"
          x-cloak class="min-h-full flex flex-col">
         
         <!-- Header -->
@@ -29,12 +32,12 @@
             <div class="max-w-screen-2xl mx-auto px-6 py-4">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-4">
-                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/20">
-                            C
+                        <div class="w-10 h-10 bg-gradient-to-br from-blue-500 to-teal-500 rounded-xl flex items-center justify-center font-bold text-lg shadow-lg shadow-blue-500/20">
+                            V
                         </div>
                         <div>
                             <h1 class="text-xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
-                                Catalog Admin Panel
+                                Vessel Admin Panel
                             </h1>
                             <p class="text-xs text-gray-400">Debug & Testing Console</p>
                         </div>
@@ -71,6 +74,32 @@
                         </svg>
                         Database
                     </button>
+                    <button @click="activeTab = 'logs'; if (!logsLoaded) { loadLogs(); }" 
+                            :class="activeTab === 'logs' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+                            class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-6a2 2 0 012-2h9m-5 8v1a2 2 0 01-2 2H6l-3 3V6a2 2 0 012-2h7" />
+                        </svg>
+                        Logs
+                    </button>
+                    <button @click="activeTab = 'sql'" 
+                            :class="activeTab === 'sql' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+                            class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 4h2a2 2 0 012 2v12a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c-1.333 0-2 .667-2 2s.667 2 2 2 2-.667 2-2-.667-2-2-2z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 7v2" />
+                        </svg>
+                        SQL
+                    </button>
+                    <button @click="activeTab = 'routes'; if (!routesLoaded) { loadRoutes(); }" 
+                            :class="activeTab === 'routes' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
+                            class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 flex items-center gap-2">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m-6 4h18m-9-2v2m-9 4h12m-6-2v2" />
+                        </svg>
+                        Routes
+                    </button>
                     <button @click="activeTab = 'actions'" 
                             :class="activeTab === 'actions' ? 'bg-blue-600 text-white' : 'text-gray-400 hover:text-white hover:bg-gray-800'"
                             class="px-5 py-3 text-sm font-medium rounded-t-lg transition-all duration-200 flex items-center gap-2">
@@ -93,6 +122,31 @@
 
         <!-- Main Content -->
         <main class="flex-1 max-w-screen-2xl mx-auto w-full px-6 py-6">
+            <template x-if="missing.length > 0">
+                <div class="mb-6 bg-amber-500/10 border border-amber-500/40 text-amber-100 rounded-2xl p-5 flex flex-col gap-3">
+                    <div class="flex flex-col gap-1">
+                        <h2 class="text-lg font-semibold">Migraciones pendientes</h2>
+                        <p class="text-sm text-amber-200/90">Faltan tablas básicas: <span class="font-mono" x-text="missing.join(', ')"></span>. Ejecuta migraciones para inicializar Vessel (Portal + shared_config).</p>
+                    </div>
+                    <div class="flex flex-wrap gap-3 items-center">
+                        <button @click="runMigrate()" class="px-4 py-2 rounded-lg bg-amber-500 text-amber-950 font-semibold shadow">Ejecutar migraciones</button>
+                    </div>
+                </div>
+            </template>
+
+            <template x-if="missing.length === 0 && needsAdminSetup">
+                <div class="mb-6 bg-amber-500/10 border border-amber-500/40 text-amber-100 rounded-2xl p-5 flex flex-col gap-3">
+                    <div class="flex flex-col gap-1">
+                        <h2 class="text-lg font-semibold">Protege el panel</h2>
+                        <p class="text-sm text-amber-200/90">Define credenciales admin para habilitar el Basic Auth.</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+                        <input x-model="adminUser" type="text" placeholder="Usuario admin" class="bg-gray-900 border border-amber-500/50 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                        <input x-model="adminPass" type="password" placeholder="Password" class="bg-gray-900 border border-amber-500/50 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-amber-400 focus:border-transparent" />
+                        <button @click="saveAdminCredentials()" class="px-4 py-2 rounded-lg bg-emerald-500 text-emerald-950 font-semibold shadow">Guardar credenciales</button>
+                    </div>
+                </div>
+            </template>
             
             <!-- Tests Tab -->
             <div x-show="activeTab === 'tests'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0">
@@ -169,10 +223,13 @@
                         <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden sticky top-24">
                             <div class="px-5 py-4 border-b border-gray-700/50">
                                 <h3 class="font-medium text-white">Catalog Tables</h3>
-                                <p class="text-xs text-gray-400 mt-1" x-text="tables.length + ' tables'"></p>
+                                <div class="flex flex-col gap-2 mt-2">
+                                    <p class="text-xs text-gray-400" x-text="tables.length + ' tables'"></p>
+                                    <input x-model="tableSearch" type="text" placeholder="Filtrar tablas..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                </div>
                             </div>
                             <div class="max-h-[calc(100vh-280px)] overflow-y-auto scrollbar-thin">
-                                <template x-for="table in tables" :key="table.name">
+                                <template x-for="table in tables.filter(t => !tableSearch || t.name.toLowerCase().includes(tableSearch.toLowerCase()))" :key="table.name">
                                     <button @click="selectTable(table.name)"
                                             :class="selectedTable === table.name ? 'bg-blue-600/20 border-l-2 border-blue-500' : 'hover:bg-gray-700/50 border-l-2 border-transparent'"
                                             class="w-full px-5 py-3 text-left transition-all duration-150 flex items-center justify-between group">
@@ -252,6 +309,237 @@
                 </div>
             </div>
 
+            <!-- Logs Tab -->
+            <div x-show="activeTab === 'logs'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0">
+                <div class="space-y-4">
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6 flex flex-col gap-4">
+                        <div class="flex flex-wrap items-center gap-3">
+                            <h2 class="text-lg font-semibold text-white">Laravel Logs</h2>
+                            <span class="text-xs text-gray-400">Solo lectura • Entorno dev</span>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                            <input x-model="logSearch" type="text" placeholder="Buscar texto..." class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <select x-model="logLevel" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos los niveles</option>
+                                <option value="error">Error</option>
+                                <option value="warning">Warning</option>
+                                <option value="info">Info</option>
+                                <option value="debug">Debug</option>
+                            </select>
+                            <input x-model.number="logLimit" type="number" min="10" max="500" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Limite de lineas">
+                            <div class="flex gap-2 justify-end">
+                                <button @click="loadLogs()" :disabled="logLoading" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2">
+                                    <svg x-show="!logLoading" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                    </svg>
+                                    <svg x-show="logLoading" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span x-text="logLoading ? 'Cargando...' : 'Actualizar'"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                            <h3 class="font-medium text-white">Entradas recientes</h3>
+                            <span class="text-xs text-gray-400" x-text="logEntries.length + ' mostradas'"></span>
+                        </div>
+                        <div class="max-h-[calc(100vh-320px)] overflow-y-auto scrollbar-thin divide-y divide-gray-800/80">
+                            <template x-if="logEntries.length === 0 && !logLoading">
+                                <div class="py-12 text-center text-gray-500">Sin registros para los filtros actuales</div>
+                            </template>
+                            <template x-if="logLoading">
+                                <div class="py-12 text-center text-gray-400 flex items-center justify-center gap-3">
+                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Cargando...
+                                </div>
+                            </template>
+                            <template x-for="(entry, idx) in logEntries" :key="idx">
+                                <div class="px-6 py-4 flex flex-col gap-1">
+                                    <div class="flex items-center gap-3">
+                                        <span class="text-xs text-gray-500" x-text="entry.timestamp || '-' "></span>
+                                        <span class="text-xs text-gray-500" x-text="entry.env || 'local'"></span>
+                                        <span :class="{
+                                            'bg-red-500/10 text-red-300 border border-red-500/30': entry.level === 'error',
+                                            'bg-amber-500/10 text-amber-300 border border-amber-500/30': entry.level === 'warning',
+                                            'bg-blue-500/10 text-blue-300 border border-blue-500/30': entry.level === 'info',
+                                            'bg-gray-500/10 text-gray-300 border border-gray-500/30': !['error','warning','info'].includes(entry.level)
+                                        }" class="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                            <span x-text="entry.level || 'info'"></span>
+                                        </span>
+                                    </div>
+                                    <pre class="whitespace-pre-wrap text-sm text-gray-200 font-mono leading-relaxed bg-gray-900/40 rounded-lg px-3 py-2 border border-gray-800" x-text="entry.message"></pre>
+                                </div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SQL Tab -->
+            <div x-show="activeTab === 'sql'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0">
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="lg:col-span-1 bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6 flex flex-col gap-4">
+                        <div>
+                            <h2 class="text-lg font-semibold text-white">Ejecutar SELECT</h2>
+                            <p class="text-xs text-gray-400 mt-1">Solo tablas de Catálogo, lectura y limite automático</p>
+                        </div>
+                        <textarea x-model="sqlQuery" rows="8" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm font-mono focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="SELECT * FROM catalog_items LIMIT 20;"></textarea>
+                        <div class="flex items-center justify-between text-xs text-gray-500">
+                            <span>Solo SELECT | Se forza LIMIT 100 si no está presente</span>
+                        </div>
+                        <button @click="runSqlQuery()" :disabled="sqlRunning || !sqlQuery.trim()" class="w-full px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed flex items-center gap-2 justify-center">
+                            <svg x-show="!sqlRunning" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            </svg>
+                            <svg x-show="sqlRunning" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="sqlRunning ? 'Ejecutando...' : 'Ejecutar'"></span>
+                        </button>
+                        <p class="text-xs text-gray-500">Tip: usa JOIN pero solo con tablas que comiencen con catalog_, stock_, locations_, uom_, taxonomy_, pricing_ o portal.</p>
+                    </div>
+
+                    <div class="lg:col-span-2 bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-white">Resultado</h3>
+                                <p class="text-xs text-gray-400" x-show="sqlResult" x-text="(sqlResult?.count || 0) + ' filas · ' + (sqlResult?.duration_ms || 0) + ' ms'"></p>
+                            </div>
+                            <button @click="sqlResult = null; sqlError = ''" class="text-xs text-gray-400 hover:text-white">Limpiar</button>
+                        </div>
+                        <div class="p-6">
+                            <template x-if="sqlError">
+                                <div class="mb-4 px-4 py-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-200 text-sm" x-text="sqlError"></div>
+                            </template>
+                            <template x-if="sqlRunning">
+                                <div class="py-10 text-center text-gray-400 flex items-center justify-center gap-3">
+                                    <svg class="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Ejecutando consulta...
+                                </div>
+                            </template>
+                            <template x-if="sqlResult && sqlResult.rows && sqlResult.rows.length">
+                                <div class="overflow-auto max-h-[calc(100vh-340px)] scrollbar-thin">
+                                    <table class="w-full text-sm">
+                                        <thead class="bg-gray-900/50 sticky top-0">
+                                            <tr>
+                                                <template x-for="column in sqlResult.columns" :key="column">
+                                                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider whitespace-nowrap" x-text="column"></th>
+                                                </template>
+                                            </tr>
+                                        </thead>
+                                        <tbody class="divide-y divide-gray-700/50">
+                                            <template x-for="(row, idx) in sqlResult.rows" :key="idx">
+                                                <tr class="hover:bg-gray-700/30 transition-colors">
+                                                    <template x-for="column in sqlResult.columns" :key="column">
+                                                        <td class="px-4 py-3 text-gray-300 whitespace-nowrap max-w-xs truncate" x-text="row[column] ?? '-' "></td>
+                                                    </template>
+                                                </tr>
+                                            </template>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </template>
+                            <template x-if="sqlResult && (!sqlResult.rows || sqlResult.rows.length === 0) && !sqlRunning && !sqlError">
+                                <div class="py-10 text-center text-gray-500">Sin resultados</div>
+                            </template>
+                            <template x-if="!sqlResult && !sqlRunning && !sqlError">
+                                <div class="py-10 text-center text-gray-500">Ingresa una consulta SELECT y ejecuta.</div>
+                            </template>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Routes Tab -->
+            <div x-show="activeTab === 'routes'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0">
+                <div class="space-y-6">
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6 grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+                        <div>
+                            <label class="text-xs text-gray-400">Buscar</label>
+                            <input x-model="routeSearch" @input.debounce.400ms="loadRoutes" type="text" placeholder="URI, name o action" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Método</label>
+                            <select x-model="routeMethod" @change="loadRoutes" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos</option>
+                                <option>GET</option>
+                                <option>POST</option>
+                                <option>PUT</option>
+                                <option>PATCH</option>
+                                <option>DELETE</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs text-gray-400">Módulo</label>
+                            <select x-model="routeModule" @change="loadRoutes" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                                <option value="">Todos</option>
+                                <template x-for="mod in modules" :key="mod.name">
+                                    <option :value="mod.name" x-text="mod.name"></option>
+                                </template>
+                            </select>
+                        </div>
+                        <div class="flex gap-2 justify-end">
+                            <button @click="loadRoutes" class="px-4 py-2 rounded-lg text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Actualizar
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                            <div>
+                                <h3 class="font-medium text-white">Rutas</h3>
+                                <p class="text-xs text-gray-400" x-text="routes.length + ' rutas'" ></p>
+                            </div>
+                            <div class="text-xs text-gray-400">Equivalente a route:list con filtros por módulo</div>
+                        </div>
+                        <div class="overflow-auto max-h-[calc(100vh-320px)] scrollbar-thin">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-900/50 sticky top-0">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Módulo</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Método</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">URI</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Name</th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-gray-400 uppercase">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-800">
+                                    <template x-for="(r, idx) in routes" :key="idx">
+                                        <tr class="hover:bg-gray-700/30">
+                                            <td class="px-4 py-3 text-gray-300 font-mono text-xs" x-text="r.module"></td>
+                                            <td class="px-4 py-3 text-gray-200 font-mono text-xs" x-text="r.methods.join(',')"></td>
+                                            <td class="px-4 py-3 text-gray-100 font-mono text-xs" x-text="'/' + r.uri"></td>
+                                            <td class="px-4 py-3 text-gray-400 font-mono text-xs" x-text="r.name || '-' "></td>
+                                            <td class="px-4 py-3 text-gray-400 font-mono text-[11px]" x-text="r.action"></td>
+                                        </tr>
+                                    </template>
+                                    <template x-if="routes.length === 0">
+                                        <tr>
+                                            <td colspan="5" class="px-4 py-10 text-center text-gray-500 text-sm">Sin rutas para los filtros actuales</td>
+                                        </tr>
+                                    </template>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Actions Tab -->
             <div x-show="activeTab === 'actions'" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 transform translate-y-2" x-transition:enter-end="opacity-100 transform translate-y-0">
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -321,6 +609,34 @@
                                 class="w-full px-4 py-2 bg-amber-600 hover:bg-amber-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors">
                             Clear All Cache
                         </button>
+                    </div>
+
+                    <!-- Auto Update -->
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 bg-blue-500/10 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v4m0 8v4m4-12h2a2 2 0 012 2v4a2 2 0 01-2 2h-2m-8-8H6a2 2 0 00-2 2v4a2 2 0 002 2h2" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12a4 4 0 118 0 4 4 0 01-8 0z" />
+                                </svg>
+                            </div>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white mb-2">Auto Update</h3>
+                        <p class="text-sm text-gray-400 mb-4">Pull de git + composer + migrate (dev only, APP_ALLOW_UPDATE)</p>
+                        <input x-model="updateBranch" type="text" placeholder="branch (default main)" class="w-full mb-2 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                        <button @click="runUpdate()" 
+                                :disabled="actionRunning"
+                                class="w-full px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-gray-600 disabled:cursor-not-allowed rounded-lg text-sm font-medium text-white transition-colors flex items-center justify-center gap-2">
+                            <svg x-show="!actionRunning" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <svg x-show="actionRunning" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span x-text="actionRunning ? 'Ejecutando...' : 'Actualizar' "></span>
+                        </button>
+                        <p class="text-[11px] text-gray-500 mt-2">Necesita git y APP_ALLOW_UPDATE=true. Usa branch opcional.</p>
                     </div>
                 </div>
 
@@ -394,61 +710,74 @@
                         </div>
                     </div>
 
+                    <!-- Config Store -->
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden">
+                        <div class="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                            <h3 class="font-medium text-white">Config (shared_config)</h3>
+                            <button @click="loadConfig()" class="text-xs px-3 py-1 rounded-md border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-200">Refrescar</button>
+                        </div>
+                        <div class="p-6 space-y-3">
+                            <div class="space-y-2">
+                                <label class="text-xs text-gray-400">Clave</label>
+                                <input x-model="configKey" type="text" placeholder="ej: modules.catalog.enabled" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent" />
+                                <label class="text-xs text-gray-400">Valor (se almacena como texto/JSON)</label>
+                                <textarea x-model="configValue" rows="2" placeholder='ej: true o {"foo":"bar"}' class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"></textarea>
+                                <div class="flex gap-2">
+                                    <button @click="saveConfig()" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-sm">Guardar</button>
+                                    <button @click="deleteConfig()" class="px-4 py-2 rounded-lg bg-red-600/70 hover:bg-red-500 text-white text-sm">Eliminar</button>
+                                </div>
+                            </div>
+                            <div class="max-h-60 overflow-auto border border-gray-700/60 rounded-lg divide-y divide-gray-800">
+                                <template x-if="!configEntries.length">
+                                    <p class="text-sm text-gray-500 p-3">Sin entradas.</p>
+                                </template>
+                                <template x-for="item in configEntries" :key="item.key">
+                                    <div class="px-3 py-2 flex flex-col gap-1">
+                                        <div class="flex items-center justify-between gap-2">
+                                            <span class="font-mono text-xs text-gray-300" x-text="item.key"></span>
+                                            <button @click="configKey = item.key; configValue = typeof item.value === 'string' ? item.value : JSON.stringify(item.value, null, 2)" class="text-[11px] text-blue-300 hover:text-blue-100">Editar</button>
+                                        </div>
+                                        <pre class="text-xs text-gray-400 bg-gray-900/60 rounded px-2 py-1 whitespace-pre-wrap" x-text="JSON.stringify(item.value, null, 2)"></pre>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Modules -->
                     <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 overflow-hidden md:col-span-2">
-                        <div class="px-6 py-4 border-b border-gray-700/50">
-                            <h3 class="font-medium text-white">Catalog Modules</h3>
+                        <div class="px-6 py-4 border-b border-gray-700/50 flex items-center justify-between">
+                            <h3 class="font-medium text-white">Módulos instalados</h3>
+                            <span class="text-xs text-gray-400" x-text="modules?.length + ' módulos'"></span>
                         </div>
-                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 p-6">
-                            <div class="bg-gray-900/50 rounded-xl p-4 text-center">
-                                <div class="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/>
-                                    </svg>
+                        <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 p-6">
+                            <template x-for="mod in modules" :key="mod.name">
+                                <div class="bg-gray-900/50 rounded-xl p-4 border border-gray-800">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <span class="text-sm font-semibold text-white" x-text="mod.name"></span>
+                                        <span :class="mod.enabled ? 'bg-emerald-500/15 text-emerald-300 border border-emerald-500/30' : 'bg-red-500/15 text-red-300 border border-red-500/30'" class="text-[10px] px-2 py-0.5 rounded-full uppercase tracking-wide">
+                                            <span x-text="mod.enabled ? 'on' : 'off'"></span>
+                                        </span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs text-gray-400">
+                                        <span>WebSockets</span>
+                                        <span :class="mod.ws_enabled ? 'text-emerald-300' : 'text-gray-500'" class="font-mono" x-text="mod.ws_enabled ? 'enabled' : 'disabled'"></span>
+                                    </div>
+                                    <div class="flex items-center justify-between text-xs text-gray-400 mt-1">
+                                        <span>Migraciones</span>
+                                        <span :class="(mod.pending_migrations ?? 0) > 0 ? 'text-amber-300' : 'text-emerald-300'" class="font-mono" x-text="(mod.pending_migrations ?? 'n/a')"></span>
+                                    </div>
+                                    <div class="mt-2 text-[11px] text-gray-500 break-all" x-text="mod.provider || 'provider?'" title="Proveedor"></div>
+                                    <div class="text-[11px] text-gray-500" :class="mod.loaded ? 'text-emerald-300' : 'text-gray-500'">Provider: <span x-text="mod.loaded ? 'loaded' : 'not loaded'"></span></div>
+                                    <div class="mt-3 flex gap-2">
+                                        <button @click="toggleModule(mod.name, !mod.enabled)" class="flex-1 text-xs px-3 py-1.5 rounded-md border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200">{{ __('Toggle') }}</button>
+                                        <button @click="toggleModule(mod.name, mod.enabled, !mod.ws_enabled)" class="flex-1 text-xs px-3 py-1.5 rounded-md border border-gray-700 bg-gray-800 hover:bg-gray-700 text-gray-200">WS</button>
+                                    </div>
                                 </div>
-                                <p class="text-sm font-medium text-white">Items</p>
-                            </div>
-                            <div class="bg-gray-900/50 rounded-xl p-4 text-center">
-                                <div class="w-10 h-10 bg-green-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-white">Locations</p>
-                            </div>
-                            <div class="bg-gray-900/50 rounded-xl p-4 text-center">
-                                <div class="w-10 h-10 bg-purple-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-white">Stock</p>
-                            </div>
-                            <div class="bg-gray-900/50 rounded-xl p-4 text-center">
-                                <div class="w-10 h-10 bg-yellow-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg class="w-5 h-5 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-white">UoM</p>
-                            </div>
-                            <div class="bg-gray-900/50 rounded-xl p-4 text-center">
-                                <div class="w-10 h-10 bg-pink-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg class="w-5 h-5 text-pink-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-white">Taxonomy</p>
-                            </div>
-                            <div class="bg-gray-900/50 rounded-xl p-4 text-center">
-                                <div class="w-10 h-10 bg-cyan-500/10 rounded-lg flex items-center justify-center mx-auto mb-2">
-                                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                    </svg>
-                                </div>
-                                <p class="text-sm font-medium text-white">Pricing</p>
-                            </div>
+                            </template>
+                            <template x-if="!modules || modules.length === 0">
+                                <div class="col-span-full text-center text-gray-500 text-sm py-8">Sin módulos registrados</div>
+                            </template>
                         </div>
                     </div>
                 </div>
@@ -486,6 +815,7 @@
                 testOutput: '',
                 testResult: null,
                 tables: [],
+                tableSearch: '',
                 selectedTable: null,
                 tableData: [],
                 tableColumns: [],
@@ -494,12 +824,46 @@
                 actionOutput: '',
                 selectedSeeder: '',
                 notification: null,
+                updateBranch: '',
+                logsLoaded: false,
+                logEntries: [],
+                logLevel: '',
+                logSearch: '',
+                logLimit: 200,
+                logLoading: false,
+                sqlQuery: 'SELECT * FROM catalog_items LIMIT 20;',
+                sqlResult: null,
+                sqlRunning: false,
+                sqlError: '',
+                modules: <?php echo json_encode($modules ?? []); ?>,
+                missing: [],
+                needsAdminSetup: false,
+                routesLoaded: false,
+                routes: [],
+                routeSearch: '',
+                routeMethod: '',
+                routeModule: '',
+                adminUser: '',
+                adminPass: '',
+                configEntries: [],
+                configKey: '',
+                configValue: '',
+
+                async parseJsonResponse(response) {
+                    const text = await response.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Respuesta inesperada del servidor: ' + text.slice(0, 200));
+                    }
+                },
 
                 init() {
-                    // Auto-load first table
-                    if (this.tables.length > 0) {
-                        // Don't auto-select to avoid initial load
-                    }
+                    // Load datasets from root element
+                    this.tables = JSON.parse(this.$root.dataset.tables || '[]');
+                    this.missing = JSON.parse(this.$root.dataset.missing || '[]');
+                    this.needsAdminSetup = (this.$root.dataset.needsSetup || 'false') === 'true';
+                    this.configEntries = JSON.parse(this.$root.dataset.config || '[]');
                 },
 
                 async runTests() {
@@ -516,7 +880,7 @@
                             },
                             body: JSON.stringify({ filter: this.testFilter })
                         });
-                        const data = await response.json();
+                        const data = await this.parseJsonResponse(response);
                         this.testOutput = data.output;
                         this.testResult = { success: data.success };
                         this.showNotification(data.success ? 'Tests completed successfully' : 'Some tests failed', data.success ? 'success' : 'error');
@@ -537,7 +901,7 @@
 
                     try {
                         const response = await fetch(`/admin/database/table/${tableName}`);
-                        const data = await response.json();
+                        const data = await this.parseJsonResponse(response);
                         this.tableData = data.data || [];
                         this.tableColumns = data.columns || [];
                     } catch (error) {
@@ -547,10 +911,101 @@
                     }
                 },
 
+                async loadConfig() {
+                    try {
+                        const response = await fetch('/admin/config');
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) throw new Error(data.error || 'No se pudo cargar config');
+                        this.configEntries = data.entries || [];
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
+                },
+
+                async saveConfig() {
+                    if (!this.configKey.trim()) {
+                        this.showNotification('Clave requerida', 'error');
+                        return;
+                    }
+                    let payloadValue = this.configValue;
+                    try {
+                        // Try to parse JSON if looks like object/array/true/false/null/number
+                        const trimmed = (this.configValue || '').trim();
+                        if (['{', '[', '"', 't', 'f', 'n', '-', '0','1','2','3','4','5','6','7','8','9'].includes(trimmed[0])) {
+                            payloadValue = JSON.parse(trimmed);
+                        }
+                    } catch (e) {
+                        // keep as string
+                        payloadValue = this.configValue;
+                    }
+
+                    try {
+                        const response = await fetch('/admin/config', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ key: this.configKey, value: payloadValue })
+                        });
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) throw new Error(data.error || 'No se pudo guardar');
+                        this.configEntries = data.entries || [];
+                        this.showNotification('Config guardada', 'success');
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
+                },
+
+                async deleteConfig() {
+                    if (!this.configKey.trim()) {
+                        this.showNotification('Clave requerida para eliminar', 'error');
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch('/admin/config', {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ key: this.configKey })
+                        });
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) throw new Error(data.error || 'No se pudo eliminar');
+                        this.configEntries = data.entries || [];
+                        this.showNotification('Config eliminada', 'success');
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
+                },
+
                 async refreshTable() {
                     if (this.selectedTable) {
                         await this.selectTable(this.selectedTable);
                         this.showNotification('Table refreshed', 'success');
+                    }
+                },
+
+                async loadLogs() {
+                    this.logLoading = true;
+                    this.logsLoaded = true;
+
+                    try {
+                        const params = new URLSearchParams({
+                            level: this.logLevel || '',
+                            search: this.logSearch || '',
+                            limit: this.logLimit || 200,
+                        });
+
+                        const response = await fetch(`/admin/logs?${params.toString()}`);
+                        const data = await this.parseJsonResponse(response);
+                        this.logEntries = data.entries || [];
+                    } catch (error) {
+                        this.showNotification('Error cargando logs', 'error');
+                    } finally {
+                        this.logLoading = false;
                     }
                 },
 
@@ -567,7 +1022,7 @@
                             },
                             body: JSON.stringify({ action: type })
                         });
-                        const data = await response.json();
+                        const data = await this.parseJsonResponse(response);
                         this.actionOutput = data.output;
                         this.showNotification(data.success ? 'Migrations completed' : 'Migration failed', data.success ? 'success' : 'error');
                         
@@ -578,6 +1033,80 @@
                         this.showNotification('Error running migrations', 'error');
                     } finally {
                         this.actionRunning = false;
+                    }
+                },
+
+                async toggleModule(module, enabled, wsEnabled = null) {
+                    try {
+                        const response = await fetch('/admin/modules/toggle', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ module, enabled, ws_enabled: wsEnabled })
+                        });
+
+                        const data = await this.parseJsonResponse(response);
+
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'No se pudo actualizar el módulo');
+                        }
+
+                        this.modules = data.modules || this.modules;
+                        this.showNotification('Módulo actualizado', 'success');
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
+                },
+
+                async loadRoutes() {
+                    this.routesLoaded = true;
+                    try {
+                        const params = new URLSearchParams({
+                            search: this.routeSearch || '',
+                            method: this.routeMethod || '',
+                            module: this.routeModule || '',
+                        });
+                        const response = await fetch(`/admin/routes?${params.toString()}`);
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) {
+                            throw new Error(data.error || 'No se pudo cargar rutas');
+                        }
+                        this.routes = data.routes || [];
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
+                },
+
+                needsSetup() {
+                    return this.needsAdminSetup || (Array.isArray(this.missing) && this.missing.length > 0);
+                },
+
+                async saveAdminCredentials() {
+                    try {
+                        const user = this.adminUser?.trim();
+                        const password = this.adminPass || '';
+                        if (!user || !password) {
+                            throw new Error('Usuario y password requeridos');
+                        }
+
+                        const response = await fetch('/admin/setup/credentials', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ user, password })
+                        });
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) {
+                            throw new Error(data.error || 'No se pudo guardar');
+                        }
+                        this.showNotification('Credenciales guardadas. Reingresa con Basic Auth.', 'success');
+                        this.needsAdminSetup = false;
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
                     }
                 },
 
@@ -596,7 +1125,7 @@
                             },
                             body: JSON.stringify({ seeder: this.selectedSeeder })
                         });
-                        const data = await response.json();
+                        const data = await this.parseJsonResponse(response);
                         this.actionOutput = data.output;
                         this.showNotification(data.success ? 'Seeder completed' : 'Seeder failed', data.success ? 'success' : 'error');
                     } catch (error) {
@@ -604,6 +1133,69 @@
                         this.showNotification('Error running seeder', 'error');
                     } finally {
                         this.actionRunning = false;
+                    }
+                },
+
+                async runUpdate() {
+                    this.actionRunning = true;
+                    this.actionOutput = 'Checking for updates...\n';
+
+                    try {
+                        const response = await fetch('/admin/update', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ branch: this.updateBranch || null })
+                        });
+                        const data = await this.parseJsonResponse(response);
+
+                        if (!data.success) {
+                            this.actionOutput = data.error || 'Update failed';
+                            this.showNotification('Update failed', 'error');
+                            return;
+                        }
+
+                        this.actionOutput = data.output || 'Update completed';
+                        this.showNotification('Update completed', 'success');
+                    } catch (error) {
+                        this.actionOutput = 'Error: ' + error.message;
+                        this.showNotification('Error executing update', 'error');
+                    } finally {
+                        this.actionRunning = false;
+                    }
+                },
+
+                async runSqlQuery() {
+                    if (!this.sqlQuery.trim()) return;
+
+                    this.sqlRunning = true;
+                    this.sqlError = '';
+                    this.sqlResult = null;
+
+                    try {
+                        const response = await fetch('/admin/sql', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({ query: this.sqlQuery })
+                        });
+
+                        const data = await this.parseJsonResponse(response);
+
+                        if (!data.success) {
+                            this.sqlError = data.error || 'Error ejecutando consulta';
+                            return;
+                        }
+
+                        this.sqlResult = data;
+                    } catch (error) {
+                        this.sqlError = error.message || 'Error ejecutando consulta';
+                    } finally {
+                        this.sqlRunning = false;
                     }
                 },
 
@@ -619,7 +1211,7 @@
                                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
                             }
                         });
-                        const data = await response.json();
+                        const data = await this.parseJsonResponse(response);
                         this.actionOutput = data.output;
                         this.showNotification('Cache cleared successfully', 'success');
                     } catch (error) {
@@ -633,7 +1225,7 @@
                 async refreshTablesList() {
                     try {
                         const response = await fetch('/admin/database');
-                        const data = await response.json();
+                        const data = await this.parseJsonResponse(response);
                         this.tables = data.tables || [];
                     } catch (error) {
                         console.error('Error refreshing tables:', error);

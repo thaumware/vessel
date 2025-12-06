@@ -1,0 +1,437 @@
+---
+sidebar_position: 2
+---
+
+# Taxonomy ↔ Catalog: Análisis de Acoplamiento
+
+## 🔍 ¿Se puede asociar taxonomía a items?
+
+**Sí, pero con acoplamiento en Infrastructure.** Vamos a desglosar.
+
+---
+
+## 📊 Arquitectura Actual
+
+### Domain Level (Sí, hay desacoplamiento)
+
+```
+Catalog/Domain/Entities/Item.php
+├── termIds: string[]  ← Solo IDs, sin conocimiento de Taxonomy
+└── getTermIds(): array
+
+Taxonomy/Domain/Entities/Term.php
+├── name, slug, vocabularyId
+└── NO conoce de Items
+```
+
+**Score**: ✅ Domain COMPLETAMENTE desacoplado
+- Item almacena solo IDs de términos
+- Item no importa clases de Taxonomy
+- Taxonomy no sabe de Items
+
+---
+
+### Infrastructure Level (⚠️ Acoplamiento detectado)
+
+```php
+// app/Catalog/Infrastructure/Out/Models/EloquentItem.php
+use App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermModel;
+                                     ↓
+class EloquentItem extends Model {
+    public function terms() {
+        return $this->belongsToMany(
+            TermModel::class,  // ← Acoplamiento AQUÍ
+            'catalog_item_terms',
+            'item_id',
+            'term_id'
+        );
+    }
+}
+```
+
+**Score**: ⚠️ Infrastructure acoplado (pero aceptable)
+
+---
+
+## 🔗 Flujo de Asociación
+
+### 1. Guardar Item con Términos
+
+```php
+// EloquentItemRepository.php
+public function save(Item $item): void {
+    $model = EloquentItem::create([...]);
+    
+    // Sincronizar relación M:M
+    if (!empty($item->getTermIds())) {
+        $model->terms()->sync($item->getTermIds());
+        //        ↑ Eloquent relationship
+    }
+}
+```
+
+**Funcionamiento:**
+```
+Item.termIds = ["term-uuid-1", "term-uuid-2"]
+                            ↓
+        $model->terms()->sync([...])
+                            ↓
+        INSERT INTO catalog_item_terms (item_id, term_id)
+        VALUES ("item-id", "term-uuid-1")
+        VALUES ("item-id", "term-uuid-2")
+```
+
+### 2. Cargar Item con Términos
+
+```php
+public function findById(string $id): ?Item {
+    $model = EloquentItem::with('terms')->find($id);
+    //                      ↑ Eager load
+    
+    return $this->toDomain($model);
+}
+
+private function toDomain(EloquentItem $model): Item {
+    return new Item(
+        ...
+        termIds: $model->terms->pluck('id')->toArray(),
+        //              ↑ Extrae solo IDs
+    );
+}
+```
+
+**Flujo:**
+```
+SELECT * FROM catalog_items WHERE id = ?
+SELECT * FROM catalog_item_terms WHERE item_id = ?
+SELECT * FROM catalog_terms WHERE id IN (...)
+                            ↓
+        $model->terms = [TermModel, TermModel, ...]
+                            ↓
+        termIds = ["term-uuid-1", "term-uuid-2"]
+                            ↓
+        Item(termIds: [...])
+```
+
+---
+
+## ✅ Fortalezas
+
+### 1. **Domain está limpio**
+```php
+// Item.php NUNCA importa Taxonomy
+class Item {
+    private array $termIds = [];  // Solo IDs
+}
+```
+
+### 2. **La relación es flexible**
+Item no sabe qué son los términos. Podrían ser:
+- Categorías de producto
+- Marcas
+- Colores
+- Atributos
+- Etiquetas
+- Anything!
+
+### 3. **Reversibilidad**
+La tabla `catalog_item_terms` es una tabla de asociación pura:
+```
+catalog_item_terms (item_id, term_id)
+    ↑
+    └─ Ambas tablas conocen el UUID, pero no la estructura
+```
+
+---
+
+## ⚠️ Debilidades y Acoplamiento
+
+### 1. **EloquentItem importa TermModel**
+
+**ACTUAL (Acoplado):**
+```php
+// EloquentItem.php
+use App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermModel;
+
+public function terms() {
+    return $this->belongsToMany(TermModel::class, ...);
+}
+```
+
+**Problema:** Si Taxonomy fuera microservicio remoto, esto falla.
+
+**Mejor (Desacoplado):**
+```php
+// EloquentItem.php
+public function terms() {
+    return $this->belongsToMany(
+        'App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermModel',
+        // String path, no importa TermModel
+        'catalog_item_terms',
+        'item_id',
+        'term_id'
+    );
+}
+```
+
+O **aún mejor**, usar tabla polimórfica:
+
+```php
+public function terms() {
+    return $this->morphToMany(
+        GenericTaxonomy::class,
+        'taggable',
+        'catalog_polymorphic_terms'
+    );
+}
+```
+
+### 2. **No hay validación de existencia de términos**
+
+**Situación actual:**
+```php
+$item->setTermIds(["invalid-uuid"]);
+$repository->save($item);  // ← Sin validar que el término existe
+```
+
+**Resultado:** Foreign key constraint error en BD.
+
+**Mejor:**
+```php
+public function save(Item $item): void {
+    // Validar que términos existen
+    $terms = TermModel::whereIn('id', $item->getTermIds())->get();
+    
+    if ($terms->count() !== count($item->getTermIds())) {
+        throw new InvalidTermException('Some terms do not exist');
+    }
+    
+    $model->terms()->sync($item->getTermIds());
+}
+```
+
+### 3. **Cambios en Taxonomy rompen Catalog**
+
+Si cambian la tabla o estructura de Taxonomy:
+```
+catalog_terms → catalog_taxonomies    (breaking change)
+                            ↓
+        EloquentItem.terms() breaks
+```
+
+---
+
+## 📐 Patrón Actual vs Propuesto
+
+### ACTUAL - Acoplamiento en Infra
+
+```
+Catalog Domain          Taxonomy Domain
+    ├─ Item                ├─ Term
+    └─ termIds: []         └─ vocabularyId
+         (desacoplado)          (desacoplado)
+              ↓                     ↓
+         ┌────────────────────────┐
+         │ Catalog Infrastructure │
+         │                        │
+         │ EloquentItem ──uses──  │
+         │ TermModel    (import)  │
+         │                        │
+         └────────────────────────┘
+              ⚠️ Acoplamiento AQUÍ
+```
+
+### PROPUESTO - Desacoplamiento Total
+
+#### Opción 1: Usar Strings
+
+```php
+// EloquentItem.php
+public function terms() {
+    return $this->belongsToMany(
+        'App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermModel',
+        'catalog_item_terms',
+        'item_id',
+        'term_id'
+    );
+}
+```
+
+**Beneficio:** No importa directamente, evita circular dependencies.
+
+#### Opción 2: Usar Portal para vinculación
+
+```php
+// CatalogTermGateway.php (Infrastructure)
+interface CatalogTermGatewayInterface {
+    public function linkTermsToItem(string $itemId, array $termIds): void;
+    public function getItemTerms(string $itemId): array;
+}
+
+// PortalCatalogTermGateway.php
+class PortalCatalogTermGateway implements CatalogTermGatewayInterface {
+    public function linkTermsToItem(string $itemId, array $termIds): void {
+        Portal::link($itemId, 'Item', 'Catalog', $termIds, 'Terms', 'Taxonomy');
+    }
+}
+```
+
+**Uso:**
+```php
+// EloquentItemRepository.php
+public function save(Item $item): void {
+    $model = EloquentItem::create([...]);
+    
+    // Usar gateway, NO relación Eloquent directa
+    $this->termGateway->linkTermsToItem(
+        $item->getId(),
+        $item->getTermIds()
+    );
+}
+```
+
+**Beneficio:** Totally desacoplado, preparado para microservicios.
+
+#### Opción 3: Relación Polimórfica
+
+```php
+// Usar tabla neutral "item_tags" en lugar de "catalog_item_terms"
+
+Schema::create('item_tags', function (Blueprint $table) {
+    $table->id();
+    $table->uuidMorphs('taggable');  // item_id + item_type
+    $table->uuid('tag_id');
+    $table->timestamps();
+});
+
+// EloquentItem.php
+public function tags() {
+    return $this->morphToMany(
+        Tag::class,
+        'taggable',
+        'item_tags'  // Tabla neutral
+    );
+}
+```
+
+**Beneficio:** Permite categorizar CUALQUIER entidad (Items, Orders, Users, etc.).
+
+---
+
+## 🏗️ Tabla Actual: catalog_item_terms
+
+```sql
+CREATE TABLE catalog_item_terms (
+    item_id UUID,           -- Foreign Key → catalog_items
+    term_id UUID,           -- Foreign Key → catalog_terms
+    PRIMARY KEY (item_id, term_id)
+);
+```
+
+**Diagrama:**
+```
+catalog_items
+    │
+    ├─ id (PK)
+    ├─ name
+    ├─ description
+    └─ ...
+
+        ┌──────────────────────┐
+        │ catalog_item_terms   │
+        │ (tabla de relación)  │
+        │ item_id ──┬──────┐   │
+        │ term_id ──┼──────┤   │
+        └──────────────────────┘
+                    │
+catalog_terms ──────┘
+    │
+    ├─ id (PK)
+    ├─ name (ej: "Electrónica")
+    ├─ vocabulary_id
+    └─ ...
+```
+
+---
+
+## 🎯 Recomendaciones
+
+### Corto Plazo (Inmediato)
+
+✅ **Mantener como está** - Funciona correctamente.
+
+### Mediano Plazo
+
+1. **Validación de términos:**
+```php
+// EloquentItemRepository.php
+public function save(Item $item): void {
+    if (!empty($item->getTermIds())) {
+        // Validar que términos existen
+        $exists = TermModel::whereIn('id', $item->getTermIds())
+                    ->count() === count($item->getTermIds());
+        
+        if (!$exists) {
+            throw new TermNotFoundException();
+        }
+    }
+    // ... resto del código
+}
+```
+
+2. **Usar strings para imports (menor acoplamiento):**
+```php
+// EloquentItem.php
+return $this->belongsToMany(
+    'App\Taxonomy\Infrastructure\Out\Models\Eloquent\TermModel',
+    // En lugar de: use TermModel; belongsToMany(TermModel::class)
+```
+
+### Largo Plazo
+
+1. **Implementar Gateway patrón:**
+```php
+// ItemRepositoryInterface con método para términos
+interface ItemRepositoryInterface {
+    public function setTermGateway(TermGatewayInterface $gateway): void;
+}
+```
+
+2. **Considerar Portal si Taxonomy es remoto:**
+```php
+// Cuando Taxonomy sea otro servicio
+Portal::link('item-id', 'Item', 'Catalog', 'terms', [...], 'Taxonomy');
+```
+
+---
+
+## 📈 Score de Desacoplamiento
+
+| Aspecto | Score | Estado |
+|---------|-------|--------|
+| Domain desacoplado | 9/10 | ✅ Excelente |
+| Infrastructure desacoplado | 6/10 | ⚠️ Acoplado (aceptable) |
+| Validaciones presentes | 4/10 | ⚠️ Falta validación |
+| Preparado para cambios | 6/10 | ⚠️ Requiere refactoring |
+| Testeable | 8/10 | ✅ Bueno |
+| **Total** | **6.6/10** | ⚠️ Funciona, mejorable |
+
+---
+
+## ✅ Conclusión
+
+### ¿Se puede asociar taxonomía a items?
+**Sí, perfectamente.** Item tiene `termIds`, se sincroniza con Taxonomy en BD.
+
+### ¿Está bien desacoplado?
+**Parcialmente.**
+- ✅ Domain: Perfecto desacoplamiento
+- ⚠️ Infrastructure: Acoplado mediante imports directos de TermModel
+
+### ¿Cuál es el riesgo?
+**Bajo-Medio:** Solo afecta Infrastructure. Si Taxonomy cambia de ubicación/BD, EloquentItem.terms() necesita actualización.
+
+### ¿Qué hacer?
+1. Corto plazo: Agregar validación de existencia de términos
+2. Mediano plazo: Usar strings para imports o tabla polimórfica
+3. Largo plazo: Gateway pattern si Taxonomy es remoto

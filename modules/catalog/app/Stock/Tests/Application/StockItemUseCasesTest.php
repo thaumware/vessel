@@ -39,7 +39,7 @@ class StockItemUseCasesTest extends StockTestCase
         $id = $this->generateUuid();
         $data = [
             'id' => $id,
-            'sku' => 'NEW-SKU-001',
+            'item_id' => 'NEW-SKU-001',
             'catalog_item_id' => $this->generateUuid(),
             'catalog_origin' => 'internal_catalog',
             'location_id' => $this->generateUuid(),
@@ -60,7 +60,7 @@ class StockItemUseCasesTest extends StockTestCase
         $result = $useCase->execute($data);
 
         $this->assertEquals($id, $result->getId());
-        $this->assertEquals($data['sku'], $result->getSku());
+        $this->assertEquals($data['item_id'], $result->getItemId());
         $this->assertEquals($data['catalog_item_id'], $result->getCatalogItemId());
         $this->assertEquals($data['quantity'], $result->getQuantity());
     }
@@ -68,7 +68,7 @@ class StockItemUseCasesTest extends StockTestCase
     public function test_create_stock_item_throws_exception_when_id_not_provided(): void
     {
         $data = [
-            'sku' => 'NEW-SKU',
+            'item_id' => 'NEW-SKU',
             'catalog_item_id' => $this->generateUuid(),
             'location_id' => $this->generateUuid(),
         ];
@@ -88,7 +88,7 @@ class StockItemUseCasesTest extends StockTestCase
         $id = $this->generateUuid();
         $stockItem = new StockItem(
             id: $id,
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'internal_catalog',
             locationId: $this->generateUuid(),
@@ -129,14 +129,14 @@ class StockItemUseCasesTest extends StockTestCase
         $items = [
             new StockItem(
                 id: $this->generateUuid(),
-                sku: 'SKU-001',
+                itemId: 'SKU-001',
                 catalogItemId: $this->generateUuid(),
                 catalogOrigin: 'catalog_items',
                 locationId: $locationId,
             ),
             new StockItem(
                 id: $this->generateUuid(),
-                sku: 'SKU-002',
+                itemId: 'SKU-002',
                 catalogItemId: $this->generateUuid(),
                 catalogOrigin: 'catalog_items',
                 locationId: $locationId,
@@ -162,7 +162,7 @@ class StockItemUseCasesTest extends StockTestCase
         $id = $this->generateUuid();
         $existing = new StockItem(
             id: $id,
-            sku: 'OLD-SKU',
+            itemId: 'OLD-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -180,9 +180,9 @@ class StockItemUseCasesTest extends StockTestCase
             ->willReturnCallback(fn(StockItem $item) => $item);
 
         $useCase = new UpdateStockItem($this->repository);
-        $result = $useCase->execute($id, ['sku' => 'NEW-SKU', 'quantity' => 100]);
+        $result = $useCase->execute($id, ['item_id' => 'NEW-SKU', 'quantity' => 100]);
 
-        $this->assertEquals('NEW-SKU', $result->getSku());
+        $this->assertEquals('NEW-SKU', $result->getItemId());
         $this->assertEquals(100, $result->getQuantity());
     }
 
@@ -195,7 +195,7 @@ class StockItemUseCasesTest extends StockTestCase
         $useCase = new UpdateStockItem($this->repository);
 
         $this->expectException(\RuntimeException::class);
-        $useCase->execute($this->generateUuid(), ['sku' => 'NEW-SKU']);
+        $useCase->execute($this->generateUuid(), ['item_id' => 'NEW-SKU']);
     }
 
     // === DeleteStockItem Tests ===
@@ -220,12 +220,12 @@ class StockItemUseCasesTest extends StockTestCase
 
     public function test_adjust_stock_quantity_adds_delta(): void
     {
-        $sku = 'TEST-SKU';
+        $itemId = 'TEST-SKU';
         $locationId = $this->generateUuid();
         
         $adjusted = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $locationId,
@@ -235,11 +235,11 @@ class StockItemUseCasesTest extends StockTestCase
         $this->repository
             ->expects($this->once())
             ->method('adjustQuantity')
-            ->with($sku, $locationId, 50)
+            ->with($itemId, $locationId, 50)
             ->willReturn($adjusted);
 
         $useCase = new AdjustStockQuantity($this->repository);
-        $result = $useCase->execute($sku, $locationId, 50);
+        $result = $useCase->execute($itemId, $locationId, 50);
 
         $this->assertEquals(150, $result->getQuantity());
     }
@@ -252,7 +252,7 @@ class StockItemUseCasesTest extends StockTestCase
         
         $reserved = new StockItem(
             id: $id,
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -280,7 +280,7 @@ class StockItemUseCasesTest extends StockTestCase
         
         $released = new StockItem(
             id: $id,
-            sku: 'TEST-SKU',
+            itemId: 'TEST-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),

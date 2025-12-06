@@ -22,7 +22,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'TEST-SKU-001',
+            itemId: 'TEST-SKU-001',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -34,7 +34,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->assertEquals($item->getId(), $saved->getId());
         $this->assertNotNull($found);
-        $this->assertEquals($item->getSku(), $found->getSku());
+        $this->assertEquals($item->getItemId(), $found->getItemId());
     }
 
     public function test_find_by_id_returns_null_when_not_found(): void
@@ -43,15 +43,15 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $this->assertNull($found);
     }
 
-    public function test_find_by_sku(): void
+    public function test_find_by_item_id(): void
     {
-        $sku = 'UNIQUE-SKU';
+        $itemId = 'UNIQUE-SKU';
         $locationId1 = $this->generateUuid();
         $locationId2 = $this->generateUuid();
 
         $item1 = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $locationId1,
@@ -60,7 +60,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $item2 = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $locationId2,
@@ -70,19 +70,19 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $this->repository->save($item1);
         $this->repository->save($item2);
 
-        $found = $this->repository->findBySku($sku);
+        $found = $this->repository->findByItemId($itemId);
 
         $this->assertCount(2, $found);
     }
 
-    public function test_find_by_sku_and_location(): void
+    public function test_find_by_item_and_location(): void
     {
-        $sku = 'TARGET-SKU';
+        $itemId = 'TARGET-SKU';
         $locationId = $this->generateUuid();
 
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $locationId,
@@ -91,10 +91,10 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->repository->save($item);
 
-        $found = $this->repository->findBySkuAndLocation($sku, $locationId);
+        $found = $this->repository->findByItemAndLocation($itemId, $locationId);
 
         $this->assertNotNull($found);
-        $this->assertEquals($sku, $found->getSku());
+        $this->assertEquals($itemId, $found->getItemId());
         $this->assertEquals($locationId, $found->getLocationId());
     }
 
@@ -105,7 +105,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         for ($i = 0; $i < 3; $i++) {
             $this->repository->save(new StockItem(
                 id: $this->generateUuid(),
-                sku: "SKU-{$i}",
+                itemId: "SKU-{$i}",
                 catalogItemId: $this->generateUuid(),
                 catalogOrigin: 'catalog_items',
                 locationId: $locationId,
@@ -115,7 +115,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         // Different location
         $this->repository->save(new StockItem(
             id: $this->generateUuid(),
-            sku: 'SKU-OTHER',
+            itemId: 'SKU-OTHER',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -132,7 +132,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->repository->save(new StockItem(
             id: $this->generateUuid(),
-            sku: 'EXT-001',
+            itemId: 'EXT-001',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: $catalogOrigin,
             locationId: $this->generateUuid(),
@@ -140,7 +140,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->repository->save(new StockItem(
             id: $this->generateUuid(),
-            sku: 'INT-001',
+            itemId: 'INT-001',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -149,7 +149,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $results = $this->repository->search(['catalog_origin' => $catalogOrigin]);
 
         $this->assertCount(1, $results);
-        $this->assertEquals('EXT-001', $results[0]->getSku());
+        $this->assertEquals('EXT-001', $results[0]->getItemId());
     }
 
     public function test_search_with_pagination(): void
@@ -157,7 +157,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         for ($i = 0; $i < 10; $i++) {
             $this->repository->save(new StockItem(
                 id: $this->generateUuid(),
-                sku: "SKU-{$i}",
+                itemId: "SKU-{$i}",
                 catalogItemId: $this->generateUuid(),
                 catalogOrigin: 'catalog_items',
                 locationId: $this->generateUuid(),
@@ -180,7 +180,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $id = $this->generateUuid();
         $item = new StockItem(
             id: $id,
-            sku: 'ORIGINAL-SKU',
+            itemId: 'ORIGINAL-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -191,7 +191,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $updated = new StockItem(
             id: $id,
-            sku: 'UPDATED-SKU',
+            itemId: 'UPDATED-SKU',
             catalogItemId: $item->getCatalogItemId(),
             catalogOrigin: $item->getCatalogOrigin(),
             locationId: $item->getLocationId(),
@@ -202,7 +202,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $found = $this->repository->findById($id);
 
-        $this->assertEquals('UPDATED-SKU', $found->getSku());
+        $this->assertEquals('UPDATED-SKU', $found->getItemId());
         $this->assertEquals(200, $found->getQuantity());
     }
 
@@ -211,7 +211,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
         $id = $this->generateUuid();
         $item = new StockItem(
             id: $id,
-            sku: 'TO-DELETE',
+            itemId: 'TO-DELETE',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -226,12 +226,12 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
     public function test_adjust_quantity(): void
     {
-        $sku = 'ADJUST-SKU';
+        $itemId = 'ADJUST-SKU';
         $locationId = $this->generateUuid();
 
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: $sku,
+            itemId: $itemId,
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $locationId,
@@ -240,10 +240,10 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
 
         $this->repository->save($item);
 
-        $adjusted = $this->repository->adjustQuantity($sku, $locationId, 50);
+        $adjusted = $this->repository->adjustQuantity($itemId, $locationId, 50);
         $this->assertEquals(150, $adjusted->getQuantity());
 
-        $adjusted = $this->repository->adjustQuantity($sku, $locationId, -30);
+        $adjusted = $this->repository->adjustQuantity($itemId, $locationId, -30);
         $this->assertEquals(120, $adjusted->getQuantity());
     }
 
@@ -257,7 +257,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'RESERVE-SKU',
+            itemId: 'RESERVE-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -277,7 +277,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'LIMITED-SKU',
+            itemId: 'LIMITED-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -298,7 +298,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'RELEASE-SKU',
+            itemId: 'RELEASE-SKU',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),
@@ -318,7 +318,7 @@ class InMemoryStockItemRepositoryTest extends StockTestCase
     {
         $item = new StockItem(
             id: $this->generateUuid(),
-            sku: 'OVER-RELEASE',
+            itemId: 'OVER-RELEASE',
             catalogItemId: $this->generateUuid(),
             catalogOrigin: 'catalog_items',
             locationId: $this->generateUuid(),

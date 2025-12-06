@@ -32,7 +32,6 @@ abstract class CatalogTestCase extends TestCase
             'notes' => 'Some notes',
             'status' => 'active',
             'workspaceId' => $this->generateUuid(),
-            'termIds' => [$this->generateUuid(), $this->generateUuid()],
         ], $overrides);
     }
 

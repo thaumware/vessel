@@ -9,7 +9,8 @@ use DateTimeImmutable;
  * StockItem - Representa la existencia física de un item del catálogo.
  * 
  * Se conecta al catálogo (interno o externo) mediante:
- * - catalogItemId: ID del item en el sistema de catálogo
+ * - itemId: ID canónico del catálogo (requerido)
+ * - catalogItemId: ID externo/ERP (opcional)
  * - catalogOrigin: Origen del catálogo (internal, external_erp, etc.)
  * 
  * El catálogo define los atributos del producto (nombre, descripción, categorías).
@@ -21,7 +22,7 @@ class StockItem
 
     public function __construct(
         private string $id,
-        private string $sku,
+        private string $itemId,
         private string $locationId,
         private ?string $catalogItemId = null,
         private ?string $catalogOrigin = null,
@@ -43,9 +44,17 @@ class StockItem
 
     // === Getters ===
 
+    public function getItemId(): string
+    {
+        return $this->itemId;
+    }
+
+    /**
+     * @deprecated usar getItemId(); se mantiene por compatibilidad
+     */
     public function getSku(): string
     {
-        return $this->sku;
+        return $this->itemId;
     }
 
     public function getCatalogItemId(): ?string
@@ -149,7 +158,7 @@ class StockItem
     {
         return new self(
             $this->id,
-            $this->sku,
+            $this->itemId,
             $this->locationId,
             $this->catalogItemId,
             $this->catalogOrigin,
@@ -170,7 +179,7 @@ class StockItem
     {
         return new self(
             $this->id,
-            $this->sku,
+            $this->itemId,
             $this->locationId,
             $this->catalogItemId,
             $this->catalogOrigin,
@@ -212,7 +221,8 @@ class StockItem
     {
         return [
             'id' => $this->getId(),
-            'sku' => $this->sku,
+            'item_id' => $this->itemId,
+            'sku' => $this->itemId, // alias legado
             'catalog_item_id' => $this->catalogItemId,
             'catalog_origin' => $this->catalogOrigin,
             'location_id' => $this->locationId,
