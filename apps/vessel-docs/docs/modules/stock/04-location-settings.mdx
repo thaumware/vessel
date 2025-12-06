@@ -1,0 +1,398 @@
+---
+sidebar_position: 4
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Configuración de Ubicaciones
+
+Define restricciones y reglas de inventario para ubicaciones específicas. Sin configuración = sin restricciones (capacidad ilimitada).
+
+## Conceptos
+
+### ¿Qué controla?
+
+| Aspecto | Descripción |
+|---------|-------------|
+| **Capacidad** | Cantidad máxima, peso máximo, volumen máximo |
+| **Restricciones** | Tipos de items permitidos |
+| **Mezcla** | ¿Permite diferentes SKUs? ¿Diferentes lotes? |
+| **Políticas** | ¿Requiere FIFO estricto? |
+
+### ¿Qué NO controla?
+
+- La ubicación en sí (eso lo maneja el módulo **Locations**)
+- Datos del producto (eso lo maneja el **Catálogo**)
+- Los movimientos (eso lo maneja **Stock**)
+
+---
+
+## Modelo de Datos
+
+| Campo | Tipo | Default | Descripción |
+|-------|------|---------|-------------|
+| `id` | UUID | - | Identificador único |
+| `location_id` | UUID | - | Ubicación a configurar |
+| `max_quantity` | int? | null | Capacidad máxima de unidades |
+| `max_weight` | float? | null | Peso máximo en kg |
+| `max_volume` | float? | null | Volumen máximo en m³ |
+| `allowed_item_types` | array? | null | Tipos de items permitidos |
+| `allow_mixed_lots` | bool | true | ¿Permite mezclar lotes del mismo SKU? |
+| `allow_mixed_skus` | bool | true | ¿Permite diferentes SKUs? |
+| `fifo_enforced` | bool | false | ¿Requiere salida FIFO? |
+| `is_active` | bool | true | ¿Configuración activa? |
+| `workspace_id` | UUID? | null | Workspace para multi-tenant |
+| `meta` | json? | null | Datos adicionales |
+
+---
+
+## API Endpoints
+
+### Obtener Configuración
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Obtiene la configuración de capacidad de una ubicación"
+/>
+
+**Respuesta sin configuración:**
+```json
+{
+  "data": null,
+  "message": "No hay configuración de capacidad para esta ubicación (sin límites)"
+}
+```
+
+**Respuesta con configuración:**
+```json
+{
+  "data": {
+    "id": "config-uuid",
+    "location_id": "warehouse-uuid",
+    "max_quantity": 1000,
+    "max_weight": 5000.0,
+    "max_volume": null,
+    "allowed_item_types": ["regular", "fragile"],
+    "allow_mixed_lots": true,
+    "allow_mixed_skus": true,
+    "fifo_enforced": false,
+    "is_active": true
+  }
+}
+```
+
+---
+
+### Crear/Actualizar Configuración
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/capacity"
+  body={{
+    location_id: 'uuid-ubicacion',
+    max_quantity: 1000,
+    max_weight: 500.0,
+    allowed_item_types: ['regular', 'fragile'],
+    allow_mixed_lots: false,
+    allow_mixed_skus: true,
+    fifo_enforced: true
+  }}
+  description="Crea o actualiza configuración de capacidad"
+/>
+
+Si ya existe configuración para la ubicación, se actualiza. Si no existe, se crea.
+
+---
+
+### Eliminar Configuración
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/stock/capacity/{locationId}"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Elimina configuración (vuelve a sin límites)"
+/>
+
+---
+
+## Consultas de Capacidad
+
+### Verificar si Puede Recibir Stock
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}/can-accept"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Verifica si la ubicación puede recibir cierta cantidad"
+/>
+
+**Query params:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `item_id` | string | ID del item a ingresar |
+| `quantity` | int | Cantidad a ingresar |
+| `item_type` | string? | Tipo de item |
+
+**Respuesta exitosa:**
+```json
+{
+  "valid": true,
+  "location_id": "warehouse-uuid"
+}
+```
+
+**Respuesta con error:**
+```json
+{
+  "valid": false,
+  "error": "EXCEEDS_MAX_QUANTITY",
+  "message": "Supera capacidad máxima",
+  "location_id": "warehouse-uuid",
+  "details": {
+    "current_quantity": 950,
+    "requested_quantity": 100,
+    "max_quantity": 1000,
+    "available": 50
+  }
+}
+```
+
+---
+
+### Estadísticas de Capacidad
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}/stats"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Obtiene estadísticas detalladas de capacidad"
+/>
+
+**Respuesta:**
+```json
+{
+  "data": {
+    "location_id": "warehouse-uuid",
+    "current_quantity": 750,
+    "max_quantity": 1000,
+    "available_quantity": 250,
+    "usage_percent": 75.0,
+    "unique_items": 15,
+    "allow_mixed_items": true,
+    "fifo_enforced": false,
+    "is_active": true
+  }
+}
+```
+
+---
+
+### Capacidad Disponible
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}/available"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Obtiene la capacidad disponible"
+/>
+
+**Respuesta:**
+```json
+{
+  "data": {
+    "location_id": "warehouse-uuid",
+    "available_capacity": 250,
+    "has_limit": true
+  }
+}
+```
+
+Si `has_limit` es `false`, significa que la ubicación no tiene límite configurado.
+
+---
+
+### Stock Total (con Jerarquía)
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}/total-stock"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Obtiene el stock total incluyendo ubicaciones hijas"
+/>
+
+Este endpoint suma el stock de la ubicación especificada **más todos sus descendientes**.
+
+**Respuesta:**
+```json
+{
+  "data": {
+    "location_id": "bodega-principal-uuid",
+    "total_quantity": 2500
+  }
+}
+```
+
+**Ejemplo de cálculo:**
+```
+Bodega Principal
+├── Stock directo: 500
+├── Estante A: 800
+├── Estante B: 700
+└── Zona Picking: 500
+────────────────────
+Total: 2500
+```
+
+---
+
+### Items Únicos en Ubicación
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}/unique-item-ids"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Lista los IDs de items únicos en la ubicación"
+/>
+
+**Respuesta:**
+```json
+{
+  "data": {
+    "location_id": "warehouse-uuid",
+    "item_ids": ["PROD-001", "PROD-002", "PROD-003"],
+    "count": 3
+  }
+}
+```
+
+---
+
+### Verificar si Está Llena
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/capacity/{locationId}/is-full"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Verifica si la ubicación está al máximo de capacidad"
+/>
+
+**Respuesta:**
+```json
+{
+  "data": {
+    "location_id": "warehouse-uuid",
+    "is_full": false
+  }
+}
+```
+
+---
+
+## Códigos de Error de Validación
+
+| Código | Descripción |
+|--------|-------------|
+| `EXCEEDS_MAX_QUANTITY` | Supera la cantidad máxima permitida |
+| `EXCEEDS_MAX_WEIGHT` | Supera el peso máximo permitido |
+| `EXCEEDS_MAX_VOLUME` | Supera el volumen máximo permitido |
+| `ITEM_TYPE_NOT_ALLOWED` | Tipo de item no permitido en esta ubicación |
+| `MIXED_SKUS_NOT_ALLOWED` | La ubicación no permite mezclar diferentes SKUs |
+| `MIXED_LOTS_NOT_ALLOWED` | La ubicación no permite mezclar diferentes lotes |
+| `LOCATION_NOT_ACTIVE` | La configuración de la ubicación está desactivada |
+
+---
+
+## Casos de Uso
+
+### Estante de Producto Único
+
+Un estante que solo puede contener un SKU (ej: exhibición):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/capacity \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location_id": "estante-exhibicion-uuid",
+    "max_quantity": 50,
+    "allow_mixed_skus": false,
+    "allow_mixed_lots": true
+  }'
+```
+
+### Zona de Productos Peligrosos
+
+Área con restricción de tipo de producto:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/capacity \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location_id": "zona-hazmat-uuid",
+    "max_quantity": 100,
+    "max_weight": 500.0,
+    "allowed_item_types": ["hazmat", "flammable"]
+  }'
+```
+
+### Picking con FIFO
+
+Zona de picking que requiere salida FIFO estricta:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/capacity \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location_id": "zona-picking-uuid",
+    "allow_mixed_lots": false,
+    "fifo_enforced": true
+  }'
+```
+
+### Cámara de Frío con Capacidad Limitada
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/capacity \
+  -H "Content-Type: application/json" \
+  -d '{
+    "location_id": "camara-frio-uuid",
+    "max_quantity": 2000,
+    "max_weight": 1000.0,
+    "allowed_item_types": ["cold_chain", "frozen"],
+    "fifo_enforced": true
+  }'
+```
+
+---
+
+## Jerarquía de Ubicaciones
+
+El sistema considera la jerarquía al calcular capacidad y stock total.
+
+### Ejemplo: Bodega con Estantes
+
+```
+Bodega Principal (max: 10000)
+├── Stock suelto: 500 unidades
+├── Estante A (max: 2000)
+│   └── Stock: 1800 unidades
+├── Estante B (max: 2000)
+│   └── Stock: 1500 unidades
+└── Estante C (max: 2000)
+    └── Stock: 2000 unidades (LLENO)
+```
+
+**Comportamiento:**
+- `GET /capacity/estante-c/is-full` → `true`
+- `GET /capacity/bodega/total-stock` → `5800`
+- `GET /capacity/bodega/stats` → `usage_percent: 58%`
+
+### Validación en Cascada
+
+Al validar un ingreso a "Estante C":
+1. ✅ Verifica límite del estante (2000) → LLENO, rechaza
+2. Si pasara, verificaría límite de Bodega Principal
+
+Al validar un ingreso directo a "Bodega Principal" (stock suelto):
+1. ✅ Verifica que no supere 10000 considerando TODO el stock (suelto + estantes)

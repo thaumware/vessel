@@ -54,7 +54,7 @@ Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
         Route::get('/{locationId}/stats', [CapacityController::class, 'stats']);
         Route::get('/{locationId}/available', [CapacityController::class, 'available']);
         Route::get('/{locationId}/total-stock', [CapacityController::class, 'totalStock']);
-        Route::get('/{locationId}/unique-skus', [CapacityController::class, 'uniqueSkus']);
+        Route::get('/{locationId}/unique-item-ids', [CapacityController::class, 'uniqueItemIds']);
         Route::get('/{locationId}/is-full', [CapacityController::class, 'isFull']);
     });
 

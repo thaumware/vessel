@@ -1,0 +1,402 @@
+---
+sidebar_position: 5
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Lotes (Lots)
+
+Los **Lotes** permiten trazabilidad completa de grupos de unidades que comparten características comunes: origen, fecha de producción, atributos de calidad, etc.
+
+## Características
+
+- ✅ **Identificadores flexibles**: lot_number, supplier_lot, batch_code, etc.
+- ✅ **Atributos dinámicos**: expiration_date, production_date, quality_grade, etc.
+- ✅ **Origen genérico**: supplier, production_line, warehouse
+- ✅ **Estados de ciclo de vida**: active, quarantine, expired, depleted
+- ✅ **Alertas de vencimiento**: Consulta de lotes próximos a vencer
+
+---
+
+## Modelo de Datos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | Identificador único |
+| `item_id` | string | ID del item del catálogo |
+| `status` | LotStatus | Estado del lote |
+| `identifiers` | json? | Identificadores flexibles |
+| `attributes` | json? | Atributos dinámicos |
+| `source_type` | string? | Tipo de origen |
+| `source_id` | string? | ID del origen |
+| `workspace_id` | UUID? | Workspace para multi-tenant |
+| `meta` | json? | Metadata adicional |
+| `created_at` | datetime | Fecha de creación |
+| `updated_at` | datetime | Última actualización |
+
+### Identificadores Comunes
+
+| Key | Descripción |
+|-----|-------------|
+| `lot_number` | Número de lote interno |
+| `supplier_lot` | Número de lote del proveedor |
+| `batch_code` | Código de batch de producción |
+| `serial_prefix` | Prefijo de seriales del lote |
+
+### Atributos Comunes
+
+| Key | Tipo | Descripción |
+|-----|------|-------------|
+| `expiration_date` | date | Fecha de vencimiento |
+| `production_date` | date | Fecha de producción |
+| `reception_date` | date | Fecha de recepción |
+| `quality_grade` | string | Grado de calidad (A, B, C) |
+| `temperature_zone` | string | Zona de temperatura requerida |
+| `certificate_number` | string | Número de certificado de calidad |
+
+---
+
+## Estados de Lote
+
+| Estado | Código | Descripción |
+|--------|--------|-------------|
+| Activo | `active` | Lote disponible para uso |
+| Cuarentena | `quarantine` | Lote en revisión/retención |
+| Expirado | `expired` | Lote vencido |
+| Agotado | `depleted` | Lote sin stock restante |
+
+```
+┌─────────┐     ┌─────────────┐     ┌─────────┐
+│ ACTIVE  │ ──▶ │ QUARANTINE  │ ──▶ │ ACTIVE  │
+└─────────┘     └─────────────┘     └─────────┘
+     │                │
+     │                ▼
+     │          ┌─────────┐
+     │          │ DEPLETED│
+     │          └─────────┘
+     │
+     ▼
+┌─────────┐
+│ EXPIRED │
+└─────────┘
+```
+
+---
+
+## API Endpoints
+
+### Listar Lotes
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/lots/read"
+  description="Lista lotes con filtros opcionales"
+/>
+
+**Query params:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `item_id` | string | Filtrar por item |
+| `status` | string | Filtrar por estado |
+| `expiring_before` | date | Lotes que vencen antes de fecha |
+| `source_type` | string | Filtrar por tipo de origen |
+| `source_id` | string | Filtrar por ID de origen |
+
+---
+
+### Obtener Lote
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/lots/show/{id}"
+  params={{ id: 'uuid-del-lote' }}
+  description="Obtiene detalle de un lote"
+/>
+
+**Respuesta:**
+```json
+{
+  "data": {
+    "id": "lot-uuid",
+    "item_id": "PROD-001",
+    "status": "active",
+    "status_label": "Activo",
+    "identifiers": {
+      "lot_number": "LOT-2024-001",
+      "supplier_lot": "PROV-ABC-123"
+    },
+    "lot_number": "LOT-2024-001",
+    "attributes": {
+      "expiration_date": "2025-06-30",
+      "production_date": "2024-01-15",
+      "reception_date": "2024-01-20",
+      "quality_grade": "A"
+    },
+    "expiration_date": "2025-06-30",
+    "production_date": "2024-01-15",
+    "reception_date": "2024-01-20",
+    "source_type": "supplier",
+    "source_id": "proveedor-123",
+    "is_expired": false,
+    "is_expiring_soon": true,
+    "days_until_expiration": 212,
+    "age_in_days": 320
+  }
+}
+```
+
+---
+
+### Crear Lote
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/lots/create"
+  body={{
+    item_id: 'PROD-001',
+    identifiers: {
+      lot_number: 'LOT-2024-001',
+      supplier_lot: 'PROV-ABC-123'
+    },
+    attributes: {
+      expiration_date: '2025-06-30',
+      production_date: '2024-01-15',
+      quality_grade: 'A'
+    },
+    source_type: 'supplier',
+    source_id: 'proveedor-123'
+  }}
+  description="Crea un nuevo lote"
+/>
+
+**Versión simplificada:**
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/lots/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item_id": "PROD-001",
+    "lot_number": "LOT-2024-001",
+    "expiration_date": "2025-06-30"
+  }'
+```
+
+---
+
+### Actualizar Lote
+
+<ApiPlayground
+  method="PUT"
+  endpoint="/v1/stock/lots/update/{id}"
+  params={{ id: 'uuid-del-lote' }}
+  body={{
+    attributes: {
+      quality_grade: 'B',
+      notes: 'Reclasificado por QA'
+    }
+  }}
+  description="Actualiza atributos de un lote"
+/>
+
+---
+
+### Eliminar Lote
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/stock/lots/delete/{id}"
+  params={{ id: 'uuid-del-lote' }}
+  description="Elimina un lote (soft delete)"
+/>
+
+---
+
+### Buscar por Número de Lote
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/lots/by-number/{lotNumber}"
+  params={{ lotNumber: 'LOT-2024-001' }}
+  description="Busca lote por número"
+/>
+
+---
+
+## Operaciones de Estado
+
+### Poner en Cuarentena
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/lots/quarantine/{id}"
+  params={{ id: 'uuid-del-lote' }}
+  body={{
+    reason: 'Revisión de calidad pendiente'
+  }}
+  description="Pone un lote en cuarentena"
+/>
+
+### Activar Lote
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/lots/activate/{id}"
+  params={{ id: 'uuid-del-lote' }}
+  body={{
+    reason: 'Aprobado por QA'
+  }}
+  description="Activa un lote (desde cuarentena)"
+/>
+
+### Marcar como Agotado
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/lots/deplete/{id}"
+  params={{ id: 'uuid-del-lote' }}
+  description="Marca un lote como agotado"
+/>
+
+---
+
+## Alertas de Vencimiento
+
+### Lotes Próximos a Vencer
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/lots/expiring-soon"
+  description="Lista lotes próximos a vencer"
+/>
+
+**Query params:**
+
+| Parámetro | Tipo | Default | Descripción |
+|-----------|------|---------|-------------|
+| `days` | int | 30 | Días hasta vencimiento |
+| `item_id` | string | - | Filtrar por item |
+| `status` | string | active | Filtrar por estado |
+
+**Respuesta:**
+```json
+{
+  "data": [
+    {
+      "id": "lot-uuid-1",
+      "item_id": "FOOD-001",
+      "lot_number": "LOT-2024-050",
+      "expiration_date": "2024-12-15",
+      "days_until_expiration": 14,
+      "status": "active"
+    },
+    {
+      "id": "lot-uuid-2",
+      "item_id": "FOOD-002",
+      "lot_number": "LOT-2024-051",
+      "expiration_date": "2024-12-20",
+      "days_until_expiration": 19,
+      "status": "active"
+    }
+  ],
+  "meta": {
+    "threshold_days": 30,
+    "count": 2
+  }
+}
+```
+
+---
+
+## Casos de Uso
+
+### Lote de Alimentos con Vencimiento
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/lots/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item_id": "YOGURT-NATURAL",
+    "identifiers": {
+      "lot_number": "YOG-2024-1201",
+      "production_batch": "BATCH-A-001"
+    },
+    "attributes": {
+      "expiration_date": "2025-01-15",
+      "production_date": "2024-12-01",
+      "temperature_zone": "cold_chain"
+    },
+    "source_type": "production_line",
+    "source_id": "linea-lacteos-1"
+  }'
+```
+
+### Lote de Electrónicos con Certificación
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/lots/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item_id": "LAPTOP-PRO-15",
+    "identifiers": {
+      "lot_number": "ELEC-2024-500",
+      "supplier_lot": "FOXCONN-BT-789"
+    },
+    "attributes": {
+      "reception_date": "2024-11-15",
+      "certificate_number": "CERT-QA-2024-1234",
+      "quality_grade": "A"
+    },
+    "source_type": "supplier",
+    "source_id": "proveedor-tech-global"
+  }'
+```
+
+### Lote Farmacéutico con Múltiples Identificadores
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/lots/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item_id": "MED-PARACETAMOL-500",
+    "identifiers": {
+      "lot_number": "FARM-2024-001",
+      "supplier_lot": "BAYER-LOT-XYZ",
+      "sanitary_register": "RS-2024-12345",
+      "gtin": "07501234567890"
+    },
+    "attributes": {
+      "expiration_date": "2026-06-30",
+      "production_date": "2024-06-15",
+      "quality_grade": "A",
+      "storage_conditions": "15-25°C, proteger de la luz"
+    },
+    "source_type": "supplier",
+    "source_id": "laboratorio-bayer"
+  }'
+```
+
+---
+
+## Vinculación con Movimientos
+
+Al crear un movimiento, puedes asociarlo a un lote:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/movements \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "receipt",
+    "item_id": "YOGURT-NATURAL",
+    "location_id": "camara-frio-uuid",
+    "quantity": 500,
+    "lot_id": "lot-yogurt-uuid",
+    "source_type": "supplier",
+    "source_id": "proveedor-lacteos"
+  }'
+```
+
+Esto permite:
+- Trazabilidad completa de cada unidad
+- Reportes de movimientos por lote
+- Aplicación de políticas FIFO/FEFO
+- Retiro selectivo por lote en caso de recall

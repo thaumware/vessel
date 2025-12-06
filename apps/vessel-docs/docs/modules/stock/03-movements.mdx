@@ -1,0 +1,397 @@
+---
+sidebar_position: 3
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Movimientos (Kardex)
+
+Los **Movimientos** son registros inmutables de cada operación de inventario. Son la fuente de verdad del sistema - el stock se puede reconstruir agregando todos los movimientos.
+
+## Principios
+
+- ✅ **Inmutabilidad**: Una vez completado, un movimiento no se modifica
+- ✅ **Trazabilidad**: Cada movimiento tiene origen, referencia y responsable
+- ✅ **Flexibilidad**: Referencias genéricas para cualquier sistema externo
+- ✅ **Auditoría**: Timestamps y metadata para compliance
+
+---
+
+## Tipos de Movimiento
+
+### Movimientos de Entrada (+stock)
+
+| Tipo | Código | Descripción |
+|------|--------|-------------|
+| Recepción | `receipt` | Ingreso de mercancía de proveedor |
+| Devolución | `return` | Devolución de cliente |
+| Ajuste Entrada | `adjustment_in` | Ajuste positivo de inventario |
+| Transferencia Entrada | `transfer_in` | Entrada por transferencia interna |
+| Producción | `production` | Entrada por manufactura |
+
+### Movimientos de Salida (-stock)
+
+| Tipo | Código | Descripción |
+|------|--------|-------------|
+| Envío | `shipment` | Despacho a cliente |
+| Consumo | `consumption` | Consumo interno |
+| Ajuste Salida | `adjustment_out` | Ajuste negativo de inventario |
+| Transferencia Salida | `transfer_out` | Salida por transferencia interna |
+| Daño | `damage` | Pérdida por daño/merma |
+| Vencimiento | `expiration` | Pérdida por vencimiento |
+| Instalación | `installation` | Consumo por servicio técnico |
+
+### Movimientos de Reserva
+
+| Tipo | Código | Efecto |
+|------|--------|--------|
+| Reserva | `reserve` | +reserved_quantity |
+| Liberación | `release` | -reserved_quantity |
+
+### Movimientos Neutrales (solo tracking)
+
+| Tipo | Código | Descripción |
+|------|--------|-------------|
+| Conteo | `count` | Registro de conteo físico |
+| Reubicación | `relocation` | Cambio de ubicación interna |
+
+---
+
+## Modelo de Datos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | Identificador único |
+| `type` | MovementType | Tipo de movimiento |
+| `status` | MovementStatus | Estado (pending, completed, cancelled, failed) |
+| `item_id` | string | ID del item afectado |
+| `location_id` | UUID | Ubicación principal |
+| `quantity` | float | Cantidad del movimiento |
+| `lot_id` | UUID? | Lote asociado |
+| `tracked_unit_id` | UUID? | Unidad serializada asociada |
+| `source_location_id` | UUID? | Ubicación origen (transferencias) |
+| `destination_location_id` | UUID? | Ubicación destino (transferencias) |
+| `source_type` | string? | Tipo de origen (supplier, production, etc.) |
+| `source_id` | string? | ID del origen |
+| `reference_type` | string? | Tipo de documento (purchase_order, sales_order) |
+| `reference_id` | string? | ID del documento |
+| `reason` | string? | Motivo del movimiento |
+| `performed_by` | string? | Usuario que realizó el movimiento |
+| `workspace_id` | UUID? | Workspace para multi-tenant |
+| `meta` | json? | Metadata adicional |
+| `created_at` | datetime | Fecha de creación |
+| `processed_at` | datetime? | Fecha de procesamiento |
+
+---
+
+## API Endpoints
+
+### Listar Movimientos
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/movements"
+  description="Lista movimientos con filtros opcionales"
+/>
+
+**Query params:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `item_id` | string | Filtrar por item |
+| `location_id` | UUID | Filtrar por ubicación |
+| `type` | string | Filtrar por tipo |
+| `status` | string | Filtrar por estado |
+| `from` | date | Fecha desde |
+| `to` | date | Fecha hasta |
+| `reference_type` | string | Tipo de referencia |
+| `reference_id` | string | ID de referencia |
+
+---
+
+### Ver Movimiento
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/movements/{id}"
+  params={{ id: 'uuid-del-movimiento' }}
+  description="Obtiene detalle de un movimiento"
+/>
+
+---
+
+### Crear Movimiento
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements"
+  body={{
+    type: 'receipt',
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: 100,
+    source_type: 'supplier',
+    source_id: 'proveedor-abc',
+    reference_type: 'purchase_order',
+    reference_id: 'PO-2024-001',
+    lot_id: 'lot-uuid',
+    reason: 'Recepción orden de compra'
+  }}
+  description="Crea y procesa un movimiento de stock"
+/>
+
+---
+
+### Validar Movimiento
+
+Valida un movimiento sin ejecutarlo (útil para verificar capacidad, restricciones, etc.).
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/validate"
+  body={{
+    type: 'receipt',
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: 100
+  }}
+  description="Valida un movimiento sin ejecutarlo"
+/>
+
+**Respuesta exitosa:**
+```json
+{
+  "valid": true,
+  "warnings": []
+}
+```
+
+**Respuesta con error:**
+```json
+{
+  "valid": false,
+  "error": "EXCEEDS_MAX_QUANTITY",
+  "message": "La ubicación no tiene capacidad suficiente",
+  "details": {
+    "current": 950,
+    "requested": 100,
+    "max": 1000
+  }
+}
+```
+
+---
+
+### Tipos Disponibles
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/movements/types"
+  description="Lista todos los tipos de movimiento disponibles"
+/>
+
+---
+
+## Helpers de Movimiento
+
+Endpoints simplificados para operaciones comunes:
+
+### Recepción
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/receipt"
+  body={{
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: 100,
+    reference_id: 'PO-2024-001'
+  }}
+  description="Registra recepción de mercancía"
+/>
+
+### Envío
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/shipment"
+  body={{
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: 50,
+    reference_id: 'SO-2024-001'
+  }}
+  description="Registra envío/despacho"
+/>
+
+### Transferencia
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/transfer"
+  body={{
+    item_id: 'PROD-001',
+    source_location_id: 'bodega-a-uuid',
+    destination_location_id: 'bodega-b-uuid',
+    quantity: 25
+  }}
+  description="Transfiere stock entre ubicaciones"
+/>
+
+Internamente crea dos movimientos vinculados: `transfer_out` y `transfer_in`.
+
+### Ajuste
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/adjustment"
+  body={{
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: -5,
+    reason: 'Ajuste por conteo físico'
+  }}
+  description="Ajuste de inventario (+/-)"
+/>
+
+### Reserva
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/reserve"
+  body={{
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: 10,
+    reference_type: 'sales_order',
+    reference_id: 'SO-2024-001'
+  }}
+  description="Reserva stock para una orden"
+/>
+
+### Liberación
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/movements/release"
+  body={{
+    item_id: 'PROD-001',
+    location_id: 'warehouse-uuid',
+    quantity: 10,
+    reference_type: 'sales_order',
+    reference_id: 'SO-2024-001'
+  }}
+  description="Libera stock reservado"
+/>
+
+---
+
+## Estados de Movimiento
+
+| Estado | Código | Descripción |
+|--------|--------|-------------|
+| Pendiente | `pending` | Creado, pendiente de procesar |
+| Completado | `completed` | Procesado exitosamente |
+| Cancelado | `cancelled` | Cancelado antes de procesar |
+| Fallido | `failed` | Error durante procesamiento |
+
+---
+
+## Referencias Genéricas
+
+El sistema soporta referencias flexibles para integración con cualquier sistema:
+
+### Tipos de Origen (`source_type`)
+
+| Valor | Descripción |
+|-------|-------------|
+| `supplier` | Proveedor externo |
+| `production_line` | Línea de producción |
+| `warehouse` | Otro almacén |
+| `customer` | Cliente (devolución) |
+| `adjustment` | Ajuste interno |
+
+### Tipos de Referencia (`reference_type`)
+
+| Valor | Descripción |
+|-------|-------------|
+| `purchase_order` | Orden de compra |
+| `sales_order` | Orden de venta |
+| `transfer_order` | Orden de transferencia |
+| `return_order` | Orden de devolución |
+| `work_order` | Orden de trabajo/producción |
+| `count_session` | Sesión de conteo |
+
+---
+
+## Ejemplos curl
+
+### Recepción de Proveedor
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/movements \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "receipt",
+    "item_id": "LAPTOP-001",
+    "location_id": "warehouse-uuid",
+    "quantity": 50,
+    "source_type": "supplier",
+    "source_id": "proveedor-tech-123",
+    "reference_type": "purchase_order",
+    "reference_id": "PO-2024-001",
+    "lot_id": "lot-uuid",
+    "performed_by": "user-uuid"
+  }'
+```
+
+### Envío a Cliente
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/movements \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "shipment",
+    "item_id": "LAPTOP-001",
+    "location_id": "warehouse-uuid",
+    "quantity": 5,
+    "source_type": "customer",
+    "source_id": "cliente-abc",
+    "reference_type": "sales_order",
+    "reference_id": "SO-2024-099"
+  }'
+```
+
+### Transferencia entre Bodegas
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/movements/transfer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "item_id": "LAPTOP-001",
+    "source_location_id": "bodega-central-uuid",
+    "destination_location_id": "bodega-norte-uuid",
+    "quantity": 20,
+    "reference_type": "transfer_order",
+    "reference_id": "TO-2024-015"
+  }'
+```
+
+### Ajuste por Daño
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/movements \
+  -H "Content-Type: application/json" \
+  -d '{
+    "type": "damage",
+    "item_id": "LAPTOP-001",
+    "location_id": "warehouse-uuid",
+    "quantity": 2,
+    "reason": "Daño por agua - inundación parcial zona B"
+  }'
+```
+
+### Historial de un Item
+
+```bash
+curl "http://localhost:8000/api/v1/stock/movements?item_id=LAPTOP-001&from=2024-01-01"
+```

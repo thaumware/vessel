@@ -14,7 +14,7 @@ use App\Stock\Domain\Interfaces\LocationGatewayInterface;
 use App\Stock\Domain\Interfaces\LotRepositoryInterface;
 use App\Stock\Domain\Services\StockCapacityService;
 use App\Stock\Infrastructure\Out\Gateways\PortalCatalogGateway;
-use App\Stock\Infrastructure\Adapters\LocationsModuleGateway;
+use App\Stock\Infrastructure\Out\Gateways\LocationsModuleGateway;
 use App\Shared\Domain\Interfaces\IdGeneratorInterface;
 use App\Shared\Infrastructure\Services\UuidGenerator;
 

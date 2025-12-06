@@ -96,7 +96,7 @@ class CapacityController extends Controller
     public function canAccept(Request $request, string $locationId): JsonResponse
     {
         $validated = $request->validate([
-            'sku' => 'required|string|max:100',
+            'item_id' => 'required|string|max:100',
             'quantity' => 'required|integer|min:1',
             'item_type' => 'nullable|string|max:50',
         ]);
@@ -104,7 +104,7 @@ class CapacityController extends Controller
         $result = $this->capacityService->canAcceptStock(
             locationId: $locationId,
             quantity: $validated['quantity'],
-            sku: $validated['sku'],
+            itemId: $validated['item_id'],
             itemType: $validated['item_type'] ?? null
         );
 
@@ -153,17 +153,17 @@ class CapacityController extends Controller
     }
 
     /**
-     * SKUs únicos en una ubicación.
+     * Item IDs únicos en una ubicación.
      */
-    public function uniqueSkus(string $locationId): JsonResponse
+    public function uniqueItemIds(string $locationId): JsonResponse
     {
-        $skus = $this->capacityService->getUniqueSkus($locationId);
+        $itemIds = $this->capacityService->getUniqueItemIds($locationId);
 
         return response()->json([
             'data' => [
                 'location_id' => $locationId,
-                'skus' => $skus,
-                'count' => count($skus),
+                'item_ids' => $itemIds,
+                'count' => count($itemIds),
             ]
         ]);
     }

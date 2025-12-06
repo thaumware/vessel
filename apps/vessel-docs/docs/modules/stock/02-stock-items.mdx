@@ -1,0 +1,299 @@
+---
+sidebar_position: 2
+---
+import ApiPlayground from '@site/src/components/ApiPlayground';
+
+# Stock Items
+
+Los **Stock Items** representan la existencia física de productos en ubicaciones específicas. Pueden funcionar de forma independiente o vinculados a un sistema de catálogo externo.
+
+## Modelo de Datos
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `id` | UUID | Identificador único |
+| `sku` | string | Código SKU del producto |
+| `location_id` | UUID | Ubicación donde está el stock |
+| `location_type` | string? | Tipo de ubicación (warehouse, shelf, etc.) |
+| `catalog_item_id` | UUID? | Referencia al catálogo (opcional) |
+| `catalog_origin` | string? | Origen del catálogo (internal, sap, shopify) |
+| `quantity` | float | Cantidad total disponible |
+| `reserved_quantity` | float | Cantidad reservada para órdenes |
+| `lot_number` | string? | Número de lote asociado |
+| `expiration_date` | date? | Fecha de expiración |
+| `serial_number` | string? | Número de serie (items únicos) |
+| `workspace_id` | UUID? | Workspace para multi-tenant |
+| `meta` | json? | Datos adicionales flexibles |
+
+**Campos calculados:**
+- `available_quantity` = `quantity` - `reserved_quantity`
+- `is_expired` = `expiration_date < now()`
+- `is_lot_tracked` = `lot_number !== null`
+- `is_serial_tracked` = `serial_number !== null`
+
+---
+
+## API Endpoints
+
+### Listar Items
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/items/read"
+  description="Lista todos los items de stock con filtros opcionales"
+/>
+
+**Query params:**
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `location_id` | UUID | Filtrar por ubicación |
+| `sku` | string | Filtrar por SKU |
+| `catalog_item_id` | UUID | Filtrar por item de catálogo |
+| `with_catalog` | bool | Incluir datos del catálogo |
+| `limit` | int | Límite de resultados (default: 50) |
+| `offset` | int | Offset para paginación |
+
+**Ejemplo de respuesta:**
+
+```json
+{
+  "data": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "sku": "LAPTOP-001",
+      "location_id": "warehouse-uuid",
+      "quantity": 100,
+      "reserved_quantity": 10,
+      "available_quantity": 90,
+      "lot_number": "LOT-2024-001",
+      "expiration_date": null,
+      "catalog_item_id": "catalog-123",
+      "catalog_origin": "internal"
+    }
+  ],
+  "meta": {
+    "total": 1,
+    "limit": 50,
+    "offset": 0
+  }
+}
+```
+
+---
+
+### Obtener Item
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/items/show/{id}"
+  params={{ id: 'uuid-del-item' }}
+  description="Obtiene un item de stock por ID"
+/>
+
+---
+
+### Crear Item
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/create"
+  body={{
+    sku: 'PROD-001',
+    location_id: 'uuid-de-ubicacion',
+    quantity: 100,
+    catalog_item_id: 'uuid-del-producto',
+    catalog_origin: 'internal',
+    lot_number: 'LOT-2024-001',
+    expiration_date: '2025-12-31'
+  }}
+  description="Crea un nuevo item de stock"
+/>
+
+**Campos requeridos:** `sku`, `location_id`
+
+**Campos opcionales:** `quantity`, `catalog_item_id`, `catalog_origin`, `lot_number`, `expiration_date`, `serial_number`, `workspace_id`, `meta`
+
+---
+
+### Actualizar Item
+
+<ApiPlayground
+  method="PUT"
+  endpoint="/v1/stock/items/update/{id}"
+  params={{ id: 'uuid-del-item' }}
+  body={{
+    quantity: 150,
+    lot_number: 'LOT-2024-002'
+  }}
+  description="Actualiza un item de stock existente"
+/>
+
+---
+
+### Eliminar Item
+
+<ApiPlayground
+  method="DELETE"
+  endpoint="/v1/stock/items/delete/{id}"
+  params={{ id: 'uuid-del-item' }}
+  description="Elimina un item de stock (soft delete)"
+/>
+
+---
+
+## Operaciones de Stock
+
+### Ajustar Cantidad
+
+Permite ajustar la cantidad de stock directamente. Genera un movimiento de tipo `ADJUSTMENT_IN` o `ADJUSTMENT_OUT` según el delta.
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/adjust"
+  body={{
+    sku: 'PROD-001',
+    location_id: 'uuid-de-ubicacion',
+    delta: 50,
+    reason: 'Recepción de mercancía'
+  }}
+  description="Ajusta la cantidad de stock (positivo o negativo)"
+/>
+
+| Campo | Tipo | Descripción |
+|-------|------|-------------|
+| `sku` | string | SKU del producto |
+| `location_id` | UUID | Ubicación del stock |
+| `delta` | float | Cantidad a ajustar (+/-) |
+| `reason` | string? | Motivo del ajuste |
+
+---
+
+### Reservar Stock
+
+Reserva stock para una orden pendiente. No reduce la cantidad total, solo incrementa `reserved_quantity`.
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/reserve/{id}"
+  params={{ id: 'uuid-del-item' }}
+  body={{ quantity: 10 }}
+  description="Reserva una cantidad de stock"
+/>
+
+**Comportamiento:**
+- `quantity` se mantiene igual
+- `reserved_quantity` aumenta
+- `available_quantity` disminuye
+
+---
+
+### Liberar Reserva
+
+Libera stock previamente reservado.
+
+<ApiPlayground
+  method="POST"
+  endpoint="/v1/stock/items/release/{id}"
+  params={{ id: 'uuid-del-item' }}
+  body={{ quantity: 5 }}
+  description="Libera stock previamente reservado"
+/>
+
+---
+
+## Modos de Uso
+
+### Sin Catálogo (Standalone)
+
+Para inventario simple sin sistema de catálogo:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "MISC-001",
+    "location_id": "bodega-uuid",
+    "quantity": 50
+  }'
+```
+
+### Con Catálogo Interno
+
+Vinculado al módulo de catálogo interno:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "PROD-001",
+    "location_id": "bodega-uuid",
+    "catalog_item_id": "catalog-123",
+    "catalog_origin": "internal",
+    "quantity": 100
+  }'
+```
+
+### Con ERP Externo
+
+Sincronizado con sistema externo (SAP, Oracle, etc.):
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "SAP-MAT-456",
+    "location_id": "bodega-uuid",
+    "catalog_item_id": "sap-material-789",
+    "catalog_origin": "sap",
+    "quantity": 200
+  }'
+```
+
+---
+
+## Trazabilidad
+
+### Por Lote
+
+Items agrupados por lote de producción:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "FOOD-001",
+    "location_id": "cold-storage-uuid",
+    "quantity": 500,
+    "lot_number": "LOT-2024-001",
+    "expiration_date": "2025-06-30"
+  }'
+```
+
+### Por Número de Serie
+
+Items únicos con serial:
+
+```bash
+curl -X POST http://localhost:8000/api/v1/stock/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "sku": "LAPTOP-PRO",
+    "location_id": "showroom-uuid",
+    "quantity": 1,
+    "serial_number": "SN-2024-ABC123"
+  }'
+```
+
+---
+
+## Consultar Stock por Ubicación
+
+<ApiPlayground
+  method="GET"
+  endpoint="/v1/stock/current/location/{locationId}"
+  params={{ locationId: 'uuid-ubicacion' }}
+  description="Obtiene el stock agregado de una ubicación"
+/>
+
+Retorna todos los items en la ubicación especificada, incluyendo resúmenes.

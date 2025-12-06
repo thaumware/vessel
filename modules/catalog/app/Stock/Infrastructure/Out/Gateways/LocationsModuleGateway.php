@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Stock\Infrastructure\Adapters;
+namespace App\Stock\Infrastructure\Out\Gateways;
 
 use App\Locations\Domain\Interfaces\LocationRepository;
 use App\Stock\Domain\Interfaces\LocationGatewayInterface;

@@ -1,0 +1,114 @@
+---
+sidebar_position: 1
+---
+
+# Introducción
+
+Sistema de gestión de inventario flexible y extensible con arquitectura hexagonal.
+
+## Características Principales
+
+| Característica | Descripción |
+|----------------|-------------|
+| 🏷️ **Items de Stock** | Existencia física vinculada opcionalmente a catálogos externos |
+| 📍 **Configuración de Ubicaciones** | Reglas de capacidad, restricciones y validaciones por ubicación |
+| 📋 **Movimientos Kardex** | Registro inmutable de todas las operaciones de inventario |
+| 📦 **Lotes** | Trazabilidad completa con identificadores y atributos flexibles |
+| 🌳 **Jerarquía de Ubicaciones** | Cálculo de stock considerando ubicación padre + hijos |
+| 🔌 **Adaptadores Intercambiables** | InMemory para testing, Eloquent para producción |
+
+## Conceptos Clave
+
+### Stock Item
+Representa la **existencia física** de un producto en una ubicación específica. Puede estar vinculado a un catálogo externo o funcionar de forma independiente.
+
+### Movement (Movimiento)
+Registro **inmutable** de cada operación de inventario. Los movimientos son la fuente de verdad del sistema - el stock se calcula agregando movimientos.
+
+### Lot (Lote)
+Grupo de unidades que comparten características comunes (origen, fecha producción, atributos de calidad). Soporta identificadores y atributos dinámicos.
+
+### Location Settings
+Configuración de restricciones de inventario para una ubicación: capacidad máxima, tipos permitidos, mezcla de SKUs/lotes, FIFO, etc.
+
+## Arquitectura
+
+```
+Stock/
+├── Domain/                    # Núcleo del negocio
+│   ├── Entities/             # StockItem, Movement, Lot, LocationStockSettings
+│   ├── ValueObjects/         # MovementType, MovementStatus, LotStatus
+│   ├── Services/             # StockMovementService, StockCapacityService
+│   └── Interfaces/           # Contratos de repositorios y gateways
+├── Application/
+│   └── UseCases/             # Casos de uso (CreateStockItem, AdjustStock, etc.)
+└── Infrastructure/
+    ├── In/Http/              # Controllers, Routes, Requests
+    └── Out/                  # Repositorios, Gateways a otros módulos
+```
+
+## Flujo de Datos
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────┐
+│   Request   │ ──▶ │  UseCase    │ ──▶ │  Movement   │
+└─────────────┘     └─────────────┘     └─────────────┘
+                           │                   │
+                           ▼                   ▼
+                    ┌─────────────┐     ┌─────────────┐
+                    │  Validate   │     │   Process   │
+                    │  Capacity   │     │   & Save    │
+                    └─────────────┘     └─────────────┘
+                                              │
+                                              ▼
+                                       ┌─────────────┐
+                                       │ StockItem   │
+                                       │  Updated    │
+                                       └─────────────┘
+```
+
+## Ejemplo: Bodega con Estantes
+
+El sistema soporta stock en múltiples niveles de jerarquía:
+
+```
+Bodega Principal (location_id: bodega-1)
+├── Stock directo: 50 unidades    ← Items "sueltos" en la bodega
+├── Estante A (location_id: estante-a)
+│   └── Stock: 100 unidades
+├── Estante B (location_id: estante-b)
+│   └── Stock: 75 unidades
+└── ════════════════════════════
+    Total calculado: 225 unidades
+```
+
+Al consultar el stock de "Bodega Principal", el sistema suma automáticamente el stock de la bodega + todos sus hijos.
+
+## Cambio de Adaptador
+
+Cambio dinámico de repositorio via header HTTP:
+
+```bash
+# Eloquent (default - base de datos)
+curl http://localhost/api/v1/stock/items
+
+# InMemory (testing/demos)
+curl http://localhost/api/v1/stock/items -H "X-STOCK-ADAPTER: local"
+```
+
+| Header Value | Repositorio | Uso |
+|--------------|-------------|-----|
+| `eloquent` | Base de datos | Producción |
+| `local` | InMemory | Testing, demos |
+
+## Testing
+
+```bash
+# Ejecutar tests del módulo Stock
+cd modules/catalog
+./vendor/bin/phpunit --testsuite Stock --testdox
+
+# Tests específicos
+./vendor/bin/phpunit --filter StockMovementServiceTest
+./vendor/bin/phpunit --filter MovementTest
+```

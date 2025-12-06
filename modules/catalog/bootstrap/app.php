@@ -7,6 +7,9 @@ use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
+        // CORS middleware para todas las peticiones
+        $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
+        
         $middleware->alias([
             'jwt.validate' => \App\Shared\Http\Middleware\ValidateJwt::class,
         ]);

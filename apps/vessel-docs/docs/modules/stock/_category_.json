@@ -1,0 +1,8 @@
+{
+  "label": "Stock (Inventario)",
+  "position": 5,
+  "link": {
+    "type": "generated-index",
+    "description": "Sistema de gestión de inventario con soporte para múltiples ubicaciones, lotes, movimientos kardex y cálculo jerárquico de stock."
+  }
+}
