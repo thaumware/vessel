@@ -6,6 +6,7 @@ use Illuminate\Support\ServiceProvider;
 use App\Shared\Infrastructure\ModuleRegistry;
 use App\Shared\Infrastructure\ConfigStore;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\File;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->ensureSqliteDatabaseExists();
+
         // Fallback: if session driver is database but table missing, use array to avoid 500s
         if (config('session.driver') === 'database') {
             try {
@@ -44,6 +47,26 @@ class AppServiceProvider extends ServiceProvider
                 \App\Shared\Console\Commands\CloneTestDatabaseCommand::class,
                 \App\Shared\Console\Commands\ResetAdminCredentialsCommand::class,
             ]);
+        }
+    }
+
+    private function ensureSqliteDatabaseExists(): void
+    {
+        if (config('database.default') !== 'sqlite') {
+            return;
+        }
+
+        $dbPath = config('database.connections.sqlite.database');
+
+        if (!$dbPath || $dbPath === ':memory:' || File::exists($dbPath)) {
+            return;
+        }
+
+        try {
+            File::ensureDirectoryExists(dirname($dbPath));
+            File::put($dbPath, ''); // Best-effort creation for missing sqlite files
+        } catch (\Throwable $e) {
+            // Swallow to avoid blocking install flows; connection will still raise if inaccessible
         }
     }
 }

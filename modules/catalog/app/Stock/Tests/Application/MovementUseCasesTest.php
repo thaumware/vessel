@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace App\Stock\Tests\Application\Movements;
+namespace App\Stock\Tests\Application;
 
 use App\Stock\Application\UseCases\Movements\SearchMovements;
 use App\Stock\Application\UseCases\Movements\ShowMovement;

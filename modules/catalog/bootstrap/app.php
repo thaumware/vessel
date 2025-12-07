@@ -15,7 +15,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
         
         $middleware->alias([
-            'jwt.validate' => \App\Shared\Http\Middleware\ValidateJwt::class,
+            'jwt.validate' => \App\Shared\Adapters\Http\Middleware\ValidateJwt::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
