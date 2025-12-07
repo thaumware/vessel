@@ -86,8 +86,8 @@
                 <label for="fresh" class="text-sm text-slate-300">Recrear base con migrate:fresh (recomendado en instalación limpia)</label>
             </div>
 
-            <div id="error" class="hidden px-4 py-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-100 text-sm"></div>
-            <div id="success" class="hidden px-4 py-3 rounded-lg border border-emerald-500/40 bg-emerald-500/10 text-emerald-100 text-sm"></div>
+            <div id="error" class="hidden px-4 py-3 rounded-lg border-l-4 border-red-500 bg-red-500/10 text-red-100 text-sm shadow-lg"></div>
+            <div id="success" class="hidden px-4 py-3 rounded-lg border-l-4 border-emerald-500 bg-emerald-500/10 text-emerald-100 text-sm shadow-lg"></div>
 
             <div class="flex justify-end">
                 <button id="submit" class="px-5 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold">Guardar y continuar</button>
@@ -158,8 +158,8 @@
                     throw new Error(data?.error || 'No se pudo guardar');
                 }
 
-                showSuccess('Configuración aplicada. Vuelve a ingresar a /admin con las credenciales definidas.');
-                setTimeout(() => window.location.href = '/admin', 1500);
+                showSuccess('✓ Configuración aplicada correctamente. Redirigiendo al panel admin...');
+                setTimeout(() => window.location.href = '/admin', 2000);
             } catch (e) {
                 showError(e.message);
             } finally {

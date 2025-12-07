@@ -34,19 +34,31 @@ class SetupController
 
     public function store(Request $request)
     {
-        $validator = Validator::make($request->all(), [
+        $driver = $request->input('db_driver', 'sqlite');
+        
+        $rules = [
             'db_driver' => 'required|in:mysql,sqlite',
-            'db_host' => 'required_if:db_driver,mysql|nullable|string',
-            'db_port' => 'required_if:db_driver,mysql|nullable|string',
-            'db_name' => 'required_if:db_driver,mysql|nullable|string',
-            'db_user' => 'required_if:db_driver,mysql|nullable|string',
             'db_pass' => 'nullable|string',
-            'db_path' => 'required_if:db_driver,sqlite|nullable|string',
             'app_url' => 'required|string',
             'admin_user' => 'required|string',
             'admin_pass' => 'required|string',
             'fresh' => 'nullable|boolean',
-        ]);
+        ];
+        
+        if ($driver === 'mysql') {
+            $rules['db_host'] = 'required|string';
+            $rules['db_port'] = 'required|string';
+            $rules['db_name'] = 'required|string';
+            $rules['db_user'] = 'required|string';
+        } else {
+            $rules['db_host'] = 'nullable|string';
+            $rules['db_port'] = 'nullable|string';
+            $rules['db_name'] = 'nullable|string';
+            $rules['db_user'] = 'nullable|string';
+            $rules['db_path'] = 'required|string';
+        }
+
+        $validator = Validator::make($request->all(), $rules);
 
         if ($validator->fails()) {
             return response()->json([
@@ -120,11 +132,13 @@ class SetupController
         $this->writeEnv([
             'APP_URL' => $data['app_url'],
             'DB_CONNECTION' => $driver,
-            'DB_HOST' => $data['db_host'],
-            'DB_PORT' => $data['db_port'],
+            'DB_HOST' => $data['db_host'] ?? '',
+            'DB_PORT' => $data['db_port'] ?? '',
             'DB_DATABASE' => $driver === 'sqlite' ? $data['db_path'] : $data['db_name'],
-            'DB_USERNAME' => $data['db_user'],
-            'DB_PASSWORD' => $data['db_pass'],
+            'DB_USERNAME' => $data['db_user'] ?? '',
+            'DB_PASSWORD' => $data['db_pass'] ?? '',
+            'ADMIN_ROOT' => $data['admin_user'],
+            'ADMIN_ROOT_PASSWORD' => $data['admin_pass'],
             'APP_INSTALLED' => 'true',
         ]);
 

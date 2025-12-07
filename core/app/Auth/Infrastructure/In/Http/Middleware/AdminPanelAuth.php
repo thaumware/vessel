@@ -14,7 +14,12 @@ class AdminPanelAuth
         /** @var ConfigStore $store */
         $store = app(ConfigStore::class);
 
-        // Prefer DB-stored credentials; fallback to env; finally force defaults to avoid open access
+        // Check session first
+        if (session('admin_authenticated')) {
+            return $next($request);
+        }
+
+        // Try basic auth for backward compat
         $user = $store->get('admin.root')
             ?? env('ADMIN_ROOT')
             ?? env('ADMIN_USERNAME')
@@ -30,11 +35,19 @@ class AdminPanelAuth
         $credentialsOk = $reqUser === $user
             && ($reqPass === $pass || (str_starts_with((string) $pass, '$2y$') && Hash::check((string) $reqPass, (string) $pass)));
 
-        if (!$credentialsOk) {
-            return response('Unauthorized', 401, ['WWW-Authenticate' => 'Basic realm="Vessel Admin"']);
+        if ($credentialsOk) {
+            session(['admin_authenticated' => true]);
+            return $next($request);
         }
 
-        return $next($request);
+        // Show login form instead of ugly browser prompt
+        if ($request->expectsJson()) {
+            return response()->json(['error' => 'Unauthorized'], 401);
+        }
+
+        return response()->view('auth::login', [
+            'user' => $user,
+        ], 401);
     }
 
     private function resolveCredentials(Request $request): array

@@ -13,6 +13,27 @@ Route::middleware('web')->group(function () {
         ->name('setup.store');
 });
 
+// Login form handler (no auth)
+Route::middleware('web')->group(function () {
+    Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
+        $credentials = $request->only('username', 'password');
+        
+        $adminRoot = env('ADMIN_ROOT', 'admin');
+        $adminPassword = env('ADMIN_ROOT_PASSWORD');
+        
+        if (!$adminPassword) {
+            return response()->json(['success' => false, 'error' => 'Admin no configurado. Ve a /setup'], 500);
+        }
+        
+        if ($credentials['username'] === $adminRoot && $credentials['password'] === $adminPassword) {
+            $request->session()->put('admin_authenticated', true);
+            return response()->json(['success' => true]);
+        }
+        
+        return response()->json(['success' => false, 'error' => 'Credenciales incorrectas'], 401);
+    })->name('admin.login');
+});
+
 // Solo disponible en entorno local/desarrollo
 if (app()->environment('local', 'development', 'testing')) {
     Route::prefix('admin')->name('admin.')
