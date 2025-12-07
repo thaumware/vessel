@@ -12,8 +12,8 @@ services:
       APP_DEBUG: "true"
       APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-8000}}
       # Defaults let a fresh clone run without a local .env; override by exporting env vars or adding a .env file.
-      DB_CONNECTION: ${DB_CONNECTION:-sqlite}
-      DB_DATABASE: ${DB_DATABASE:-/app/database/database.sqlite}
+      DB_CONNECTION: ${DB_CONNECTION:-mysql}
+      DB_DATABASE: ${DB_DATABASE:-vessel_db}
       DB_HOST: ${DB_HOST:-mysql}
       DB_PORT: ${DB_PORT:-3306}
       DB_USERNAME: ${DB_USERNAME:-root}
@@ -25,3 +25,20 @@ services:
       - ./storage:/app/storage
     command: php artisan serve --host=0.0.0.0 --port=8000
     restart: unless-stopped
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: vessel_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-root}
+      MYSQL_DATABASE: ${DB_DATABASE:-vessel_db}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    restart: unless-stopped
+
+volumes:
+  mysql_data:
