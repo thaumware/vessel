@@ -3,7 +3,7 @@
 use App\Catalog\Infrastructure\In\Http\Controllers\ItemController;
 use Illuminate\Support\Facades\Route;
 
-Route::prefix('api/v1/items')->middleware('items_adapter')->group(function () {
+Route::prefix('api/v1/items')->group(function () {
     // READ - Listar todos los items
     Route::get('/read', [ItemController::class, 'list']);
     

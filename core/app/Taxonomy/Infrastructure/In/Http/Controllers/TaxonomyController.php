@@ -15,6 +15,7 @@ use App\Taxonomy\Domain\UseCases\TermRelation\RemoveTermRelation;
 use App\Taxonomy\Domain\UseCases\Vocabulary\CreateVocabulary;
 use App\Taxonomy\Domain\UseCases\Vocabulary\DeleteVocabulary;
 use App\Taxonomy\Domain\UseCases\Vocabulary\GetVocabulary;
+use App\Taxonomy\Domain\UseCases\Vocabulary\GetVocabularyWithTreeBySlug;
 use App\Taxonomy\Domain\UseCases\Vocabulary\ListVocabularies;
 use App\Taxonomy\Domain\UseCases\Vocabulary\UpdateVocabulary;
 use Illuminate\Http\JsonResponse;
@@ -167,17 +168,43 @@ class TaxonomyController extends Controller
         return response()->json(['data' => $vocabulary->toArray()]);
     }
 
+    public function vocabularyBySlug(
+        string $slug,
+        Request $request,
+        GetVocabularyWithTreeBySlug $getVocabularyWithTreeBySlug
+    ): JsonResponse {
+        $workspaceId = $request->query('workspace_id');
+        $result = $getVocabularyWithTreeBySlug->execute($slug, $workspaceId);
+
+        if (!$result) {
+            return response()->json(['error' => 'Vocabulary not found'], 404);
+        }
+
+        return response()->json(['data' => $result]);
+    }
+
     public function createVocabulary(
         Request $request,
         CreateVocabulary $createVocabulary
     ): JsonResponse {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
+            'workspace_id' => 'nullable|string|uuid',
         ]);
+        try {
+            $vocabulary = $createVocabulary->execute(
+                Uuid::v4(),
+                $validated['name'],
+                $validated['workspace_id'] ?? null,
+            );
 
-        $vocabulary = $createVocabulary->execute(Uuid::v4(), $validated['name']);
-
-        return response()->json(['data' => $vocabulary->toArray()], 201);
+            return response()->json(['data' => $vocabulary->toArray()], 201);
+        } catch (\DomainException $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+                'code' => 'DUPLICATE_VOCABULARY',
+            ], 422);
+        }
     }
 
     public function updateVocabulary(

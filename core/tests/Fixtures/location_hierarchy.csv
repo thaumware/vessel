@@ -1,0 +1,21 @@
+workspace_id,code,name,type,parent_code,level,capacity,temperature_controlled,security_level
+,WH-A,Bodega Principal,warehouse,,1,10000,false,medium
+,WH-A1,Pasillo A1,aisle,WH-A,2,2000,false,medium
+,WH-A1-S01,Estante A1-S01,rack,WH-A1,3,200,false,medium
+,WH-A1-S02,Estante A1-S02,rack,WH-A1,3,200,false,medium
+,WH-A1-S03,Estante A1-S03,rack,WH-A1,3,200,false,medium
+,WH-A1-S04,Estante A1-S04,rack,WH-A1,3,200,false,medium
+,WH-A1-S05,Estante A1-S05,rack,WH-A1,3,200,false,medium
+,WH-B,Bodega Secundaria,warehouse,,1,5000,false,low
+,WH-B2,Pasillo B2,aisle,WH-B,2,1000,false,low
+,WH-B2-S03,Estante B2-S03,rack,WH-B2,3,150,false,low
+,COLD-C,Almacén Refrigerado,cold_storage,,1,3000,true,high
+,COLD-C1,Zona Refrigeración C1,aisle,COLD-C,2,1500,true,high
+,COLD-C1-S01,Estante C1-S01,rack,COLD-C1,3,300,true,high
+,QA-D,Área Control Calidad,staging,,1,500,false,high
+,QA-D1,Zona Inspección D1,aisle,QA-D,2,250,false,high
+,QA-D1-S01,Mesa Inspección D1-S01,rack,QA-D1,3,50,false,high
+,QUAR-E,Cuarentena,quarantine,,1,200,false,high
+,QUAR-E1,Zona Cuarentena E1,aisle,QUAR-E,2,100,false,high
+,QUAR-E1-S01,Estante Cuarentena E1-S01,rack,QUAR-E1,3,50,false,high
+,PROD-F,Área Producción,production,,1,1000,false,medium

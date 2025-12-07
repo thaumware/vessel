@@ -1,0 +1,25 @@
+workspace_id,code,name,parent_code,level,description,is_active
+,ROOT,Catálogo Completo,,0,Categoría raíz del catálogo,true
+,ELEC,Electrónica,ROOT,1,Productos electrónicos y tecnología,true
+,ELEC-COMP,Computadoras,ELEC,2,Computadoras portátiles y de escritorio,true
+,ELEC-COMP-LAP,Laptops,ELEC-COMP,3,Computadoras portátiles,true
+,ELEC-COMP-DESK,Escritorio,ELEC-COMP,3,Computadoras de escritorio,true
+,ELEC-DISP,Displays,ELEC,2,Monitores y pantallas,true
+,ELEC-DISP-MON,Monitores,ELEC-DISP,3,Monitores para PC,true
+,FOOD,Alimentos,ROOT,1,Productos alimenticios,true
+,FOOD-DRY,Despensa,FOOD,2,Alimentos no perecederos,true
+,FOOD-DRY-CER,Cereales,FOOD-DRY,3,Cereales y granolas,true
+,FOOD-FRESH,Frescos,FOOD,2,Productos refrigerados,true
+,FOOD-FRESH-DAIRY,Lácteos,FOOD-FRESH,3,Leche y derivados,true
+,PHAR,Farmacia,ROOT,1,Productos farmacéuticos,true
+,PHAR-MED,Medicamentos,PHAR,2,Medicinas con y sin receta,true
+,PHAR-MED-OTC,Sin Receta,PHAR-MED,3,Medicamentos de venta libre,true
+,PHAR-SUPP,Suplementos,PHAR,2,Vitaminas y suplementos,true
+,PHAR-SUPP-VIT,Vitaminas,PHAR-SUPP,3,Vitaminas y minerales,true
+,TEXT,Textil,ROOT,1,Productos textiles,true
+,TEXT-CLOTH,Ropa,TEXT,2,Ropa y accesorios,true
+,TEXT-CLOTH-CORP,Corporativa,TEXT-CLOTH,3,Uniformes y ropa corporativa,true
+,AUTO,Automotriz,ROOT,1,Productos para vehículos,true
+,AUTO-MAINT,Mantenimiento,AUTO,2,Productos de mantenimiento,true
+,AUTO-MAINT-OIL,Aceites,AUTO-MAINT,3,Aceites y lubricantes,true
+,AUTO-MAINT-FILT,Filtros,AUTO-MAINT,3,Filtros de aire y aceite,true

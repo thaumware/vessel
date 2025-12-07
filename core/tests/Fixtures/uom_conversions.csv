@@ -1,0 +1,12 @@
+workspace_id,base_uom,target_uom,conversion_factor,conversion_type,is_bidirectional
+,unit,dozen,12.0,multiplication,true
+,unit,gross,144.0,multiplication,true
+,kilogram,gram,1000.0,multiplication,true
+,kilogram,pound,2.20462,multiplication,true
+,liter,milliliter,1000.0,multiplication,true
+,liter,gallon,0.264172,multiplication,true
+,meter,centimeter,100.0,multiplication,true
+,meter,inch,39.3701,multiplication,true
+,box,unit,12.0,multiplication,false
+,bottle,milliliter,1000.0,multiplication,false
+,pallet,box,48.0,multiplication,false

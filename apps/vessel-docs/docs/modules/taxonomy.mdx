@@ -57,6 +57,49 @@ Este módulo soporta **dos adaptadores intercambiables** que se seleccionan medi
   description="Obtiene un vocabulario por ID. Con adapter local: vocab-1 (Product Categories), vocab-2 (Brands)"
 />
 
+### Obtener Vocabulario por slug (para el front)
+
+<ApiPlayground
+  method="GET"
+  endpoint="/api/v1/taxonomy/vocabularies/by-slug/{slug}"
+  params={{ slug: "product-categories" }}
+  queryParams={{ workspace_id: "workspace-uuid (opcional)" }}
+  headers={{ "X-TAXONOMY-ADAPTER": "" }}
+  description="Entrega un vocabulario por slug corto con el árbol completo de términos y sus relaciones parent/child. Ideal para pre-cargar filtros en el front."
+/>
+
+**Respuesta**
+
+```json
+{
+  "data": {
+    "vocabulary": {
+      "id": "...",
+      "name": "Product Categories",
+      "slug": "product-categories",
+      "description": null,
+      "workspace_id": null
+    },
+    "terms": [
+      {
+        "id": "...",
+        "name": "Electronics",
+        "slug": "electronics",
+        "vocabulary_id": "...",
+        "children": [
+          {
+            "id": "...",
+            "name": "Laptops",
+            "slug": "laptops",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
 ### Actualizar Vocabulario
 
 <ApiPlayground

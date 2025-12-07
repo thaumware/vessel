@@ -49,6 +49,21 @@
         const btn = document.getElementById('submitBtn');
         const errBox = document.getElementById('error');
 
+        // Función para obtener token fresco
+        async function refreshCsrfToken() {
+            try {
+                const res = await fetch('/setup', { method: 'HEAD' });
+                const token = res.headers.get('X-CSRF-TOKEN') || 
+                              document.querySelector('meta[name="csrf-token"]')?.content;
+                if (token) {
+                    document.querySelector('meta[name="csrf-token"]').content = token;
+                }
+                return token;
+            } catch (e) {
+                return document.querySelector('meta[name="csrf-token"]')?.content;
+            }
+        }
+
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             btn.disabled = true;
@@ -59,16 +74,39 @@
             const password = document.getElementById('password').value;
 
             try {
+                let token = document.querySelector('meta[name="csrf-token"]')?.content;
+                
                 const res = await fetch('/admin/login', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                        'X-CSRF-TOKEN': token || ''
                     },
                     body: JSON.stringify({ username, password })
                 });
 
-                const data = await res.json();
+                // Si es 419 (token expirado), refrescar y reintentar
+                if (res.status === 419) {
+                    token = await refreshCsrfToken();
+                    const retry = await fetch('/admin/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': token || ''
+                        },
+                        body: JSON.stringify({ username, password })
+                    });
+                    
+                    if (!retry.ok) {
+                        const data = await retry.json().catch(() => ({ error: 'Error de autenticación' }));
+                        throw new Error(data.error || 'Credenciales incorrectas');
+                    }
+                    
+                    window.location.href = '/admin';
+                    return;
+                }
+
+                const data = await res.json().catch(() => ({ error: 'Error en respuesta del servidor' }));
 
                 if (!res.ok || !data.success) {
                     throw new Error(data.error || 'Credenciales incorrectas');

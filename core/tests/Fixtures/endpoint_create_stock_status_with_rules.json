@@ -1,0 +1,109 @@
+{
+  "description": "Endpoint para crear stock status con reglas y transiciones (baterías incluidas)",
+  "method": "POST",
+  "path": "/api/stock/statuses",
+  "request": {
+    "workspace_id": null,
+    "code": "on_quality_check",
+    "label": "En revisión de calidad",
+    "description": "Producto en proceso de inspección",
+    "sort_order": 35,
+    "rules": [
+      {
+        "rule_type": "allow_movements",
+        "rule_value": false,
+        "notes": "No se puede mover mientras está en QA"
+      },
+      {
+        "rule_type": "blocks_availability",
+        "rule_value": true,
+        "notes": "No disponible para venta"
+      },
+      {
+        "rule_type": "requires_approval",
+        "rule_value": true,
+        "notes": "Requiere aprobación de QA manager"
+      }
+    ],
+    "transitions": [
+      {
+        "from_status": "quarantine",
+        "to_status": "on_quality_check",
+        "requires_approval": false,
+        "condition": "qa_started",
+        "priority": 10
+      },
+      {
+        "from_status": "on_quality_check",
+        "to_status": "available",
+        "requires_approval": true,
+        "condition": "qa_passed",
+        "priority": 10
+      },
+      {
+        "from_status": "on_quality_check",
+        "to_status": "damaged",
+        "requires_approval": true,
+        "condition": "qa_failed",
+        "priority": 5
+      }
+    ]
+  },
+  "response": {
+    "id": "018db9d3-7a82-7001-8000-000000000099",
+    "workspace_id": null,
+    "code": "on_quality_check",
+    "label": "En revisión de calidad",
+    "description": "Producto en proceso de inspección",
+    "is_active": true,
+    "sort_order": 35,
+    "rules": [
+      {
+        "id": "...",
+        "rule_type": "allow_movements",
+        "rule_value": false,
+        "notes": "No se puede mover mientras está en QA"
+      },
+      {
+        "id": "...",
+        "rule_type": "blocks_availability",
+        "rule_value": true,
+        "notes": "No disponible para venta"
+      },
+      {
+        "id": "...",
+        "rule_type": "requires_approval",
+        "rule_value": true,
+        "notes": "Requiere aprobación de QA manager"
+      }
+    ],
+    "transitions_from": [
+      {
+        "id": "...",
+        "from_status_id": "018db9d3-7a82-7001-8000-000000000004",
+        "to_status_id": "018db9d3-7a82-7001-8000-000000000099",
+        "condition": "qa_started"
+      }
+    ],
+    "transitions_to": [
+      {
+        "id": "...",
+        "to_status_id": "018db9d3-7a82-7001-8000-000000000001",
+        "condition": "qa_passed",
+        "requires_approval": true
+      },
+      {
+        "id": "...",
+        "to_status_id": "018db9d3-7a82-7001-8000-000000000003",
+        "condition": "qa_failed",
+        "requires_approval": true
+      }
+    ]
+  },
+  "notes": [
+    "workspace_id null = estado global accesible por todos",
+    "from_status y to_status por code, se resuelven a IDs automáticamente",
+    "Si un status code no existe en transitions, falla con error descriptivo",
+    "Crea status + rules + transitions en una sola transacción atómica"
+  ]
+}

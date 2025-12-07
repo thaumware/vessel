@@ -1,0 +1,15 @@
+workspace_id,sku,movement_type,quantity,from_location,to_location,reason,performed_by,occurred_at
+,ELEC-LAP-001,receipt,50,supplier,WH-A1-S01,Compra inicial,admin@vessel.com,2025-01-15 08:30:00
+,ELEC-LAP-001,transfer,10,WH-A1-S01,WH-B2-S03,Reabastecimiento tienda,warehouse@vessel.com,2025-02-20 14:15:00
+,ELEC-LAP-001,sale,-5,WH-B2-S03,customer,Venta online,sales@vessel.com,2025-03-10 16:45:00
+,FOOD-CER-101,receipt,200,supplier,WH-A1-S02,Compra semanal,admin@vessel.com,2025-01-10 09:00:00
+,FOOD-CER-101,adjustment,-15,WH-A1-S02,damaged,Producto dañado en transporte,warehouse@vessel.com,2025-01-12 11:30:00
+,FOOD-MLK-102,receipt,100,supplier,COLD-C1-S01,Compra diaria,admin@vessel.com,2025-03-05 07:00:00
+,FOOD-MLK-102,sale,-30,COLD-C1-S01,customer,Venta tienda física,sales@vessel.com,2025-03-05 18:00:00
+,PHAR-MED-201,receipt,500,supplier,QA-D1-S01,Recepción para inspección,admin@vessel.com,2025-02-01 10:00:00
+,PHAR-MED-201,transfer,480,QA-D1-S01,WH-A1-S03,Aprobado calidad,qa@vessel.com,2025-02-03 15:30:00
+,PHAR-MED-201,quarantine,20,QA-D1-S01,QUAR-E1-S01,Lote con defectos,qa@vessel.com,2025-02-03 15:30:00
+12345678-1234-1234-1234-123456789012,WORK-TEE-301,receipt,100,supplier,WH-A1-S04,Pedido corporativo,admin@vessel.com,2025-01-20 12:00:00
+12345678-1234-1234-1234-123456789012,WORK-TEE-301,internal,-25,WH-A1-S04,internal_use,Uso interno empleados,hr@vessel.com,2025-02-15 09:00:00
+,AUTO-OIL-401,receipt,80,supplier,WH-A1-S05,Compra mayorista,admin@vessel.com,2025-01-25 13:00:00
+,AUTO-OIL-401,return,5,WH-A1-S05,supplier,Producto equivocado,warehouse@vessel.com,2025-01-26 10:00:00

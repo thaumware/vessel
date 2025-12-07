@@ -1,0 +1,6 @@
+id,workspace_id,locable_type,locable_id,rule_key,rule_value,metadata,is_active
+018db9d3-7a82-7001-8000-500000000001,018db9d3-7a82-7001-8000-999999999999,LocationType,018db9d3-7a82-7001-8000-300000000003,max_capacity,5000,"{""unit"": ""kg""}",1
+018db9d3-7a82-7001-8000-500000000002,018db9d3-7a82-7001-8000-999999999999,LocationType,018db9d3-7a82-7001-8000-300000000003,allowed_item_types,"[""perishable"", ""frozen""]","{""require_cold_chain"": true}",1
+018db9d3-7a82-7001-8000-500000000003,018db9d3-7a82-7001-8000-999999999999,LocationType,018db9d3-7a82-7001-8000-300000000004,auto_status_transition,quarantine,"{""target_status"": ""quarantine"", ""days"": 7}",1
+018db9d3-7a82-7001-8000-500000000004,018db9d3-7a82-7001-8000-999999999999,Location,018db9d3-7a82-7001-8000-400000000003,max_capacity,200,"{""unit"": ""items""}",1
+018db9d3-7a82-7001-8000-500000000005,018db9d3-7a82-7001-8000-999999999999,Location,018db9d3-7a82-7001-8000-400000000003,min_stock_level,10,"{""alert_threshold"": 20}",1

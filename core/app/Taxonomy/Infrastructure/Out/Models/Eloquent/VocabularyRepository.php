@@ -71,6 +71,27 @@ class VocabularyRepository implements VocabularyRepositoryInterface
         return PaginatedResult::fromArray($data, $total, $params);
     }
 
+    public function findBySlug(string $slug, ?string $workspaceId = null): ?Vocabulary
+    {
+        $model = VocabularyModel::query()
+            ->where('slug', $slug)
+            ->when($workspaceId, fn($q) => $q->where('workspace_id', $workspaceId))
+            ->when(!$workspaceId, fn($q) => $q->whereNull('workspace_id'))
+            ->first();
+
+        if (!$model) {
+            return null;
+        }
+
+        return new Vocabulary(
+            id: $model->id,
+            name: $model->name,
+            slug: $model->slug,
+            description: $model->description,
+            workspaceId: $model->workspace_id
+        );
+    }
+
     public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool
     {
         return VocabularyModel::where('slug', $slug)

@@ -8,24 +8,47 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use App\Shared\Infrastructure\ConfigStore;
 
 class SetupController
 {
     public function show()
     {
+        // Si no existe .env, crearlo desde .env.example
+        $envPath = base_path('.env');
+        $envExamplePath = base_path('.env.example');
+        
+        if (!file_exists($envPath) && file_exists($envExamplePath)) {
+            copy($envExamplePath, $envPath);
+            
+            // Generar APP_KEY
+            Artisan::call('key:generate', ['--force' => true]);
+        }
+        
+        // Bloquear si ya está instalado
+        if (env('APP_INSTALLED') === 'true' || env('APP_INSTALLED') === true) {
+            return redirect('/admin')->with('error', 'La aplicación ya está instalada.');
+        }
+
         // Prefill from env if any
         $driver = env('DB_CONNECTION', 'mysql');
         $dbPath = $driver === 'sqlite'
             ? (env('DB_DATABASE') ?: base_path('database/database.sqlite'))
             : base_path('database/database.sqlite');
 
+        // Detectar si está en Docker y sugerir host.docker.internal
+        $defaultHost = '127.0.0.1';
+        if (file_exists('/.dockerenv') || getenv('DOCKER_ENV')) {
+            $defaultHost = 'host.docker.internal';
+        }
+
         return view('auth::setup', [
             'db_driver' => $driver,
-            'db_host' => env('DB_HOST', '127.0.0.1'),
-            'db_port' => env('DB_PORT', '3306'),
-            'db_name' => env('DB_DATABASE') ?? env('DB_CATALOG_DATABASE', ''),
-            'db_user' => env('DB_USERNAME', ''),
+            'db_host' => env('DB_HOST', $defaultHost),
+            'db_port' => env('DB_PORT', '3307'),
+            'db_name' => env('DB_DATABASE', 'vessel_db'),
+            'db_user' => env('DB_USERNAME', 'root'),
             'db_pass' => env('DB_PASSWORD', ''),
             'db_path' => $dbPath,
             'app_url' => env('APP_URL', 'http://localhost'),
@@ -35,6 +58,12 @@ class SetupController
     public function store(Request $request)
     {
         $driver = $request->input('db_driver', 'sqlite');
+        
+        // Log raw input para debug
+        Log::info('Setup Request Received', [
+            'all' => $request->all(),
+            'driver' => $driver,
+        ]);
         
         $rules = [
             'db_driver' => 'required|in:mysql,sqlite',
@@ -89,10 +118,23 @@ class SetupController
         if ($driver === 'mysql') {
             Config::set('database.default', 'mysql');
             Config::set('database.connections.mysql.host', $data['db_host']);
-            Config::set('database.connections.mysql.port', $data['db_port']);
+            Config::set('database.connections.mysql.port', (int)$data['db_port']);
             Config::set('database.connections.mysql.database', $data['db_name']);
             Config::set('database.connections.mysql.username', $data['db_user']);
-            Config::set('database.connections.mysql.password', $data['db_pass']);
+            Config::set('database.connections.mysql.password', $data['db_pass'] ?? '');
+            Config::set('database.connections.mysql.unix_socket', '');
+            
+            // Log para debug
+            Log::info('MySQL Config', [
+                'host' => $data['db_host'],
+                'port' => $data['db_port'],
+                'database' => $data['db_name'],
+                'username' => $data['db_user'],
+                'password_empty' => empty($data['db_pass']),
+            ]);
+            
+            // Limpiar conexiones cacheadas
+            DB::purge('mysql');
         } else {
             Config::set('database.default', 'sqlite');
             Config::set('database.connections.sqlite.database', $data['db_path']);
@@ -100,12 +142,36 @@ class SetupController
             if (!file_exists($data['db_path'])) {
                 @touch($data['db_path']);
             }
+            
+            // Limpiar conexiones cacheadas
+            DB::purge('sqlite');
         }
 
-        // Test connection
+        // NO usar DB::reconnect() - crear nueva conexión desde cero
+
+        // Test connection - forzar conexión específica
         try {
-            DB::connection()->getPdo();
+            if ($driver === 'mysql') {
+                // Purge again to ensure clean state
+                DB::purge('mysql');
+                
+                // Log config actual antes de conectar
+                $actualConfig = Config::get('database.connections.mysql');
+                Log::info('Config actual antes de conectar', $actualConfig);
+                
+                $pdo = DB::connection('mysql')->getPdo();
+                Log::info('Conexión exitosa');
+            } else {
+                DB::purge('sqlite');
+                DB::connection('sqlite')->getPdo();
+            }
         } catch (\Throwable $e) {
+            Log::error('Error en test de conexión', [
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json(['success' => false, 'error' => 'No se pudo conectar a la base de datos: ' . $e->getMessage()], 422);
         }
 
@@ -122,13 +188,16 @@ class SetupController
             return response()->json(['success' => false, 'error' => 'Migraciones fallaron: ' . $e->getMessage()], 500);
         }
 
+        // Hashear password del admin
+        $hashedPassword = password_hash($data['admin_pass'], PASSWORD_BCRYPT);
+
         /** @var ConfigStore $store */
         $store = app(ConfigStore::class);
         $store->set('admin.root', $data['admin_user']);
-        $store->set('admin.root_password', $data['admin_pass']);
+        $store->set('admin.root_password', $hashedPassword);
         $store->set('app.installed', true);
 
-        // Persist to .env for next boots
+        // Persist to .env for next boots con password hasheado
         $this->writeEnv([
             'APP_URL' => $data['app_url'],
             'DB_CONNECTION' => $driver,
@@ -138,7 +207,7 @@ class SetupController
             'DB_USERNAME' => $data['db_user'] ?? '',
             'DB_PASSWORD' => $data['db_pass'] ?? '',
             'ADMIN_ROOT' => $data['admin_user'],
-            'ADMIN_ROOT_PASSWORD' => $data['admin_pass'],
+            'ADMIN_ROOT_PASSWORD' => $hashedPassword,
             'APP_INSTALLED' => 'true',
         ]);
 
@@ -175,10 +244,18 @@ class SetupController
             return '';
         }
 
-        $needsQuotes = str_contains((string) $value, ' ');
-        $escaped = str_replace(["\n", '"'], ['\\n', '\\"'], (string) $value);
+        $str = (string) $value;
+        
+        // Si contiene $ (como hashes bcrypt), espacios, o caracteres especiales, usar comillas
+        $needsQuotes = str_contains($str, ' ') || str_contains($str, '$') || str_contains($str, '#');
+        
+        if ($needsQuotes) {
+            // Escapar comillas dobles y backslashes
+            $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], $str);
+            return '"' . $escaped . '"';
+        }
 
-        return $needsQuotes ? '"' . $escaped . '"' : $escaped;
+        return $str;
     }
 
     private function writeTestingEnv(array $data, string $driver): void

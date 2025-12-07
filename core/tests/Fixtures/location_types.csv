@@ -1,0 +1,6 @@
+id,workspace_id,code,label,description,is_active
+018db9d3-7a82-7001-8000-300000000001,,warehouse,Bodega,Almacén principal de productos,1
+018db9d3-7a82-7001-8000-300000000002,,staging,Área de preparación,Zona de picking y packing,1
+018db9d3-7a82-7001-8000-300000000003,,cold_storage,Cámara fría,Almacenamiento refrigerado,1
+018db9d3-7a82-7001-8000-300000000004,,quarantine,Cuarentena,Área de inspección de calidad,1
+018db9d3-7a82-7001-8000-300000000005,018db9d3-7a82-7001-8000-999999999999,production,Producción,Área de manufactura,1

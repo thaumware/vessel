@@ -1,0 +1,75 @@
+{
+  "description": "Endpoint para crear ubicación con configuración completa (baterías incluidas)",
+  "method": "POST",
+  "path": "/api/locations",
+  "request": {
+    "workspace_id": "018db9d3-7a82-7001-8000-999999999999",
+    "name": "Cámara Fría 2",
+    "description": "Nueva cámara de refrigeración",
+    "type": {
+      "code": "cold_storage",
+      "create_if_not_exists": true
+    },
+    "parent": {
+      "id": "018db9d3-7a82-7001-8000-400000000001",
+      "optional": true
+    },
+    "rules": [
+      {
+        "rule_key": "max_capacity",
+        "rule_value": "3000",
+        "metadata": {
+          "unit": "kg"
+        }
+      },
+      {
+        "rule_key": "allowed_item_types",
+        "rule_value": "[\"perishable\", \"frozen\", \"dairy\"]",
+        "metadata": {
+          "require_cold_chain": true,
+          "temp_range": "-5 to 5°C"
+        }
+      }
+    ]
+  },
+  "response": {
+    "id": "018db9d3-7a82-7001-8000-400000000099",
+    "workspace_id": "018db9d3-7a82-7001-8000-999999999999",
+    "name": "Cámara Fría 2",
+    "description": "Nueva cámara de refrigeración",
+    "type_id": "018db9d3-7a82-7001-8000-300000000003",
+    "parent_id": "018db9d3-7a82-7001-8000-400000000001",
+    "level": 1,
+    "path": "/018db9d3-7a82-7001-8000-400000000001/018db9d3-7a82-7001-8000-400000000099",
+    "type": {
+      "id": "018db9d3-7a82-7001-8000-300000000003",
+      "code": "cold_storage",
+      "label": "Cámara fría"
+    },
+    "rules": [
+      {
+        "id": "...",
+        "rule_key": "max_capacity",
+        "rule_value": "3000",
+        "metadata": {
+          "unit": "kg"
+        }
+      },
+      {
+        "id": "...",
+        "rule_key": "allowed_item_types",
+        "rule_value": "[\"perishable\", \"frozen\", \"dairy\"]",
+        "metadata": {
+          "require_cold_chain": true,
+          "temp_range": "-5 to 5°C"
+        }
+      }
+    ]
+  },
+  "notes": [
+    "Si type.code no existe, se crea automáticamente con create_if_not_exists",
+    "Las rules se crean en la misma transacción",
+    "Si parent_id existe, se calcula level y path automáticamente",
+    "Endpoint atómico: si falla algo, rollback completo"
+  ]
+}

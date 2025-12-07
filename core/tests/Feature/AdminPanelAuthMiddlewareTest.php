@@ -37,8 +37,9 @@ class AdminPanelAuthMiddlewareTest extends TestCase
 
         $response = $middleware->handle($request, fn () => response('OK'));
 
+        // Should return 401 and show login form (not WWW-Authenticate header)
         $this->assertSame(401, $response->getStatusCode());
-        $this->assertTrue($response->headers->has('WWW-Authenticate'));
+        $this->assertStringContainsString('login', $response->getContent());
     }
 
     public function test_allows_access_with_default_credentials(): void

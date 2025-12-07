@@ -66,6 +66,20 @@ class InMemoryVocabularyRepository implements VocabularyRepositoryInterface
         );
     }
 
+    public function findBySlug(string $slug, ?string $workspaceId = null): ?Vocabulary
+    {
+        foreach ($this->vocabularies as $vocabulary) {
+            if ($vocabulary->getSlug() === $slug && $vocabulary->getWorkspaceId() === $workspaceId) {
+                return $vocabulary;
+            }
+            if ($workspaceId === null && $vocabulary->getSlug() === $slug && $vocabulary->getWorkspaceId() === null) {
+                return $vocabulary;
+            }
+        }
+
+        return null;
+    }
+
     public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool
     {
         foreach ($this->vocabularies as $vocabulary) {

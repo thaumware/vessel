@@ -47,7 +47,7 @@ class ModuleCommunicationTest extends TestCase
     {
         // Stock with local adapter
         $stockResponse = $this->withAdapter('stock', 'local')
-            ->getJson('/api/v1/stock/items/list');
+            ->getJson('/api/v1/stock/items/read');
 
         // Locations with local adapter (independent)
         $locationsResponse = $this->withAdapter('locations', 'local')
@@ -56,11 +56,11 @@ class ModuleCommunicationTest extends TestCase
         // Both should work independently (200 or 500 for db error)
         $this->assertTrue(
             in_array($stockResponse->status(), [200, 500]),
-            'Stock module should respond'
+            'Stock module should respond with 200 or 500, got: ' . $stockResponse->status()
         );
         $this->assertTrue(
             in_array($locationsResponse->status(), [200, 500]),
-            'Locations module should respond'
+            'Locations module should respond with 200 or 500, got: ' . $locationsResponse->status()
         );
     }
 }

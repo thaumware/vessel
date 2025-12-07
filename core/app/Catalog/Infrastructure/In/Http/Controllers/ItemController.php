@@ -74,7 +74,6 @@ class ItemController extends Controller
             uomId: $validated['uom_id'] ?? null,
             notes: $validated['notes'] ?? null,
             status: $validated['status'] ?? 'active',
-            termIds: $validated['term_ids'] ?? [],
         );
 
         return response()->json(['data' => $item->toArray()], 201);
@@ -106,7 +105,6 @@ class ItemController extends Controller
             uomId: $validated['uom_id'] ?? null,
             notes: $validated['notes'] ?? null,
             status: $validated['status'] ?? null,
-            termIds: $validated['term_ids'] ?? null,
         );
 
         if (!$item) {

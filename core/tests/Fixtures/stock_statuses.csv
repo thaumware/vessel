@@ -1,0 +1,7 @@
+id,workspace_id,code,label,description,is_active,sort_order
+018db9d3-7a82-7001-8000-000000000001,,available,Disponible,Stock disponible para venta y movimientos,1,10
+018db9d3-7a82-7001-8000-000000000002,,reserved,Reservado,Stock reservado en carritos o pedidos pendientes,1,20
+018db9d3-7a82-7001-8000-000000000003,,damaged,Dañado,Producto con daños físicos o defectos,1,30
+018db9d3-7a82-7001-8000-000000000004,,quarantine,Cuarentena,En espera de inspección de calidad,1,40
+018db9d3-7a82-7001-8000-000000000005,,lost,Perdido,Inventario extraviado o no ubicado,1,50
+018db9d3-7a82-7001-8000-000000000006,018db9d3-7a82-7001-8000-999999999999,on_approval,En aprobación,Requiere aprobación de supervisor,1,60

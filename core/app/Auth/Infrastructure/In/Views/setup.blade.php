@@ -29,6 +29,7 @@
                     <div class="space-y-2">
                         <label class="text-sm text-slate-300">DB Host</label>
                         <input id="db_host" type="text" value="{{ $db_host }}" class="mt-1 w-full bg-slate-950 border border-slate-800 rounded-lg px-3 py-2" placeholder="127.0.0.1" />
+                        <p class="text-xs text-slate-400">Docker: usa <code class="text-amber-400">host.docker.internal</code> para MySQL en host</p>
                     </div>
                 </template>
                 <template x-if="dbDriver === 'mysql'">

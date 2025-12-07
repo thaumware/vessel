@@ -34,6 +34,10 @@ $enriched = $loader->attach($models); // portal_catalog_items presente
 - Filtra queries por `workspace_id` (ver `MovementSearchCriteria`); en producción, haz lo mismo en tus adapters (DB/HTTP).
 - Usa `portal_catalog.json` como ejemplo de enriquecimiento (taxonomía + metadata + UOM).
 
+### Conectar el front (categorías y filtros)
+- Pre-carga el árbol de categorías llamando **GET `/api/v1/taxonomy/vocabularies/by-slug/{slug}?workspace_id=...`**.
+- El payload incluye `vocabulary` + `terms` en árbol (usa `slug` como short code); ideal para construir menús, breadcrumbs y filtros sin múltiples requests.
+
 ## Próximos pasos
 1) Llevar Portal al flujo de casos de uso de Stock en producción (adapter real que filtre workspace y permisos).
 2) Añadir políticas de acceso cuando se definan roles.

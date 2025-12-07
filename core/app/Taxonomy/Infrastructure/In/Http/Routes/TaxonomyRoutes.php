@@ -33,6 +33,7 @@ Route::prefix('api/v1/taxonomy')
 
         Route::get('/read', [TaxonomyController::class, 'vocabularyList']);
         Route::get('/show/{id}', [TaxonomyController::class, 'vocabularyProfile']);
+        Route::get('/by-slug/{slug}', [TaxonomyController::class, 'vocabularyBySlug']);
 
         Route::put('/update/{id}', [TaxonomyController::class, 'updateVocabulary']);
         Route::delete('/delete/{id}', [TaxonomyController::class, 'deleteVocabulary']);

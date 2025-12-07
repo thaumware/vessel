@@ -14,6 +14,8 @@ interface VocabularyRepositoryInterface
 
     public function findAll(PaginationParams $params): PaginatedResult;
 
+    public function findBySlug(string $slug, ?string $workspaceId = null): ?Vocabulary;
+
     public function existsBySlugAndWorkspace(string $slug, ?string $workspaceId): bool;
 
     public function delete(Vocabulary $vocabulary): void;

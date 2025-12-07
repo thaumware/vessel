@@ -4,6 +4,7 @@ use App\AppServiceProvider;
 use App\Catalog\Infrastructure\CatalogServiceProvider;
 use App\Shared\Providers\PortalServiceProvider;
 use App\Shared\Providers\HealthServiceProvider;
+use App\Shared\Providers\SharedServiceProvider;
 use App\Auth\Infrastructure\AuthServiceProvider;
 use App\Locations\Infrastructure\LocationsServiceProvider;
 use App\Pricing\Infrastructure\PricingServiceProvider;
@@ -15,6 +16,7 @@ return [
     AppServiceProvider::class,
     PortalServiceProvider::class,
     HealthServiceProvider::class,
+    SharedServiceProvider::class, // Testing, utilities, etc.
     
     // Auth module (admin panel + sessions)
     AuthServiceProvider::class,

@@ -1,0 +1,11 @@
+workspace_id,sku,name,category,supplier,cost_price,list_price,unit_of_measure
+,ELEC-LAP-001,Laptop Dell Inspiron 15,Electrónica,Dell Inc,850.00,1299.99,unit
+,ELEC-MON-002,Monitor LG 27 4K,Electrónica,LG Electronics,320.00,549.99,unit
+,FOOD-CER-101,Cereal Corn Flakes 500g,Alimentos,Kelloggs,2.50,4.99,box
+,FOOD-MLK-102,Leche Entera 1L,Alimentos,Nestlé,0.80,1.99,liter
+,PHAR-MED-201,Paracetamol 500mg x20,Farmacia,Bayer,3.20,8.50,box
+,PHAR-VIT-202,Vitamina C 1000mg x30,Farmacia,Nature Made,5.60,12.99,bottle
+12345678-1234-1234-1234-123456789012,WORK-TEE-301,Camiseta Corporativa,Textil,Local Supplier,8.00,25.00,unit
+12345678-1234-1234-1234-123456789012,WORK-CAP-302,Gorra con Logo,Textil,Local Supplier,4.50,15.00,unit
+,AUTO-OIL-401,Aceite Motor 5W30 4L,Automotriz,Castrol,18.00,35.99,bottle
+,AUTO-FIL-402,Filtro de Aire K&N,Automotriz,K&N Engineering,25.00,45.00,unit

@@ -25,7 +25,8 @@ Route::middleware('web')->group(function () {
             return response()->json(['success' => false, 'error' => 'Admin no configurado. Ve a /setup'], 500);
         }
         
-        if ($credentials['username'] === $adminRoot && $credentials['password'] === $adminPassword) {
+        // Verificar password hasheado con password_verify
+        if ($credentials['username'] === $adminRoot && password_verify($credentials['password'], $adminPassword)) {
             $request->session()->put('admin_authenticated', true);
             return response()->json(['success' => true]);
         }
