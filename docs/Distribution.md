@@ -10,7 +10,7 @@ This repository is the source-of-truth (internal dev). The public "distribution"
    # from this repo root (git bash)
    DEST=../vessel-distribution   # clone of the public repo
    mkdir -p "$DEST"
-   git archive --format=tar HEAD modules/catalog apps/vessel-web apps/vessel-docs shared resources config bootstrap | tar -xf - -C "$DEST"
+  git archive --format=tar HEAD core apps/vessel-web apps/vessel-docs shared resources config bootstrap | tar -xf - -C "$DEST"
    ```
    Adjust paths to include only what you want to ship (core + selected modules).
 3) In the distribution repo:
@@ -61,7 +61,7 @@ Add a helper script (example):
 #!/usr/bin/env bash
 set -euo pipefail
 DEST=${1:-../vessel-distribution}
-PATHS=(modules/catalog shared apps/vessel-web apps/vessel-docs resources config bootstrap)
+PATHS=(core shared apps/vessel-web apps/vessel-docs resources config bootstrap)
 mkdir -p "$DEST"
 git archive --format=tar HEAD "${PATHS[@]}" | tar -xf - -C "$DEST"
 (

@@ -3,7 +3,7 @@ set -euo pipefail
 
 DEST=${1:-../vessel-distribution}
 # Paths to export; adjust as needed
-PATHS=(modules/catalog shared apps/vessel-web apps/vessel-docs resources config bootstrap)
+PATHS=(core shared apps/vessel-web apps/vessel-docs resources config bootstrap)
 
 mkdir -p "$DEST"
 

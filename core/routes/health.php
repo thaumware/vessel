@@ -8,15 +8,28 @@ Route::get('/health', function () {
         'status' => 'ok',
         'app' => config('app.name'),
         'env' => config('app.env'),
+        'version' => config('app.version'),
+        'timestamp' => now()->toIso8601String(),
     ], 200);
 });
 
-// Minimal root route (no Laravel branding) to avoid 404/landing page issues
-Route::get('/', function () {
+Route::get('/api/status', function () {
     return response()->json([
-        'status' => 'ready',
+        'status' => 'ok',
         'app' => config('app.name'),
         'env' => config('app.env'),
+        'version' => config('app.version'),
+        'timestamp' => now()->toIso8601String(),
+    ], 200);
+});
+
+Route::get('/', function () {
+    return view('landing', [
+        'appName' => config('app.name'),
+        'env' => config('app.env'),
+        'version' => config('app.version'),
+        'timestamp' => now()->toDayDateTimeString(),
+        'status' => 'ready',
     ]);
 });
 

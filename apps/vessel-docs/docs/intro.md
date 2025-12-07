@@ -60,7 +60,7 @@ localStorage.setItem('API_URL', 'https://tu-api.com/api');
 ### 2. Levantar el backend
 
 ```bash
-cd modules/catalog
+cd core
 php artisan serve
 ```
 

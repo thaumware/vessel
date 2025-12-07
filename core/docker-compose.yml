@@ -1,7 +1,9 @@
+version: '3.9'
+
 services:
   core:
     build:
-      context: ./core
+      context: .
       dockerfile: Dockerfile.dev
     container_name: vessel_core
     environment:
@@ -9,7 +11,7 @@ services:
       APP_ENV: local
       APP_DEBUG: "true"
       APP_URL: ${APP_URL:-http://localhost:${APP_PORT:-8000}}
-      # Defaults allow running without an env file; override via env or a local .env
+      # Defaults let a fresh clone run without a local .env; override by exporting env vars or adding a .env file.
       DB_CONNECTION: ${DB_CONNECTION:-sqlite}
       DB_DATABASE: ${DB_DATABASE:-/app/database/database.sqlite}
       DB_HOST: ${DB_HOST:-mysql}
@@ -19,7 +21,7 @@ services:
     ports:
       - "${APP_PORT:-8000}:8000"
     volumes:
-      - ./core:/app
-      - ./core/storage:/app/storage
+      - ./:/app
+      - ./storage:/app/storage
     command: php artisan serve --host=0.0.0.0 --port=8000
     restart: unless-stopped

@@ -1,0 +1,18 @@
+services:
+  core:
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+      target: final
+    image: vessel-core:latest
+    env_file:
+      - .env
+    ports:
+      - "${APP_PORT:-8000}:80"
+    volumes:
+      - storage:/usr/share/nginx/html/storage
+      - dbdata:/usr/share/nginx/html/database
+
+volumes:
+  storage:
+  dbdata:

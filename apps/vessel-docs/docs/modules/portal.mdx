@@ -23,7 +23,7 @@ $stockItems = Portal::attach($stockItems); // añade $item->portal_catalog_items
 ```
 
 ## Adapter de pruebas (fixture)
-En Stock tests usamos `PortalJsonAdapter` (`modules/catalog/app/Stock/Tests/Support/PortalJsonAdapter.php`). Carga `portal_catalog.json` y simula origen `catalog_items` sin BD/HTTP.
+En Stock tests usamos `PortalJsonAdapter` (`core/app/Stock/Tests/Support/PortalJsonAdapter.php`). Carga `portal_catalog.json` y simula origen `catalog_items` sin BD/HTTP.
 
 ```php
 $adapter = new PortalJsonAdapter(__DIR__.'/portal_catalog.json', workspaceId: 'plant-01');

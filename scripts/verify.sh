@@ -121,10 +121,10 @@ else
     fail "docker-compose.yml no encontrado"
 fi
 
-if [ -d "modules/catalog" ]; then
-    pass "Módulo catalog existe"
+if [ -d "core" ]; then
+    pass "Core existe"
 else
-    fail "Módulo catalog no encontrado"
+    fail "Core no encontrado"
 fi
 
 if [ -d "modules/inventory" ]; then
