@@ -28,7 +28,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        $this->ensureSqliteDatabaseExists();
+        // NO auto-crear base de datos - eso se hace en setup
+        // Solo configurar fallbacks si la app ya está configurada
 
         // Fallback: if session driver is database but table missing, use array to avoid 500s
         if (config('session.driver') === 'database') {
@@ -47,26 +48,6 @@ class AppServiceProvider extends ServiceProvider
                 \App\Shared\Console\Commands\CloneTestDatabaseCommand::class,
                 \App\Shared\Console\Commands\ResetAdminCredentialsCommand::class,
             ]);
-        }
-    }
-
-    private function ensureSqliteDatabaseExists(): void
-    {
-        if (config('database.default') !== 'sqlite') {
-            return;
-        }
-
-        $dbPath = config('database.connections.sqlite.database');
-
-        if (!$dbPath || $dbPath === ':memory:' || File::exists($dbPath)) {
-            return;
-        }
-
-        try {
-            File::ensureDirectoryExists(dirname($dbPath));
-            File::put($dbPath, ''); // Best-effort creation for missing sqlite files
-        } catch (\Throwable $e) {
-            // Swallow to avoid blocking install flows; connection will still raise if inaccessible
         }
     }
 }

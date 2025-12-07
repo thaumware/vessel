@@ -40,16 +40,18 @@ class PortalServiceProvider extends ServiceProvider
         // Ensure shared + portal tables are registered for artisan migrate
         $this->loadMigrationsFrom(__DIR__ . '/../Infrastructure/Out/Database/Migrations');
 
-        /** @var object $adapter */
-        $adapter = $this->app->make(self::PORTAL_ADAPTER);
-
-        // Ensure portal tables exist before usage
-        if (method_exists($adapter, 'install')) {
-            $adapter->install();
+        // NO auto-install en boot - debe hacerse manualmente en setup o migrate
+        // Solo registrar el runtime si ya está instalado
+        try {
+            /** @var object $adapter */
+            $adapter = $this->app->make(self::PORTAL_ADAPTER);
+            
+            // Install Portal runtime with DB-backed adapter (no crea tablas, solo registra)
+            $runtime = self::PORTAL_RUNTIME;
+            $runtime::install($adapter);
+        } catch (\Throwable $e) {
+            // Si falla (DB no configurado), simplemente no instalar Portal
+            // La app debe funcionar sin Portal
         }
-
-        // Install Portal runtime with DB-backed adapter
-        $runtime = self::PORTAL_RUNTIME;
-        $runtime::install($adapter);
     }
 }
