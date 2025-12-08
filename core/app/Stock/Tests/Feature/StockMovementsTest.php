@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Stock;
+namespace App\Stock\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -12,25 +12,22 @@ class StockMovementsTest extends TestCase
 
     private function loadCSV(string $filename): array
     {
-        $path = base_path("tests/Fixtures/{$filename}");
+        $path = base_path("app/Stock/Tests/Fixtures/{$filename}");
         $rows = array_map('str_getcsv', file($path));
         $header = array_shift($rows);
-        
-        return array_map(function($row) use ($header) {
+
+        return array_map(function ($row) use ($header) {
             $data = array_combine($header, $row);
-            // Convert empty strings to null
-            return array_map(fn($v) => $v === '' ? null : $v, $data);
+            return array_map(fn ($value) => $value === '' ? null : $value, $data);
         }, $rows);
     }
 
     private function loadFixtures(): void
     {
-        // Load products
         $products = $this->loadCSV('products.csv');
         foreach ($products as $product) {
-            // Crear una ubicación para cada producto (requerido)
             $locationId = '018db9d3-7a82-7001-8000-' . str_pad(strval(crc32($product['sku'])), 12, '0', STR_PAD_LEFT);
-            
+
             DB::table('stock_items')->insert([
                 'id' => '018db9d3-7a82-7001-9000-' . str_pad(strval(crc32($product['sku'])), 12, '0', STR_PAD_LEFT),
                 'workspace_id' => $product['workspace_id'],
@@ -41,27 +38,22 @@ class StockMovementsTest extends TestCase
                 'location_type' => 'warehouse',
                 'quantity' => 0,
                 'reserved_quantity' => 0,
-                'item_type' => 'unit', // Requerido por el schema actual de la BD
+                'item_type' => 'unit',
                 'item_id' => '018db9d3-7a82-7001-9000-' . str_pad(strval(crc32($product['sku'])), 12, '0', STR_PAD_LEFT),
                 'created_at' => now(),
                 'updated_at' => now(),
             ]);
         }
 
-        // Load locations - OMITIDO: Las ubicaciones ya existen en la BD de tests
-        // El test de LocationsApiTest ya crea ubicaciones funcionales
-
-        // Load movements
         $movements = $this->loadCSV('stock_movements.csv');
         foreach ($movements as $movement) {
-            // Mapear códigos de ubicación a IDs (simplificado - en producción buscar en BD)
-            $fromLocationId = $movement['from_location'] !== 'supplier' 
+            $fromLocationId = $movement['from_location'] !== 'supplier'
                 ? '018db9d3-7a82-7001-8000-' . str_pad(strval(crc32($movement['from_location'])), 12, '0', STR_PAD_LEFT)
                 : null;
             $toLocationId = $movement['to_location'] !== 'customer'
                 ? '018db9d3-7a82-7001-8000-' . str_pad(strval(crc32($movement['to_location'])), 12, '0', STR_PAD_LEFT)
                 : null;
-                
+
             DB::table('stock_movements')->insert([
                 'id' => '018db9d3-7a82-7001-7000-' . str_pad(strval(rand(100000000000, 999999999999)), 12, '0', STR_PAD_LEFT),
                 'workspace_id' => $movement['workspace_id'],
@@ -71,7 +63,7 @@ class StockMovementsTest extends TestCase
                 'location_from_id' => $fromLocationId,
                 'location_to_id' => $toLocationId,
                 'reference' => $movement['reason'],
-                'user_id' => null, // No tenemos mapeo de performed_by a user_id
+                'user_id' => null,
                 'meta' => json_encode([
                     'from_location_code' => $movement['from_location'],
                     'to_location_code' => $movement['to_location'],
@@ -92,12 +84,12 @@ class StockMovementsTest extends TestCase
             ->where('movement_type', 'receipt')
             ->get();
 
-        $this->assertGreaterThan(0, $receipts->count(), '📦 Debe haber movimientos de recepción');
+        $this->assertGreaterThan(0, $receipts->count(), 'Receipts should exist');
 
         foreach ($receipts as $receipt) {
             $meta = json_decode($receipt->meta, true);
-            $this->assertGreaterThan(0, $receipt->quantity, "✅ Recepción debe tener cantidad positiva: {$receipt->sku}");
-            $this->assertEquals('supplier', $meta['from_location_code'], '🏭 Recepciones vienen de proveedor');
+            $this->assertGreaterThan(0, $receipt->quantity, 'Receipt quantity should be positive');
+            $this->assertEquals('supplier', $meta['from_location_code'], 'Receipts should originate from supplier');
         }
     }
 
@@ -109,12 +101,12 @@ class StockMovementsTest extends TestCase
             ->where('movement_type', 'sale')
             ->get();
 
-        $this->assertGreaterThan(0, $sales->count(), '📦 Debe haber movimientos de venta');
+        $this->assertGreaterThan(0, $sales->count(), 'Sales should exist');
 
         foreach ($sales as $sale) {
             $meta = json_decode($sale->meta, true);
-            $this->assertLessThan(0, $sale->quantity, "✅ Venta debe tener cantidad negativa: {$sale->sku}");
-            $this->assertEquals('customer', $meta['to_location_code'], '🛒 Ventas van al cliente');
+            $this->assertLessThan(0, $sale->quantity, 'Sale quantity should be negative');
+            $this->assertEquals('customer', $meta['to_location_code'], 'Sales should go to customer');
         }
     }
 
@@ -126,16 +118,14 @@ class StockMovementsTest extends TestCase
             ->where('movement_type', 'transfer')
             ->get();
 
-        $this->assertGreaterThan(0, $transfers->count(), '📦 Debe haber transferencias');
+        $this->assertGreaterThan(0, $transfers->count(), 'Transfers should exist');
 
         foreach ($transfers as $transfer) {
             $meta = json_decode($transfer->meta, true);
-            $this->assertNotEquals('supplier', $meta['from_location_code'], '🏭 Transferencias no vienen de supplier');
-            $this->assertNotEquals('customer', $meta['to_location_code'], '🛒 Transferencias no van a customer');
-            
-            // Validación simplificada: solo verificamos que tengan códigos de ubicación
-            $this->assertNotEmpty($meta['from_location_code'], "✅ Transferencia debe tener ubicación origen");
-            $this->assertNotEmpty($meta['to_location_code'], "✅ Transferencia debe tener ubicación destino");
+            $this->assertNotEquals('supplier', $meta['from_location_code'], 'Transfers should not originate from supplier');
+            $this->assertNotEquals('customer', $meta['to_location_code'], 'Transfers should not go directly to customer');
+            $this->assertNotEmpty($meta['from_location_code'], 'Transfer must have source location');
+            $this->assertNotEmpty($meta['to_location_code'], 'Transfer must have destination location');
         }
     }
 
@@ -148,8 +138,8 @@ class StockMovementsTest extends TestCase
             ->get();
 
         foreach ($adjustments as $adjustment) {
-            $this->assertNotEmpty($adjustment->reference, "\u2705 Ajuste debe tener raz\u00f3n: {$adjustment->sku}");
-            $this->assertLessThan(0, $adjustment->quantity, '📉 Ajustes suelen ser negativos (mermas, da\u00f1os)');
+            $this->assertNotEmpty($adjustment->reference, 'Adjustment should include a reason');
+            $this->assertLessThan(0, $adjustment->quantity, 'Adjustment quantities are expected to be negative');
         }
     }
 
@@ -163,8 +153,8 @@ class StockMovementsTest extends TestCase
 
         foreach ($quarantines as $quarantine) {
             $meta = json_decode($quarantine->meta, true);
-            $this->assertStringContainsString('QUAR', $meta['to_location_code'], '🔒 Cuarentena debe ir a ubicaci\u00f3n QUAR');
-            $this->assertNotEmpty($quarantine->reference, '\u2705 Cuarentena debe tener raz\u00f3n');
+            $this->assertStringContainsString('QUAR', $meta['to_location_code'], 'Quarantine should go to QUAR location');
+            $this->assertNotEmpty($quarantine->reference, 'Quarantine should include a reason');
         }
     }
 
@@ -173,12 +163,12 @@ class StockMovementsTest extends TestCase
         $this->loadFixtures();
 
         $workspaceId = '12345678-1234-1234-1234-123456789012';
-        
+
         $workspaceMovements = DB::table('stock_movements')
             ->where('workspace_id', $workspaceId)
             ->get();
 
-        $this->assertGreaterThan(0, $workspaceMovements->count(), '📦 Debe haber movimientos de workspace específico');
+        $this->assertGreaterThan(0, $workspaceMovements->count(), 'Workspace-specific movements should exist');
 
         foreach ($workspaceMovements as $movement) {
             $item = DB::table('stock_items')
@@ -186,7 +176,7 @@ class StockMovementsTest extends TestCase
                 ->where('workspace_id', $workspaceId)
                 ->first();
 
-            $this->assertNotNull($item, "✅ Producto debe pertenecer al mismo workspace: {$movement->sku}");
+            $this->assertNotNull($item, 'Movement item should belong to the same workspace');
         }
     }
 
@@ -198,7 +188,7 @@ class StockMovementsTest extends TestCase
             ->whereNull('workspace_id')
             ->get();
 
-        $this->assertGreaterThan(0, $globalMovements->count(), '🌍 Debe haber movimientos globales');
+        $this->assertGreaterThan(0, $globalMovements->count(), 'Global movements should exist');
 
         foreach ($globalMovements as $movement) {
             $item = DB::table('stock_items')
@@ -206,7 +196,7 @@ class StockMovementsTest extends TestCase
                 ->whereNull('workspace_id')
                 ->first();
 
-            $this->assertNotNull($item, "✅ Producto global debe existir: {$movement->sku}");
+            $this->assertNotNull($item, 'Global movement item should exist');
         }
     }
 
@@ -219,7 +209,7 @@ class StockMovementsTest extends TestCase
             ->orderBy('created_at')
             ->get();
 
-        $this->assertGreaterThan(1, $movements->count(), '📦 Debe haber múltiples movimientos para seguimiento');
+        $this->assertGreaterThan(1, $movements->count(), 'Laptop movements should include a timeline');
 
         $previousTime = null;
         foreach ($movements as $movement) {
@@ -227,7 +217,7 @@ class StockMovementsTest extends TestCase
                 $this->assertGreaterThanOrEqual(
                     strtotime($previousTime),
                     strtotime($movement->created_at),
-                    '⏰ Movimientos deben estar ordenados cronológicamente'
+                    'Movements should be ordered chronologically'
                 );
             }
             $previousTime = $movement->created_at;
@@ -246,8 +236,7 @@ class StockMovementsTest extends TestCase
         foreach ($milkMovements as $movement) {
             $meta = json_decode($movement->meta, true);
             if ($meta['to_location_code'] !== 'customer' && $meta['to_location_code'] !== 'supplier') {
-                // Validación simplificada: verificamos que el código contenga COLD
-                $this->assertStringContainsString('COLD', $meta['to_location_code'], '❄️ Lácteos deben ir a almacén refrigerado');
+                $this->assertStringContainsString('COLD', $meta['to_location_code'], 'Dairy should move through cold storage');
             }
         }
     }
@@ -263,19 +252,18 @@ class StockMovementsTest extends TestCase
 
         foreach ($pharmaReceipts as $receipt) {
             $meta = json_decode($receipt->meta, true);
-            $this->assertStringContainsString('QA', $meta['to_location_code'], '\ud83d\udd2c Farmac\u00e9uticos deben ir a QA primero');
+            $this->assertStringContainsString('QA', $meta['to_location_code'], 'Pharmaceutical receipts should route to QA first');
         }
 
-        // Query con LIKE no funciona en meta JSON - simplificamos la validaci\u00f3n
         $qaTransfers = DB::table('stock_movements')
             ->where('sku', 'PHAR-MED-201')
             ->where('movement_type', 'transfer')
             ->get()
-            ->filter(function($movement) {
+            ->filter(function ($movement) {
                 $meta = json_decode($movement->meta, true);
                 return str_starts_with($meta['from_location_code'] ?? '', 'QA-');
             });
 
-        $this->assertGreaterThan(0, $qaTransfers->count(), '✅ Debe haber transferencias desde QA después de aprobación');
+        $this->assertGreaterThan(0, $qaTransfers->count(), 'Transfers should leave QA after approval');
     }
 }

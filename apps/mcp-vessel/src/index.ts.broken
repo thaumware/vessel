@@ -1,0 +1,1038 @@
+/**
+ * Vessel MCP Server
+ * 
+ * Permite interactuar con Vessel API desde el contexto MCP.
+ * Expone herramientas para: Items, Stock, Locations, Taxonomy, Movements
+ */
+
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import {
+    CallToolRequestSchema,
+    ListToolsRequestSchema,
+    ListResourcesRequestSchema,
+    ReadResourceRequestSchema,
+} from "@modelcontextprotocol/sdk/types.js";
+
+const VESSEL_API_URL = process.env.VESSEL_API_URL || "http://localhost:8000";
+
+// === HTTP HELPERS ===
+
+async function vesselGet<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
+    const url = new URL(`${VESSEL_API_URL}${endpoint}`);
+    if (params) {
+        Object.entries(params).forEach(([k, v]) => {
+            if (v) url.searchParams.append(k, v);
+        });
+    }
+    const res = await fetch(url.toString(), {
+        method: "GET",
+        headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error(`GET ${endpoint} failed: ${res.status}`);
+    return res.json();
+}
+
+async function vesselPost<T>(endpoint: string, body: any): Promise<T> {
+    const res = await fetch(`${VESSEL_API_URL}${endpoint}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`POST ${endpoint} failed: ${res.status}`);
+    return res.json();
+}
+
+async function vesselPut<T>(endpoint: string, body: any): Promise<T> {
+    const res = await fetch(`${VESSEL_API_URL}${endpoint}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+    });
+    if (!res.ok) throw new Error(`PUT ${endpoint} failed: ${res.status}`);
+    return res.json();
+}
+
+async function vesselDelete(endpoint: string): Promise<void> {
+    const res = await fetch(`${VESSEL_API_URL}${endpoint}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+    });
+    if (!res.ok) throw new Error(`DELETE ${endpoint} failed: ${res.status}`);
+}
+
+// === TOOLS DEFINITION ===
+
+const TOOLS = [
+    // === ITEMS (Catalog) ===
+    {
+        name: "vessel_items_list",
+        description: "Lista todos los items del catálogo de Vessel con filtros opcionales",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                status: { type: "string", description: "Filtrar por estado: active, draft, archived" },
+                search: { type: "string", description: "Buscar por nombre o descripción" },
+                limit: { type: "number", description: "Límite de resultados" },
+            },
+        },
+    },
+    {
+        name: "vessel_items_get",
+        description: "Obtiene un item específico por ID con toda su información",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del item (UUID)" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_items_create",
+        description: "Crea un nuevo item en el catálogo con sus atributos",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                name: { type: "string", description: "Nombre del item" },
+                description: { type: "string", description: "Descripción detallada" },
+                uom_id: { type: "string", description: "ID de unidad de medida (ej: uom-kg, uom-unit)" },
+                notes: { type: "string", description: "Notas adicionales" },
+                status: { type: "string", description: "Estado: active, draft, archived" },
+            },
+            required: ["name"],
+        },
+    },
+    {
+        name: "vessel_items_update",
+        description: "Actualiza un item existente del catálogo",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del item a actualizar" },
+                name: { type: "string", description: "Nuevo nombre" },
+                description: { type: "string", description: "Nueva descripción" },
+                uom_id: { type: "string", description: "Nueva unidad de medida" },
+                notes: { type: "string", description: "Nuevas notas" },
+                status: { type: "string", description: "Nuevo estado" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_items_delete",
+        description: "Elimina un item del catálogo (soft delete)",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del item a eliminar" },
+            },
+            required: ["id"],
+        },
+    },
+
+    // === STOCK (Inventory) ===
+    {
+        name: "vessel_stock_list",
+        description: "Lista los items de stock (inventario físico) con filtros",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                location_id: { type: "string", description: "Filtrar por ubicación específica" },
+                catalog_item_id: { type: "string", description: "Filtrar por item del catálogo" },
+                sku: { type: "string", description: "Filtrar por SKU" },
+                with_catalog: { type: "boolean", description: "Incluir información del item del catálogo" },
+            },
+        },
+    },
+    {
+        name: "vessel_stock_get",
+        description: "Obtiene un item de stock específico por ID",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del stock item" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_stock_create",
+        description: "Crea un registro de stock para un item en una ubicación",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                catalog_item_id: { type: "string", description: "ID del item del catálogo" },
+                location_id: { type: "string", description: "ID de la ubicación donde se almacena" },
+                quantity: { type: "number", description: "Cantidad inicial de stock" },
+                sku: { type: "string", description: "SKU personalizado (opcional, se auto-genera si no se provee)" },
+            },
+            required: ["catalog_item_id", "location_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_stock_adjust",
+        description: "Ajusta el stock de un item (suma o resta cantidad)",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                sku: { type: "string", description: "SKU del stock item" },
+                location_id: { type: "string", description: "ID de ubicación" },
+                delta: { type: "number", description: "Cantidad a ajustar (positivo para añadir, negativo para restar)" },
+                reason: { type: "string", description: "Razón del ajuste (ej: 'Corrección de inventario', 'Merma')" },
+            },
+            required: ["sku", "location_id", "delta"],
+        },
+    },
+    {
+        name: "vessel_stock_reserve",
+        description: "Reserva stock para un pedido o proceso",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del stock item" },
+                quantity: { type: "number", description: "Cantidad a reservar" },
+                reference: { type: "string", description: "Referencia del pedido/proceso" },
+            },
+            required: ["id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_stock_release",
+        description: "Libera stock previamente reservado",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del stock item" },
+                quantity: { type: "number", description: "Cantidad a liberar" },
+            },
+            required: ["id", "quantity"],
+        },
+    },
+
+    // === LOTS (Trazabilidad) ===
+    {
+        name: "vessel_lots_list",
+        description: "Lista todos los lotes con trazabilidad",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                status: { type: "string", description: "Filtrar por estado: active, quarantine, depleted" },
+                expiring_soon: { type: "boolean", description: "Mostrar solo lotes próximos a vencer" },
+            },
+        },
+    },
+    {
+        name: "vessel_lots_create",
+        description: "Crea un nuevo lote con número de lote y fecha de vencimiento",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                lot_number: { type: "string", description: "Número de lote único" },
+                catalog_item_id: { type: "string", description: "ID del item del catálogo" },
+                expiration_date: { type: "string", description: "Fecha de vencimiento (YYYY-MM-DD)" },
+                quantity: { type: "number", description: "Cantidad del lote" },
+                notes: { type: "string", description: "Notas del lote" },
+            },
+            required: ["lot_number", "catalog_item_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_lots_quarantine",
+        description: "Pone un lote en cuarentena",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del lote" },
+                reason: { type: "string", description: "Razón de la cuarentena" },
+            },
+            required: ["id", "reason"],
+        },
+    },
+    {
+        name: "vessel_lots_by_number",
+        description: "Busca un lote por su número",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                lot_number: { type: "string", description: "Número de lote a buscar" },
+            },
+            required: ["lot_number"],
+        },
+    },
+
+    // === LOCATIONS (Bodegas/Ubicaciones) ===
+    {
+        name: "vessel_locations_list",
+        description: "Lista todas las ubicaciones/bodegas del sistema",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                type: { type: "string", description: "Filtrar por tipo de ubicación" },
+                parent_id: { type: "string", description: "Filtrar por ubicación padre" },
+            },
+        },
+    },
+    {
+        name: "vessel_locations_get",
+        description: "Obtiene una ubicación específica por ID",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID de la ubicación" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_locations_create",
+        description: "Crea una nueva ubicación con jerarquía opcional",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                name: { type: "string", description: "Nombre de la ubicación" },
+                type: { type: "string", description: "Tipo: warehouse, storage_unit, cold_storage, etc." },
+                parent_id: { type: "string", description: "ID de ubicación padre (para jerarquía)" },
+                description: { type: "string", description: "Descripción de la ubicación" },
+            },
+            required: ["name", "type"],
+        },
+    },
+    {
+        name: "vessel_locations_update",
+        description: "Actualiza una ubicación existente",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID de la ubicación" },
+                name: { type: "string", description: "Nuevo nombre" },
+                type: { type: "string", description: "Nuevo tipo" },
+                description: { type: "string", description: "Nueva descripción" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_locations_delete",
+        description: "Elimina una ubicación",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID de la ubicación" },
+            },
+            required: ["id"],
+        },
+    },
+
+    // === MOVEMENTS (Movimientos de inventario) ===
+    {
+        name: "vessel_movements_list",
+        description: "Lista los movimientos de inventario con filtros",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                type: { type: "string", description: "Tipo: receipt, shipment, transfer, adjustment, consumption" },
+                catalog_item_id: { type: "string", description: "Filtrar por item" },
+                location_id: { type: "string", description: "Filtrar por ubicación" },
+                limit: { type: "number", description: "Límite de resultados" },
+            },
+        },
+    },
+    {
+        name: "vessel_movements_get",
+        description: "Obtiene un movimiento específico por ID",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del movimiento" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_movements_types",
+        description: "Lista los tipos de movimientos disponibles en el sistema",
+        inputSchema: {
+            type: "object" as const,
+            properties: {},
+        },
+    },
+    {
+        name: "vessel_movements_receipt",
+        description: "Registra una entrada/recepción de stock desde proveedor",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                catalog_item_id: { type: "string", description: "ID del item" },
+                location_id: { type: "string", description: "ID de ubicación destino" },
+                quantity: { type: "number", description: "Cantidad a ingresar" },
+                reference_id: { type: "string", description: "Referencia externa (OC, factura, etc.)" },
+                notes: { type: "string", description: "Notas del movimiento" },
+            },
+            required: ["catalog_item_id", "location_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_movements_shipment",
+        description: "Registra una salida/envío de stock a cliente",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                catalog_item_id: { type: "string", description: "ID del item" },
+                location_id: { type: "string", description: "ID de ubicación origen" },
+                quantity: { type: "number", description: "Cantidad a enviar" },
+                reference_id: { type: "string", description: "Referencia de pedido/orden" },
+            },
+            required: ["catalog_item_id", "location_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_movements_transfer",
+        description: "Transfiere stock entre dos ubicaciones",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                catalog_item_id: { type: "string", description: "ID del item" },
+                source_location_id: { type: "string", description: "Ubicación origen" },
+                destination_location_id: { type: "string", description: "Ubicación destino" },
+                quantity: { type: "number", description: "Cantidad a transferir" },
+            },
+            required: ["catalog_item_id", "source_location_id", "destination_location_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_movements_adjustment",
+        description: "Registra un ajuste de inventario (corrección, merma, daño)",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                catalog_item_id: { type: "string", description: "ID del item" },
+                location_id: { type: "string", description: "ID de ubicación" },
+                quantity: { type: "number", description: "Cantidad del ajuste (puede ser negativa)" },
+                reason: { type: "string", description: "Razón del ajuste: damage, loss, correction, etc." },
+            },
+            required: ["catalog_item_id", "location_id", "quantity", "reason"],
+        },
+    },
+
+    // === TAXONOMY (Categorías/Vocabularios) ===
+    {
+        name: "vessel_vocabularies_list",
+        description: "Lista los vocabularios de taxonomía disponibles",
+        inputSchema: {
+            type: "object" as const,
+            properties: {},
+        },
+    },
+    {
+        name: "vessel_vocabularies_get",
+        description: "Obtiene un vocabulario específico por ID",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del vocabulario" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_vocabularies_create",
+        description: "Crea un nuevo vocabulario de taxonomía",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                name: { type: "string", description: "Nombre del vocabulario" },
+                machine_name: { type: "string", description: "Nombre de máquina (slug)" },
+                description: { type: "string", description: "Descripción" },
+            },
+            required: ["name"],
+        },
+    },
+    {
+        name: "vessel_terms_list",
+        description: "Lista los términos de un vocabulario",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                vocabulary_id: { type: "string", description: "ID del vocabulario" },
+            },
+        },
+    },
+    {
+        name: "vessel_terms_tree",
+        description: "Obtiene el árbol jerárquico de términos",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                vocabulary_id: { type: "string", description: "ID del vocabulario" },
+            },
+        },
+    },
+    {
+        name: "vessel_terms_create",
+        description: "Crea un nuevo término en un vocabulario",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                vocabulary_id: { type: "string", description: "ID del vocabulario" },
+                name: { type: "string", description: "Nombre del término" },
+                parent_id: { type: "string", description: "ID del término padre (opcional)" },
+                description: { type: "string", description: "Descripción" },
+            },
+            required: ["vocabulary_id", "name"],
+        },
+    },
+    {
+        name: "vessel_terms_breadcrumb",
+        description: "Obtiene el breadcrumb de un término (ancestros)",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID del término" },
+            },
+            required: ["id"],
+        },
+    },
+
+    // === UOM (Unidades de Medida) ===
+    {
+        name: "vessel_uom_list",
+        description: "Lista las unidades de medida disponibles",
+        inputSchema: {
+            type: "object" as const,
+            properties: {},
+        },
+    },
+    {
+        name: "vessel_uom_get",
+        description: "Obtiene una unidad de medida específica",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                id: { type: "string", description: "ID de la unidad" },
+            },
+            required: ["id"],
+        },
+    },
+    {
+        name: "vessel_uom_convert",
+        description: "Convierte una cantidad de una unidad a otra",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                from_uom: { type: "string", description: "Unidad origen (código o ID)" },
+                to_uom: { type: "string", description: "Unidad destino (código o ID)" },
+                quantity: { type: "number", description: "Cantidad a convertir" },
+            },
+            required: ["from_uom", "to_uom", "quantity"],
+        },
+    },
+    {
+        name: "vessel_uom_families",
+        description: "Lista las familias de unidades de medida (peso, volumen, longitud, etc.)",
+        inputSchema: {
+            type: "object" as const,
+            properties: {},
+        },
+    },
+
+    // === CAPACITY (Capacidad de ubicaciones) ===
+    {
+        name: "vessel_capacity_get",
+        description: "Obtiene la configuración de capacidad de una ubicación",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                location_id: { type: "string", description: "ID de la ubicación" },
+            },
+            required: ["location_id"],
+        },
+    },
+    {
+        name: "vessel_capacity_stats",
+        description: "Obtiene estadísticas de capacidad de una ubicación",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                location_id: { type: "string", description: "ID de la ubicación" },
+            },
+            required: ["location_id"],
+        },
+    },
+    {
+        name: "vessel_capacity_can_accept",
+        description: "Verifica si una ubicación puede aceptar más stock",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                location_id: { type: "string", description: "ID de la ubicación" },
+                quantity: { type: "number", description: "Cantidad a verificar" },
+            },
+            required: ["location_id", "quantity"],
+        },
+    },
+];
+            properties: {
+                id: { type: "string", description: "ID de la ubicación" },
+            },
+            required: ["id"],
+        },
+    },
+
+    // === MOVEMENTS ===
+    {
+        name: "vessel_movements_list",
+        description: "Lista los movimientos de inventario",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                type: { type: "string", description: "Tipo: receipt, shipment, consumption, etc." },
+                item_id: { type: "string", description: "Filtrar por item" },
+                limit: { type: "number", description: "Límite de resultados" },
+            },
+        },
+    },
+    {
+        name: "vessel_movements_receipt",
+        description: "Registra una entrada/recepción de stock",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                item_id: { type: "string", description: "ID del item" },
+                location_id: { type: "string", description: "ID de ubicación destino" },
+                quantity: { type: "number", description: "Cantidad a ingresar" },
+                reference_id: { type: "string", description: "Referencia externa (OC, factura)" },
+            },
+            required: ["item_id", "location_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_movements_consumption",
+        description: "Registra una salida/consumo de stock",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                item_id: { type: "string", description: "ID del item" },
+                location_id: { type: "string", description: "ID de ubicación origen" },
+                quantity: { type: "number", description: "Cantidad a consumir" },
+                reason: { type: "string", description: "Razón del consumo" },
+            },
+            required: ["item_id", "location_id", "quantity"],
+        },
+    },
+    {
+        name: "vessel_movements_transfer",
+        description: "Transfiere stock entre ubicaciones",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                item_id: { type: "string", description: "ID del item" },
+                source_location_id: { type: "string", description: "Ubicación origen" },
+                destination_location_id: { type: "string", description: "Ubicación destino" },
+                quantity: { type: "number", description: "Cantidad a transferir" },
+            },
+            required: ["item_id", "source_location_id", "destination_location_id", "quantity"],
+        },
+    },
+
+    // === TAXONOMY ===
+    {
+        name: "vessel_vocabularies_list",
+        description: "Lista los vocabularios de taxonomía",
+        inputSchema: {
+            type: "object" as const,
+            properties: {},
+        },
+    },
+    {
+        name: "vessel_terms_list",
+        description: "Lista los términos de un vocabulario",
+        inputSchema: {
+            type: "object" as const,
+            properties: {
+                vocabulary_id: { type: "string", description: "ID del vocabulario" },
+            },
+        },
+    },
+
+    // === UOM ===
+    {
+        name: "vessel_uom_list",
+        description: "Lista las unidades de medida disponibles",
+        inputSchema: {
+            type: "object" as const,
+            properties: {},
+        },
+    },
+];
+
+// === TOOL HANDLERS ===
+
+async function handleToolCall(name: string, args: any): Promise<any> {
+    switch (name) {
+        // === ITEMS ===
+        case "vessel_items_list": {
+            const params: Record<string, string> = {};
+            if (args.status) params.status = args.status;
+            if (args.search) params.search = args.search;
+            if (args.limit) params.limit = args.limit.toString();
+            return await vesselGet<any>("/api/v1/items/read", params);
+        }
+        case "vessel_items_get": {
+            return await vesselGet<any>(`/api/v1/items/show/${args.id}`);
+        }
+        case "vessel_items_create": {
+            return await vesselPost<any>("/api/v1/items/create", {
+                name: args.name,
+                description: args.description,
+                uom_id: args.uom_id,
+                notes: args.notes,
+                status: args.status || "active",
+            });
+        }
+        case "vessel_items_update": {
+            const payload: any = {};
+            if (args.name) payload.name = args.name;
+            if (args.description) payload.description = args.description;
+            if (args.uom_id) payload.uom_id = args.uom_id;
+            if (args.notes) payload.notes = args.notes;
+            if (args.status) payload.status = args.status;
+            return await vesselPut<any>(`/api/v1/items/update/${args.id}`, payload);
+        }
+        case "vessel_items_delete": {
+            await vesselDelete(`/api/v1/items/delete/${args.id}`);
+            return { success: true, message: `Item ${args.id} eliminado` };
+        }
+
+        // === STOCK ===
+        case "vessel_stock_list": {
+            const params: Record<string, string> = {};
+            if (args.location_id) params.location_id = args.location_id;
+            if (args.catalog_item_id) params.catalog_item_id = args.catalog_item_id;
+            if (args.sku) params.sku = args.sku;
+            if (args.with_catalog) params.with_catalog = "true";
+            return await vesselGet<any>("/api/v1/stock/items/read", params);
+        }
+        case "vessel_stock_get": {
+            return await vesselGet<any>(`/api/v1/stock/items/show/${args.id}`);
+        }
+        case "vessel_stock_create": {
+            return await vesselPost<any>("/api/v1/stock/items/create", {
+                catalog_item_id: args.catalog_item_id,
+                location_id: args.location_id,
+                quantity: args.quantity,
+                sku: args.sku,
+                catalog_origin: "vessel_items",
+                location_type: "warehouse",
+            });
+        }
+        case "vessel_stock_adjust": {
+            return await vesselPost<any>("/api/v1/stock/items/adjust", {
+                sku: args.sku,
+                location_id: args.location_id,
+                delta: args.delta,
+                reason: args.reason,
+            });
+        }
+        case "vessel_stock_reserve": {
+            return await vesselPost<any>(`/api/v1/stock/items/reserve/${args.id}`, {
+                quantity: args.quantity,
+                reference: args.reference,
+            });
+        }
+        case "vessel_stock_release": {
+            return await vesselPost<any>(`/api/v1/stock/items/release/${args.id}`, {
+                quantity: args.quantity,
+            });
+        }
+
+        // === LOTS ===
+        case "vessel_lots_list": {
+            const params: Record<string, string> = {};
+            if (args.status) params.status = args.status;
+            if (args.expiring_soon) return await vesselGet<any>("/api/v1/stock/lots/expiring-soon");
+            return await vesselGet<any>("/api/v1/stock/lots/read", params);
+        }
+        case "vessel_lots_create": {
+            return await vesselPost<any>("/api/v1/stock/lots/create", {
+                lot_number: args.lot_number,
+                catalog_item_id: args.catalog_item_id,
+                expiration_date: args.expiration_date,
+                quantity: args.quantity,
+                notes: args.notes,
+            });
+        }
+        case "vessel_lots_quarantine": {
+            return await vesselPost<any>(`/api/v1/stock/lots/quarantine/${args.id}`, {
+                reason: args.reason,
+            });
+        }
+        case "vessel_lots_by_number": {
+            return await vesselGet<any>(`/api/v1/stock/lots/by-number/${args.lot_number}`);
+        }
+
+        // === LOCATIONS ===
+        case "vessel_locations_list": {
+            const params: Record<string, string> = {};
+            if (args.type) params.type = args.type;
+            if (args.parent_id) params.parent_id = args.parent_id;
+            return await vesselGet<any>("/api/v1/locations/read", params);
+        }
+        case "vessel_locations_get": {
+            return await vesselGet<any>(`/api/v1/locations/show/${args.id}`);
+        }
+        case "vessel_locations_create": {
+            return await vesselPost<any>("/api/v1/locations/create", {
+                name: args.name,
+                type: args.type,
+                parent_id: args.parent_id,
+                description: args.description,
+            });
+        }
+        case "vessel_locations_update": {
+            const payload: any = {};
+            if (args.name) payload.name = args.name;
+            if (args.type) payload.type = args.type;
+            if (args.description) payload.description = args.description;
+            return await vesselPut<any>(`/api/v1/locations/update/${args.id}`, payload);
+        }
+        case "vessel_locations_delete": {
+            await vesselDelete(`/api/v1/locations/delete/${args.id}`);
+            return { success: true, message: `Ubicación ${args.id} eliminada` };
+        }
+
+        // === MOVEMENTS ===
+        case "vessel_movements_list": {
+            const params: Record<string, string> = {};
+            if (args.type) params.type = args.type;
+            if (args.catalog_item_id) params.catalog_item_id = args.catalog_item_id;
+            if (args.location_id) params.location_id = args.location_id;
+            if (args.limit) params.limit = args.limit.toString();
+            return await vesselGet<any>("/api/v1/stock/movements/", params);
+        }
+        case "vessel_movements_get": {
+            return await vesselGet<any>(`/api/v1/stock/movements/${args.id}`);
+        }
+        case "vessel_movements_types": {
+            return await vesselGet<any>("/api/v1/stock/movements/types");
+        }
+        case "vessel_movements_receipt": {
+            return await vesselPost<any>("/api/v1/stock/movements/receipt", {
+                catalog_item_id: args.catalog_item_id,
+                location_id: args.location_id,
+                quantity: args.quantity,
+                reference_id: args.reference_id,
+                notes: args.notes,
+            });
+        }
+        case "vessel_movements_shipment": {
+            return await vesselPost<any>("/api/v1/stock/movements/shipment", {
+                catalog_item_id: args.catalog_item_id,
+                location_id: args.location_id,
+                quantity: args.quantity,
+                reference_id: args.reference_id,
+            });
+        }
+        case "vessel_movements_transfer": {
+            return await vesselPost<any>("/api/v1/stock/movements/transfer", {
+                catalog_item_id: args.catalog_item_id,
+                source_location_id: args.source_location_id,
+                destination_location_id: args.destination_location_id,
+                quantity: args.quantity,
+            });
+        }
+        case "vessel_movements_adjustment": {
+            return await vesselPost<any>("/api/v1/stock/movements/adjustment", {
+                catalog_item_id: args.catalog_item_id,
+                location_id: args.location_id,
+                quantity: args.quantity,
+                reason: args.reason,
+            });
+        }
+
+        // === TAXONOMY ===
+        case "vessel_vocabularies_list": {
+            return await vesselGet<any>("/api/v1/taxonomy/vocabularies/read");
+        }
+        case "vessel_vocabularies_get": {
+            return await vesselGet<any>(`/api/v1/taxonomy/vocabularies/show/${args.id}`);
+        }
+        case "vessel_vocabularies_create": {
+            return await vesselPost<any>("/api/v1/taxonomy/vocabularies/create", {
+                name: args.name,
+                machine_name: args.machine_name,
+                description: args.description,
+            });
+        }
+        case "vessel_terms_list": {
+            const params: Record<string, string> = {};
+            if (args.vocabulary_id) params.vocabulary_id = args.vocabulary_id;
+            return await vesselGet<any>("/api/v1/taxonomy/terms/read", params);
+        }
+        case "vessel_terms_tree": {
+            const params: Record<string, string> = {};
+            if (args.vocabulary_id) params.vocabulary_id = args.vocabulary_id;
+            return await vesselGet<any>("/api/v1/taxonomy/terms/tree", params);
+        }
+        case "vessel_terms_create": {
+            return await vesselPost<any>("/api/v1/taxonomy/terms/create", {
+                vocabulary_id: args.vocabulary_id,
+                name: args.name,
+                parent_id: args.parent_id,
+                description: args.description,
+            });
+        }
+        case "vessel_terms_breadcrumb": {
+            return await vesselGet<any>(`/api/v1/taxonomy/terms/breadcrumb/${args.id}`);
+        }
+
+        // === UOM ===
+        case "vessel_uom_list": {
+            return await vesselGet<any>("/api/v1/uom/measures/read");
+        }
+        case "vessel_uom_get": {
+            return await vesselGet<any>(`/api/v1/uom/measures/show/${args.id}`);
+        }
+        case "vessel_uom_convert": {
+            return await vesselPost<any>("/api/v1/uom/measures/convert", {
+                from_uom: args.from_uom,
+                to_uom: args.to_uom,
+                quantity: args.quantity,
+            });
+        }
+        case "vessel_uom_families": {
+            return await vesselGet<any>("/api/v1/uom/families/read");
+        }
+
+        // === CAPACITY ===
+        case "vessel_capacity_get": {
+            return await vesselGet<any>(`/api/v1/stock/capacity/${args.location_id}`);
+        }
+        case "vessel_capacity_stats": {
+            return await vesselGet<any>(`/api/v1/stock/capacity/${args.location_id}/stats`);
+        }
+        case "vessel_capacity_can_accept": {
+            const params: Record<string, string> = {};
+            if (args.quantity) params.quantity = args.quantity.toString();
+            return await vesselGet<any>(`/api/v1/stock/capacity/${args.location_id}/can-accept`, params);
+        }
+
+        default:
+            throw new Error(`Unknown tool: ${name}`);
+    }
+}
+
+// === SERVER SETUP ===
+
+const server = new Server(
+    {
+        name: "vessel-mcp",
+        version: "1.0.0",
+    },
+    {
+        capabilities: {
+            tools: {},
+            resources: {},
+        },
+    }
+);
+
+// List tools
+server.setRequestHandler(ListToolsRequestSchema, async () => ({
+    tools: TOOLS,
+}));
+
+// Handle tool calls
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+    const { name, arguments: args } = request.params;
+
+    try {
+        const result = await handleToolCall(name, args || {});
+        return {
+            content: [
+                {
+                    type: "text" as const,
+                    text: JSON.stringify(result, null, 2),
+                },
+            ],
+        };
+    } catch (error: any) {
+        return {
+            content: [
+                {
+                    type: "text" as const,
+                    text: `Error: ${error.message}`,
+                },
+            ],
+            isError: true,
+        };
+    }
+});
+
+// List resources (endpoints disponibles)
+server.setRequestHandler(ListResourcesRequestSchema, async () => ({
+    resources: [
+        { uri: "vessel://items", name: "Items del Catálogo", description: "Gestión de items del catálogo" },
+        { uri: "vessel://stock", name: "Stock/Inventario", description: "Inventario físico en ubicaciones" },
+        { uri: "vessel://lots", name: "Lotes", description: "Lotes con trazabilidad y vencimiento" },
+        { uri: "vessel://locations", name: "Ubicaciones", description: "Bodegas y locaciones jerárquicas" },
+        { uri: "vessel://movements", name: "Movimientos", description: "Historial de movimientos de inventario" },
+        { uri: "vessel://taxonomy", name: "Taxonomía", description: "Vocabularios y términos de categorización" },
+        { uri: "vessel://uom", name: "Unidades de Medida", description: "UoM y conversiones" },
+        { uri: "vessel://capacity", name: "Capacidad", description: "Capacidad de ubicaciones" },
+    ],
+}));
+
+// Read resource
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const { uri } = request.params;
+
+    let data: any;
+    switch (uri) {
+        case "vessel://items":
+            data = await vesselGet<any>("/api/v1/items/read");
+            break;
+        case "vessel://stock":
+            data = await vesselGet<any>("/api/v1/stock/items/read?with_catalog=true");
+            break;
+        case "vessel://lots":
+            data = await vesselGet<any>("/api/v1/stock/lots/read");
+            break;
+        case "vessel://locations":
+            data = await vesselGet<any>("/api/v1/locations/read");
+            break;
+        case "vessel://movements":
+            data = await vesselGet<any>("/api/v1/stock/movements/?limit=50");
+            break;
+        case "vessel://taxonomy":
+            data = await vesselGet<any>("/api/v1/taxonomy/vocabularies/read");
+            break;
+        case "vessel://uom":
+            data = await vesselGet<any>("/api/v1/uom/measures/read");
+            break;
+        case "vessel://capacity":
+            data = { message: "Use vessel_capacity_get con location_id específico" };
+            break;
+        default:
+            throw new Error(`Unknown resource: ${uri}`);
+    }
+
+    return {
+        contents: [
+            {
+                uri,
+                mimeType: "application/json",
+                text: JSON.stringify(data, null, 2),
+            },
+        ],
+    };
+});
+
+// Start server
+async function main() {
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    console.error("Vessel MCP Server running on stdio");
+}
+
+main().catch(console.error);

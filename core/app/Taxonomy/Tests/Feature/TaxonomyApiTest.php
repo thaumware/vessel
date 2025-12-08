@@ -1,21 +1,11 @@
 <?php
 
-namespace Tests\Feature;
+namespace App\Taxonomy\Tests\Feature;
 
 use Tests\TestCase;
 
 /**
- * Smoke tests for Taxonomy module HTTP endpoints.
- * 
- * These tests verify that routes are properly defined and controllers respond.
- * For full integration tests with database, use Integration test suite.
- * 
- * API Routes:
- * - GET    /api/v1/taxonomy/vocabularies/read
- * - POST   /api/v1/taxonomy/vocabularies/create
- * - GET    /api/v1/taxonomy/terms/read
- * - POST   /api/v1/taxonomy/terms/create
- * - GET    /api/v1/taxonomy/terms/tree
+ * Smoke tests para endpoints de Taxonomy.
  */
 class TaxonomyApiTest extends TestCase
 {
@@ -24,17 +14,14 @@ class TaxonomyApiTest extends TestCase
         $response = $this->withAdapter('taxonomy', 'local')
             ->getJson('/api/v1/taxonomy/vocabularies/read');
 
-        // Route exists and responds (500 = controller reached but db error, 200 = success)
         $this->assertContains($response->status(), [200, 500]);
     }
 
     public function test_create_vocabulary_validates_input(): void
     {
-        // Empty request should return validation error
         $response = $this->withAdapter('taxonomy', 'local')
             ->postJson('/api/v1/taxonomy/vocabularies/create', []);
 
-        // 422 = validation error (route works, validation works)
         $response->assertStatus(422);
     }
 
@@ -43,17 +30,14 @@ class TaxonomyApiTest extends TestCase
         $response = $this->withAdapter('taxonomy', 'local')
             ->getJson('/api/v1/taxonomy/terms/read');
 
-        // Route exists (may need vocabulary_id parameter)
         $this->assertContains($response->status(), [200, 422, 500]);
     }
 
     public function test_create_term_validates_input(): void
     {
-        // Empty request should return validation error
         $response = $this->withAdapter('taxonomy', 'local')
             ->postJson('/api/v1/taxonomy/terms/create', []);
 
-        // 422 = validation error (route works, validation works)
         $response->assertStatus(422);
     }
 
@@ -62,7 +46,6 @@ class TaxonomyApiTest extends TestCase
         $response = $this->withAdapter('taxonomy', 'local')
             ->getJson('/api/v1/taxonomy/terms/tree');
 
-        // Route exists (may need vocabulary_id parameter)
         $this->assertContains($response->status(), [200, 422, 500]);
     }
 
@@ -84,7 +67,6 @@ class TaxonomyApiTest extends TestCase
                 'name' => 'Test Vocabulary',
             ]);
 
-        // 201 means auto-generated machine_name, 422 means validation error - both acceptable
         $this->assertContains($response->status(), [201, 422]);
     }
 

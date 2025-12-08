@@ -1,0 +1,13 @@
+{
+    "mcpServers": {
+        "vessel": {
+            "command": "node",
+            "args": [
+                "C:/Users/J/code/vessel/vessel/apps/mcp-vessel/dist/index.js"
+            ],
+            "env": {
+                "VESSEL_API_URL": "http://localhost:8000"
+            }
+        }
+    }
+}

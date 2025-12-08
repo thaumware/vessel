@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Stock;
+namespace App\Stock\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
@@ -10,60 +10,44 @@ class StockStatusIndependenceTest extends TestCase
 {
     use RefreshDatabase;
 
-    /**
-     * Test que Stock module funciona SIN Locations module
-     */
-    public function test_stock_statuses_work_independently_without_locations(): void
+    public function test_stock_statuses_work_without_locations(): void
     {
-        // 1. Cargar datos de stock desde CSV
         $this->loadStockFixtures();
 
-        // 2. Verificar que las tablas de stock existen
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('stock_statuses'));
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('stock_status_rules'));
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('stock_status_transitions'));
 
-        // 3. Verificar datos cargados
         $statuses = DB::table('stock_statuses')->count();
-        $this->assertGreaterThan(0, $statuses, 'Debe haber stock statuses cargados');
+        $this->assertGreaterThan(0, $statuses, 'Stock statuses should be seeded');
 
-        // 4. Verificar estados globales (workspace_id = null)
         $globalStatuses = DB::table('stock_statuses')->whereNull('workspace_id')->get();
-        $this->assertGreaterThan(0, $globalStatuses->count(), 'Debe haber statuses globales');
+        $this->assertGreaterThan(0, $globalStatuses->count(), 'Global stock statuses should exist');
 
-        // 5. Verificar reglas asociadas
         $availableStatus = DB::table('stock_statuses')->where('code', 'available')->first();
         $this->assertNotNull($availableStatus);
 
         $rules = DB::table('stock_status_rules')->where('status_id', $availableStatus->id)->get();
-        $this->assertGreaterThan(0, $rules->count(), 'Available debe tener reglas');
+        $this->assertGreaterThan(0, $rules->count(), 'Available status should have rules');
 
-        // 6. Verificar comportamiento de reglas
         $allowMovements = $rules->firstWhere('rule_type', 'allow_movements');
         $this->assertNotNull($allowMovements);
-        $this->assertTrue((bool)$allowMovements->rule_value, 'Available debe permitir movimientos');
+        $this->assertTrue((bool) $allowMovements->rule_value, 'Available status should allow movements');
 
-        // 7. Verificar transiciones
         $transitions = DB::table('stock_status_transitions')
             ->where('from_status_id', $availableStatus->id)
             ->get();
-        $this->assertGreaterThan(0, $transitions->count(), 'Available debe tener transiciones');
-
-        echo "\n✅ Stock module funciona independientemente SIN Locations\n";
+        $this->assertGreaterThan(0, $transitions->count(), 'Available status should have transitions');
     }
 
-    /**
-     * Test que valida eventos de stock
-     */
-    public function test_stock_events_table_exists_and_ready(): void
+    public function test_stock_events_table_exists_and_accepts_inserts(): void
     {
-        $this->loadStockFixtures(); // ← Cargar datos primero
-        
+        $this->loadStockFixtures();
+
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('stock_status_events'));
-        
-        // Insertar evento de prueba
+
         $statusId = DB::table('stock_statuses')->first()->id;
-        
+
         DB::table('stock_status_events')->insert([
             'id' => '018db9d3-7a82-7001-8000-600000000001',
             'status_id' => $statusId,
@@ -78,24 +62,18 @@ class StockStatusIndependenceTest extends TestCase
         $event = DB::table('stock_status_events')->first();
         $this->assertNotNull($event);
         $this->assertEquals('status_created', $event->event_type);
-
-        echo "\n✅ Stock events table funciona correctamente\n";
     }
 
-    /**
-     * Test que valida historial de estados
-     */
     public function test_stock_status_history_tracks_changes(): void
     {
-        $this->loadStockFixtures(); // ← Cargar datos primero
-        
+        $this->loadStockFixtures();
+
         $this->assertTrue(DB::getSchemaBuilder()->hasTable('stock_status_history'));
-        
-        // Crear item de prueba
+
         $itemId = '018db9d3-7a82-7001-8000-700000000001';
         $availableStatus = DB::table('stock_statuses')->where('code', 'available')->first();
         $reservedStatus = DB::table('stock_statuses')->where('code', 'reserved')->first();
-        
+
         DB::table('stock_items')->insert([
             'id' => $itemId,
             'sku' => 'TEST-SKU-001',
@@ -110,14 +88,13 @@ class StockStatusIndependenceTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        // Registrar cambio de estado
         DB::table('stock_status_history')->insert([
             'id' => '018db9d3-7a82-7001-8000-800000000001',
             'stock_item_id' => $itemId,
             'from_status_id' => $availableStatus->id,
             'to_status_id' => $reservedStatus->id,
             'movement_id' => null,
-            'reason' => 'Agregado al carrito',
+            'reason' => 'Added to cart',
             'metadata' => json_encode(['cart_id' => 'ABC123']),
             'changed_by' => null,
             'changed_at' => now(),
@@ -128,24 +105,18 @@ class StockStatusIndependenceTest extends TestCase
         $history = DB::table('stock_status_history')->where('stock_item_id', $itemId)->first();
         $this->assertNotNull($history);
         $this->assertEquals($reservedStatus->id, $history->to_status_id);
-        $this->assertEquals('Agregado al carrito', $history->reason);
-
-        echo "\n✅ Stock status history funciona para seguimiento total\n";
+        $this->assertEquals('Added to cart', $history->reason);
     }
 
-    /**
-     * Test que stock_items es polimórfico
-     */
     public function test_stock_items_polymorphic_structure(): void
     {
-        $this->loadStockFixtures(); // Cargar fixtures primero
-        
+        $this->loadStockFixtures();
+
         $this->assertTrue(DB::getSchemaBuilder()->hasColumn('stock_items', 'item_type'));
         $this->assertTrue(DB::getSchemaBuilder()->hasColumn('stock_items', 'item_id'));
 
-        // Crear items de diferentes tipos
         $types = ['lot', 'unit', 'batch'];
-        
+
         foreach ($types as $index => $type) {
             DB::table('stock_items')->insert([
                 'id' => "018db9d3-7a82-7001-8000-90000000000{$index}",
@@ -164,8 +135,6 @@ class StockStatusIndependenceTest extends TestCase
 
         $items = DB::table('stock_items')->whereIn('item_type', $types)->get();
         $this->assertEquals(count($types), $items->count());
-
-        echo "\n✅ Stock items estructura polimórfica (lot/unit/batch) funciona\n";
     }
 
     private function loadStockFixtures(): void
@@ -177,8 +146,8 @@ class StockStatusIndependenceTest extends TestCase
 
     private function loadCSV(string $filename, string $table): void
     {
-        $path = base_path("tests/Fixtures/{$filename}");
-        
+        $path = base_path("app/Stock/Tests/Fixtures/{$filename}");
+
         if (!file_exists($path)) {
             $this->fail("Fixture file not found: {$filename}");
         }
@@ -188,17 +157,14 @@ class StockStatusIndependenceTest extends TestCase
 
         foreach ($rows as $row) {
             $data = array_combine($header, $row);
-            
-            // Convertir empty strings a null para workspace_id
+
             foreach ($data as $key => $value) {
                 if ($value === '') {
                     $data[$key] = null;
                 }
             }
-            
+
             DB::table($table)->insert($data);
         }
-
-        echo "\n📦 Cargado {$filename} -> {$table} (" . count($rows) . " rows)\n";
     }
 }

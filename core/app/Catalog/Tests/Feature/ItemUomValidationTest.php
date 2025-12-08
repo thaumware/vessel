@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature\Catalog;
+namespace App\Catalog\Tests\Feature;
 
 use App\Uom\Infrastructure\Out\Database\Seeders\UomSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -14,11 +14,9 @@ class ItemUomValidationTest extends TestCase
     {
         parent::setUp();
 
-        // Migraciones del módulo Catalog y UoM
         $this->artisan('migrate', ['--path' => 'app/Catalog/Infrastructure/Migrations', '--realpath' => false]);
         $this->artisan('migrate', ['--path' => 'app/Uom/Infrastructure/Out/Database/Migrations', '--realpath' => false]);
 
-        // Semillas necesarias para UoM
         $this->seed(UomSeeder::class);
     }
 

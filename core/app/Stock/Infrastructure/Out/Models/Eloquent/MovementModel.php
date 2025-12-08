@@ -2,34 +2,37 @@
 
 namespace App\Stock\Infrastructure\Out\Models\Eloquent;
 
-use App\Shared\Adapters\Eloquent\EloquentModel;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
-class MovementModel extends EloquentModel
+class MovementModel extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'stock_movements';
 
     protected $fillable = [
         'id',
-        'movement_id',
         'sku',
+        'movement_type',
+        'status',
         'location_from_id',
-        'location_from_type',
         'location_to_id',
-        'location_to_type',
         'quantity',
         'balance_after',
-        'movement_type',
         'reference',
         'user_id',
         'workspace_id',
         'meta',
         'processed_at',
         'created_at',
+        'deleted_at',
     ];
 
     protected $casts = [
         'meta' => 'array',
         'created_at' => 'datetime',
         'processed_at' => 'datetime',
+        'deleted_at' => 'datetime',
     ];
 }

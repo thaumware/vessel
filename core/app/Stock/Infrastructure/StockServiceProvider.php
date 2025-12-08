@@ -59,10 +59,10 @@ class StockServiceProvider extends ServiceProvider
             \App\Stock\Infrastructure\Out\Models\Eloquent\StockRepository::class
         );
 
-        // Movement Repository: usa InMemory por ahora (Eloquent pendiente)
+        // Movement Repository: ahora Eloquent
         $this->app->bind(
             MovementRepositoryInterface::class,
-            \App\Stock\Infrastructure\Out\InMemory\InMemoryMovementRepository::class
+            \App\Stock\Infrastructure\Out\Models\Eloquent\MovementRepository::class
         );
 
         $this->app->bind(
@@ -98,6 +98,10 @@ class StockServiceProvider extends ServiceProvider
                 StockItemRepositoryInterface::class => [
                     'local' => \App\Stock\Infrastructure\Out\InMemory\InMemoryStockItemRepository::class,
                     'eloquent' => \App\Stock\Infrastructure\Out\Models\Eloquent\StockItemRepository::class,
+                ],
+                MovementRepositoryInterface::class => [
+                    'local' => \App\Stock\Infrastructure\Out\InMemory\InMemoryMovementRepository::class,
+                    'eloquent' => \App\Stock\Infrastructure\Out\Models\Eloquent\MovementRepository::class,
                 ],
                 // Agregar más interfaces cuando tengan implementación InMemory:
                 // StockRepositoryInterface::class => [...],

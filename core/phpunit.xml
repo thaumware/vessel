@@ -5,19 +5,27 @@
          colors="true"
 >
     <testsuites>
-        <!-- Global test suites -->
         <testsuite name="Feature">
-            <directory>tests/Feature</directory>
+            <directory suffix="Test.php">./tests/Feature</directory>
+            <directory suffix="Test.php">./app/Auth/Tests/Feature</directory>
+            <directory suffix="Test.php">./app/Shared/Tests/Feature</directory>
+            <directory suffix="Test.php">./app/Stock/Tests/Feature</directory>
+            <directory suffix="Test.php">./app/Locations/Tests/Feature</directory>
+            <directory suffix="Test.php">./app/Catalog/Tests/Feature</directory>
+            <directory suffix="Test.php">./app/Uom/Tests/Feature</directory>
+            <directory suffix="Test.php">./app/Taxonomy/Tests/Feature</directory>
         </testsuite>
-        <testsuite name="Integration">
-            <directory>tests/Integration</directory>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">./tests/Unit</directory>
+            <directory suffix="Test.php">./app/Auth/Tests/Unit</directory>
+            <directory suffix="Test.php">./app/Shared/Tests/Unit</directory>
+            <directory suffix="Test.php">./app/Stock/Tests/Unit</directory>
+            <directory suffix="Test.php">./app/Locations/Tests/Unit</directory>
+            <directory suffix="Test.php">./app/Catalog/Tests/Unit</directory>
+            <directory suffix="Test.php">./app/Uom/Tests/Unit</directory>
+            <directory suffix="Test.php">./app/Taxonomy/Tests/Unit</directory>
         </testsuite>
     </testsuites>
-    <source>
-        <include>
-            <directory>app</directory>
-        </include>
-    </source>
     <php>
         <env name="APP_ENV" value="testing"/>
         <env name="APP_MAINTENANCE_DRIVER" value="file"/>
@@ -29,7 +37,5 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="DB_CONNECTION" value="mysql"/>
-        <env name="DB_DATABASE" value="vessel_db_test"/>
     </php>
 </phpunit>

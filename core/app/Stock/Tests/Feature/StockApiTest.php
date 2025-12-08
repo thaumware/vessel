@@ -1,24 +1,12 @@
 <?php
 
-namespace Tests\Feature;
+namespace App\Stock\Tests\Feature;
 
 use Tests\TestCase;
 
 /**
  * Smoke tests for Stock module HTTP endpoints.
- * 
- * These tests verify that routes are properly defined and controllers respond.
- * For full integration tests with database, use Integration test suite.
- * 
- * API Routes (CRUD pattern):
- * - GET    /api/v1/stock/items/read
- * - POST   /api/v1/stock/items/create
- * - GET    /api/v1/stock/items/show/{id}
- * - PUT    /api/v1/stock/items/update/{id}
- * - DELETE /api/v1/stock/items/delete/{id}
- * - POST   /api/v1/stock/items/adjust
- * - POST   /api/v1/stock/items/reserve/{id}
- * - POST   /api/v1/stock/items/release/{id}
+ * Verifica que las rutas existen y responden.
  */
 class StockApiTest extends TestCase
 {
@@ -27,17 +15,14 @@ class StockApiTest extends TestCase
         $response = $this->withAdapter('stock', 'local')
             ->getJson('/api/v1/stock/items/read');
 
-        // Route exists and responds (500 = controller reached but db error, 200 = success)
         $this->assertContains($response->status(), [200, 500]);
     }
 
     public function test_create_stock_item_validates_input(): void
     {
-        // Empty request should return validation error
         $response = $this->withAdapter('stock', 'local')
             ->postJson('/api/v1/stock/items/create', []);
 
-        // 400/422 = validation error (route works, validation works)
         $this->assertContains($response->status(), [400, 422]);
     }
 
@@ -46,7 +31,6 @@ class StockApiTest extends TestCase
         $response = $this->withAdapter('stock', 'local')
             ->getJson('/api/v1/stock/items/show/test-id');
 
-        // Route exists (404 = not found is ok, 500 = db error)
         $this->assertContains($response->status(), [200, 404, 500]);
     }
 
@@ -55,7 +39,6 @@ class StockApiTest extends TestCase
         $response = $this->withAdapter('stock', 'local')
             ->postJson('/api/v1/stock/items/adjust', []);
 
-        // Route exists
         $this->assertContains($response->status(), [200, 400, 422, 500]);
     }
 
@@ -64,7 +47,6 @@ class StockApiTest extends TestCase
         $response = $this->withAdapter('stock', 'local')
             ->postJson('/api/v1/stock/items/reserve/test-id', []);
 
-        // Route exists
         $this->assertContains($response->status(), [200, 400, 404, 422, 500]);
     }
 
@@ -73,7 +55,6 @@ class StockApiTest extends TestCase
         $response = $this->withAdapter('stock', 'local')
             ->postJson('/api/v1/stock/items/release/test-id', []);
 
-        // Route exists
         $this->assertContains($response->status(), [200, 400, 404, 422, 500]);
     }
 
@@ -86,7 +67,6 @@ class StockApiTest extends TestCase
                 'quantity' => 100,
             ]);
 
-        // Should fail validation for missing SKU
         $this->assertContains($response->status(), [400, 422]);
     }
 
@@ -99,7 +79,6 @@ class StockApiTest extends TestCase
                 'location_id' => 'loc-123',
             ]);
 
-        // Should fail validation for missing quantity
         $this->assertContains($response->status(), [400, 422]);
     }
 }

@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace App\Shared\Tests\Feature;
 
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
@@ -13,6 +13,7 @@ class ResetAdminCredentialsCommandTest extends TestCase
     {
         parent::setUp();
         putenv('APP_INSTALLED=true');
+
         config([
             'database.default' => 'sqlite',
             'database.connections.sqlite.database' => ':memory:',

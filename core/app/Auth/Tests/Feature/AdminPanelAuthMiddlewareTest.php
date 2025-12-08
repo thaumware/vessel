@@ -1,6 +1,6 @@
 <?php
 
-namespace Tests\Feature;
+namespace App\Auth\Tests\Feature;
 
 use App\Auth\Infrastructure\In\Http\Middleware\AdminPanelAuth;
 use App\Shared\Infrastructure\ConfigStore;
@@ -12,11 +12,10 @@ class AdminPanelAuthMiddlewareTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        // Ensure we don't get redirected to setup during tests
         putenv('APP_INSTALLED=true');
         putenv('ADMIN_ROOT=admin');
         putenv('ADMIN_ROOT_PASSWORD=admin123');
-        // Use sqlite memory to satisfy schema checks in ConfigStore
+
         config([
             'database.default' => 'sqlite',
             'database.connections.sqlite.database' => ':memory:',
@@ -37,7 +36,6 @@ class AdminPanelAuthMiddlewareTest extends TestCase
 
         $response = $middleware->handle($request, fn () => response('OK'));
 
-        // Should return 401 and show login form (not WWW-Authenticate header)
         $this->assertSame(401, $response->getStatusCode());
         $this->assertStringContainsString('login', $response->getContent());
     }
