@@ -6,24 +6,36 @@
 >
     <testsuites>
         <testsuite name="Feature">
-            <directory suffix="Test.php">./tests/Feature</directory>
             <directory suffix="Test.php">./app/Auth/Tests/Feature</directory>
             <directory suffix="Test.php">./app/Shared/Tests/Feature</directory>
             <directory suffix="Test.php">./app/Stock/Tests/Feature</directory>
             <directory suffix="Test.php">./app/Locations/Tests/Feature</directory>
             <directory suffix="Test.php">./app/Catalog/Tests/Feature</directory>
-            <directory suffix="Test.php">./app/Uom/Tests/Feature</directory>
             <directory suffix="Test.php">./app/Taxonomy/Tests/Feature</directory>
         </testsuite>
         <testsuite name="Unit">
-            <directory suffix="Test.php">./tests/Unit</directory>
-            <directory suffix="Test.php">./app/Auth/Tests/Unit</directory>
-            <directory suffix="Test.php">./app/Shared/Tests/Unit</directory>
             <directory suffix="Test.php">./app/Stock/Tests/Unit</directory>
-            <directory suffix="Test.php">./app/Locations/Tests/Unit</directory>
-            <directory suffix="Test.php">./app/Catalog/Tests/Unit</directory>
-            <directory suffix="Test.php">./app/Uom/Tests/Unit</directory>
-            <directory suffix="Test.php">./app/Taxonomy/Tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Domain">
+            <directory suffix="Test.php">./app/Stock/Tests/Domain</directory>
+            <directory suffix="Test.php">./app/Catalog/Tests/Domain</directory>
+            <directory suffix="Test.php">./app/Locations/Tests/Domain</directory>
+            <directory suffix="Test.php">./app/Uom/Tests/Domain</directory>
+            <directory suffix="Test.php">./app/Taxonomy/Tests/Domain</directory>
+        </testsuite>
+        <testsuite name="Application">
+            <directory suffix="Test.php">./app/Stock/Tests/Application</directory>
+            <directory suffix="Test.php">./app/Catalog/Tests/UseCases</directory>
+            <directory suffix="Test.php">./app/Uom/Tests/Application</directory>
+            <directory suffix="Test.php">./app/Locations/Tests/UseCases</directory>
+            <directory suffix="Test.php">./app/Taxonomy/Tests/UseCases</directory>
+        </testsuite>
+        <testsuite name="Infrastructure">
+            <directory suffix="Test.php">./app/Stock/Tests/Infrastructure</directory>
+            <directory suffix="Test.php">./app/Catalog/Tests/Infrastructure</directory>
+            <directory suffix="Test.php">./app/Uom/Tests/Infrastructure</directory>
+            <directory suffix="Test.php">./app/Locations/Tests/Infrastructure</directory>
+            <directory suffix="Test.php">./app/Taxonomy/Tests/Infrastructure</directory>
         </testsuite>
     </testsuites>
     <php>

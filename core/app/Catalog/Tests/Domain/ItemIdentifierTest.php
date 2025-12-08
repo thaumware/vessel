@@ -13,21 +13,21 @@ class ItemIdentifierTest extends CatalogTestCase
 
         $identifier = new ItemIdentifier(
             id: $data['id'],
-            itemId: $data['itemId'],
+            item_id: $data['itemId'],
             type: $data['type'],
             value: $data['value'],
-            isPrimary: $data['isPrimary'],
-            variantId: $data['variantId'],
+            is_primary: $data['isPrimary'],
+            variant_id: $data['variantId'],
             label: $data['label'],
         );
 
         $this->assertEquals($data['id'], $identifier->getId());
-        $this->assertEquals($data['itemId'], $identifier->getItemId());
-        $this->assertEquals($data['type'], $identifier->getType());
-        $this->assertEquals($data['value'], $identifier->getValue());
+        $this->assertEquals($data['itemId'], $identifier->itemId());
+        $this->assertEquals($data['type'], $identifier->type()->value);
+        $this->assertEquals($data['value'], $identifier->value());
         $this->assertTrue($identifier->isPrimary());
-        $this->assertNull($identifier->getVariantId());
-        $this->assertNull($identifier->getLabel());
+        $this->assertNull($identifier->variantId());
+        $this->assertNull($identifier->label());
     }
 
     public function test_can_create_identifier_with_minimal_fields(): void
@@ -37,15 +37,15 @@ class ItemIdentifierTest extends CatalogTestCase
 
         $identifier = new ItemIdentifier(
             id: $id,
-            itemId: $itemId,
+            item_id: $itemId,
             type: 'sku',
             value: 'SKU-001'
         );
 
         $this->assertEquals($id, $identifier->getId());
-        $this->assertEquals($itemId, $identifier->getItemId());
-        $this->assertEquals('sku', $identifier->getType());
-        $this->assertEquals('SKU-001', $identifier->getValue());
+        $this->assertEquals($itemId, $identifier->itemId());
+        $this->assertEquals('sku', $identifier->type()->value);
+        $this->assertEquals('SKU-001', $identifier->value());
         $this->assertFalse($identifier->isPrimary());
     }
 
@@ -53,7 +53,7 @@ class ItemIdentifierTest extends CatalogTestCase
     {
         $identifier = new ItemIdentifier(
             id: $this->generateUuid(),
-            itemId: $this->generateUuid(),
+            item_id: $this->generateUuid(),
             type: 'ean',
             value: '1234567890123'
         );
@@ -65,38 +65,38 @@ class ItemIdentifierTest extends CatalogTestCase
     {
         $identifier = new ItemIdentifier(
             id: $this->generateUuid(),
-            itemId: $this->generateUuid(),
+            item_id: $this->generateUuid(),
             type: 'ean',
             value: '4006381333931'
         );
 
-        $this->assertEquals('ean', $identifier->getType());
+        $this->assertEquals('ean', $identifier->type()->value);
     }
 
     public function test_can_create_upc_identifier(): void
     {
         $identifier = new ItemIdentifier(
             id: $this->generateUuid(),
-            itemId: $this->generateUuid(),
+            item_id: $this->generateUuid(),
             type: 'upc',
             value: '012345678905'
         );
 
-        $this->assertEquals('upc', $identifier->getType());
+        $this->assertEquals('upc', $identifier->type()->value);
     }
 
     public function test_can_create_supplier_identifier(): void
     {
         $identifier = new ItemIdentifier(
             id: $this->generateUuid(),
-            itemId: $this->generateUuid(),
+            item_id: $this->generateUuid(),
             type: 'supplier',
             value: 'SUP-ABC-123',
             label: 'Supplier XYZ Code'
         );
 
-        $this->assertEquals('supplier', $identifier->getType());
-        $this->assertEquals('Supplier XYZ Code', $identifier->getLabel());
+        $this->assertEquals('supplier', $identifier->type()->value);
+        $this->assertEquals('Supplier XYZ Code', $identifier->label());
     }
 
     public function test_can_create_variant_specific_identifier(): void
@@ -105,13 +105,13 @@ class ItemIdentifierTest extends CatalogTestCase
 
         $identifier = new ItemIdentifier(
             id: $this->generateUuid(),
-            itemId: $this->generateUuid(),
+            item_id: $this->generateUuid(),
             type: 'sku',
             value: 'SKU-VARIANT-001',
-            variantId: $variantId
+            variant_id: $variantId
         );
 
-        $this->assertEquals($variantId, $identifier->getVariantId());
+        $this->assertEquals($variantId, $identifier->variantId());
     }
 
     public function test_to_array_returns_correct_structure(): void
@@ -123,11 +123,11 @@ class ItemIdentifierTest extends CatalogTestCase
 
         $identifier = new ItemIdentifier(
             id: $data['id'],
-            itemId: $data['itemId'],
+            item_id: $data['itemId'],
             type: $data['type'],
             value: $data['value'],
-            isPrimary: $data['isPrimary'],
-            variantId: $data['variantId'],
+            is_primary: $data['isPrimary'],
+            variant_id: $data['variantId'],
             label: $data['label'],
         );
 
@@ -146,11 +146,11 @@ class ItemIdentifierTest extends CatalogTestCase
     {
         $identifier = new ItemIdentifier(
             id: $this->generateUuid(),
-            itemId: $this->generateUuid(),
+            item_id: $this->generateUuid(),
             type: 'sku',
             value: 'TEST',
-            isPrimary: true,
-            variantId: $this->generateUuid()
+            is_primary: true,
+            variant_id: $this->generateUuid()
         );
 
         $array = $identifier->toArray();

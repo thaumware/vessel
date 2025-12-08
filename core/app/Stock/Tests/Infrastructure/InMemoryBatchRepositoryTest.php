@@ -21,7 +21,7 @@ class InMemoryBatchRepositoryTest extends StockTestCase
         $data = $this->createBatchData();
         $batch = new Batch(
             id: $data['id'],
-            itemId: $data['sku'],
+            itemId: $data['itemId'],
             locationId: $data['locationId'],
             quantity: $data['quantity'],
             lotNumber: $data['lotNumber']
@@ -32,7 +32,7 @@ class InMemoryBatchRepositoryTest extends StockTestCase
 
         $this->assertNotNull($found);
         $this->assertEquals($data['id'], $found->id());
-        $this->assertEquals($data['sku'], $found->itemId());
+        $this->assertEquals($data['itemId'], $found->itemId());
     }
 
     public function test_find_by_id_returns_null_for_nonexistent(): void

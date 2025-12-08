@@ -1,0 +1,387 @@
+---
+sidebar_position: 9
+---
+
+# Quick Reference (Guía Rápida)
+
+Referencia rápida de las funcionalidades principales del módulo Stock.
+
+## 🚀 Endpoints Más Usados
+
+### Reservaciones (Flujo Simplificado)
+
+```http
+# Validar si puedo reservar
+POST /api/v1/stock/reservations/validate
+{"item_id": "X", "location_id": "Y", "quantity": 10}
+
+# Reservar
+POST /api/v1/stock/reservations/reserve
+{"item_id": "X", "location_id": "Y", "quantity": 10, "reference_id": "ORDER-123"}
+
+# Liberar
+POST /api/v1/stock/reservations/release
+{"item_id": "X", "location_id": "Y", "quantity": 10}
+```
+
+### Movimientos Estándar
+
+```http
+# Recepción
+POST /api/v1/stock/movements/receipt
+{"item_id": "X", "location_id": "Y", "quantity": 100}
+
+# Envío
+POST /api/v1/stock/movements/shipment
+{"item_id": "X", "location_id": "Y", "quantity": 50}
+
+# Devolución
+POST /api/v1/stock/movements
+{"type": "return", "item_id": "X", "location_id": "Y", "quantity": 5}
+
+# Ajuste
+POST /api/v1/stock/movements/adjustment
+{"item_id": "X", "location_id": "Y", "quantity": 10, "type": "in"}
+```
+
+---
+
+## 📊 Tipos de Movimiento
+
+### Estándar (18 tipos)
+
+| Tipo | Efecto | Uso |
+|------|--------|-----|
+| `receipt` | ➕ Suma | Recepción de mercancía |
+| `return` | ➕ Suma | Devolución de cliente |
+| `shipment` | ➖ Resta | Envío/despacho |
+| `reserve` | 🔒 Bloquea | Reserva para orden |
+| `release` | 🔓 Libera | Libera reserva |
+| `adjustment_in` | ➕ Suma | Ajuste positivo |
+| `adjustment_out` | ➖ Resta | Ajuste negativo |
+| `damage` | ➖ Resta | Daño/merma |
+| `transfer_out` | ➖ Resta | Transferencia salida |
+| `transfer_in` | ➕ Suma | Transferencia entrada |
+
+### Custom (Extensible)
+
+```http
+POST /api/v1/stock/movements
+{
+  "type": "custom",
+  "reference_type": "customer_loan",  # ← Identifica el handler
+  "item_id": "X",
+  "quantity": 5
+}
+```
+
+Handlers incluidos:
+- `customer_loan` / `loan_return` - Préstamos
+- `consignment_out` / `consignment_return` - Consignación
+
+---
+
+## 🔧 Configuración de Locación
+
+```http
+POST /api/v1/stock/capacity
+
+{
+  "location_id": "WAREHOUSE-MAIN",
+  "allow_negative_stock": false,
+  "max_reservation_percentage": 80,
+  "max_capacity": 10000
+}
+```
+
+**Efectos**:
+- `allow_negative_stock`: Permite stock negativo
+- `max_reservation_percentage`: Límite de reserva (% del total)
+- `max_capacity`: Capacidad máxima de la locación
+
+---
+
+## 📦 Modelo de Datos
+
+### Stock Item
+
+```json
+{
+  "id": "stock-abc-123",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 100,           // Total
+  "reserved_quantity": 30,   // Bloqueado
+  "available_quantity": 70   // Disponible = quantity - reserved
+}
+```
+
+### Movement
+
+```json
+{
+  "id": "mov-xyz-456",
+  "type": "reserve",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 10,
+  "status": "completed",
+  "reference_type": "sales_order",
+  "reference_id": "SO-2024-001",
+  "reason": "Reserva para venta",
+  "meta": {},
+  "created_at": "2024-12-08T10:00:00Z",
+  "processed_at": "2024-12-08T10:00:01Z"
+}
+```
+
+---
+
+## 🎯 Casos de Uso Comunes
+
+### 1. Verificar Disponibilidad
+
+```http
+POST /api/v1/stock/reservations/validate
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 50
+}
+```
+
+**Response incluye**:
+- ✅ `can_reserve`: true/false
+- 📊 `available_quantity`: Disponible ahora
+- 📊 `reserved_quantity`: Bloqueado
+- 📊 `max_reservation_allowed`: Límite configurado
+- ℹ️ `item_info`: Info del catálogo
+- ℹ️ `location_info`: Info de la locación
+
+---
+
+### 2. Reservar para Orden de Venta
+
+```http
+POST /api/v1/stock/reservations/reserve
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 50,
+  "reference_type": "sales_order",
+  "reference_id": "SO-2024-001",
+  "reason": "Orden de venta #001"
+}
+```
+
+**Efecto**:
+- `reserved_quantity` += 50
+- `available_quantity` -= 50
+- `quantity` sin cambios
+
+---
+
+### 3. Enviar (Consume Reserva)
+
+```http
+POST /api/v1/stock/movements/shipment
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 50,
+  "reference_type": "sales_order",
+  "reference_id": "SO-2024-001"
+}
+```
+
+**Efecto**:
+- `quantity` -= 50
+- `reserved_quantity` -= 50 (si había reserva)
+- `available_quantity` sin cambios
+
+---
+
+### 4. Cancelar Orden (Liberar)
+
+```http
+POST /api/v1/stock/reservations/release
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 50,
+  "reference_id": "SO-2024-001",
+  "reason": "Orden cancelada"
+}
+```
+
+**Efecto**:
+- `reserved_quantity` -= 50
+- `available_quantity` += 50
+- `quantity` sin cambios
+
+---
+
+### 5. Devolución de Cliente
+
+```http
+POST /api/v1/stock/movements
+{
+  "type": "return",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 5,
+  "reference_type": "return_order",
+  "reference_id": "RET-2024-001",
+  "reason": "Cliente insatisfecho"
+}
+```
+
+**Efecto**:
+- `quantity` += 5
+- `available_quantity` += 5
+
+---
+
+## 🛠️ Extender con Handler Custom
+
+### 1. Crear Handler
+
+```php title="app/Stock/Infrastructure/Handlers/MyHandler.php"
+class MyHandler implements MovementHandlerInterface
+{
+    public function supports(string $type): bool
+    {
+        return $type === 'my_custom_type';
+    }
+
+    public function validate(Movement $m, StockItem $s): void
+    {
+        if ($s->getQuantity() < $m->getQuantity()) {
+            throw new \DomainException('Insuficiente');
+        }
+    }
+
+    public function handle(Movement $m, StockItem $s): StockItem
+    {
+        return $s->adjustQuantity(-$m->getQuantity());
+    }
+}
+```
+
+### 2. Registrar
+
+```php title="StockServiceProvider.php"
+$registry->register(new MyHandler());
+```
+
+### 3. Usar
+
+```http
+POST /api/v1/stock/movements
+{
+  "type": "custom",
+  "reference_type": "my_custom_type",
+  "item_id": "X",
+  "quantity": 10
+}
+```
+
+---
+
+## 📈 Estados del Stock
+
+```
+┌─────────────────────────────┐
+│  Total Stock: 100           │
+├─────────────────────────────┤
+│  Reserved: 30 🔒            │ ← Bloqueado para órdenes
+│  Available: 70 ✅           │ ← Libre para reservar/enviar
+└─────────────────────────────┘
+
+Available = Total - Reserved
+```
+
+### Flujo de Reserva → Envío
+
+```
+1. Estado inicial:
+   Total: 100, Reserved: 0, Available: 100
+
+2. RESERVE 30:
+   Total: 100, Reserved: 30, Available: 70
+
+3. SHIPMENT 30:
+   Total: 70, Reserved: 0, Available: 70
+   (Consume de reserved primero, luego de total)
+
+4. RECEIPT 50:
+   Total: 120, Reserved: 0, Available: 120
+```
+
+---
+
+## 🔍 Consultas Útiles
+
+```http
+# Stock actual por locación
+GET /api/v1/stock/current/location/{locationId}
+
+# Resumen de locación (combina con Locations module)
+GET /api/v1/stock/locations/{locationId}/summary
+
+# Configuración de capacidad
+GET /api/v1/stock/capacity/{locationId}
+
+# Historial de movimientos
+GET /api/v1/stock/movements?item_id=X&location_id=Y
+
+# Tipos de movimiento soportados
+GET /api/v1/stock/movements/types
+```
+
+---
+
+## ⚠️ Errores Comunes
+
+### 422: Stock insuficiente
+
+```json
+{
+  "errors": ["Stock disponible insuficiente. Disponible: 10, solicitado: 30"]
+}
+```
+
+**Solución**: Validar disponibilidad antes con `/reservations/validate`
+
+---
+
+### 422: Excede límite de reserva
+
+```json
+{
+  "errors": ["Excede el límite de reserva (80%)"]
+}
+```
+
+**Solución**: Ajustar `max_reservation_percentage` en configuración de locación
+
+---
+
+### 422: Item no existe
+
+```json
+{
+  "errors": ["Item 'ITEM-999' no existe en catálogo"]
+}
+```
+
+**Solución**: Verificar que el item existe en el módulo Catalog
+
+---
+
+## 📚 Más Información
+
+- [Reservations](./07-reservations) - Flujo completo de reservas
+- [Extensibility](./08-extensibility) - Tipos custom de movimiento
+- [Movements](./03-movements) - Movimientos estándar
+- [Location Settings](./04-location-settings) - Configuración de locaciones

@@ -1,0 +1,150 @@
+# Location Stock Summary
+
+Endpoint para obtener un resumen del stock agrupado por item en una ubicación y sus hijos.
+
+## Endpoint
+
+```
+GET /api/v1/stock/locations/{locationId}/summary
+```
+
+## Parámetros
+
+### Path Parameters
+- `locationId` (UUID, requerido): ID de la ubicación raíz
+
+### Query Parameters
+- `include_children` (boolean, opcional, default: `true`): Si debe incluir ubicaciones hijas en el cálculo
+
+## Respuesta
+
+```json
+{
+  "location_id": "uuid-location-1",
+  "includes_children": true,
+  "total_locations": 3,
+  "location_ids": ["uuid-location-1", "uuid-shelf-a", "uuid-shelf-b"],
+  "items": [
+    {
+      "item_id": "uuid-item-1",
+      "total_quantity": 150.5,
+      "reserved_quantity": 20.0,
+      "available_quantity": 130.5,
+      "locations": ["uuid-location-1", "uuid-shelf-a"],
+      "catalog_item": {
+        "name": "Alimento Premium Perros 15kg",
+        "uom_id": "uuid-kg",
+        "uom_symbol": "kg"
+      }
+    },
+    {
+      "item_id": "uuid-item-2",
+      "total_quantity": 50,
+      "reserved_quantity": 0,
+      "available_quantity": 50,
+      "locations": ["uuid-shelf-b"],
+      "catalog_item": {
+        "name": "Collar Ajustable Talla M",
+        "uom_id": "uuid-unit",
+        "uom_symbol": "unidad"
+      }
+    }
+  ],
+  "total_items": 2
+}
+```
+
+## Campos de Respuesta
+
+### Nivel Superior
+- `location_id`: ID de la ubicación consultada
+- `includes_children`: Si se incluyeron ubicaciones hijas
+- `total_locations`: Número total de ubicaciones consideradas
+- `location_ids`: Array con IDs de todas las ubicaciones incluidas
+- `items`: Array de items con stock
+- `total_items`: Cantidad total de items distintos
+
+### Nivel Item
+- `item_id`: ID del item en el catálogo
+- `total_quantity`: Suma de cantidades en todas las ubicaciones
+- `reserved_quantity`: Suma de cantidades reservadas
+- `available_quantity`: Cantidad disponible (total - reservado)
+- `locations`: Array de IDs de ubicaciones donde existe este item
+- `catalog_item`: Datos enriquecidos desde el catálogo
+  - `name`: Nombre del producto
+  - `uom_id`: ID de la unidad de medida
+  - `uom_symbol`: Símbolo de la UoM (kg, unidades, m³, etc.)
+
+## Casos de Uso
+
+### 1. Ver stock total de una bodega incluyendo estantes
+```bash
+GET /api/v1/stock/locations/bodega-principal/summary?include_children=true
+```
+
+### 2. Ver solo stock directo de una ubicación (sin hijos)
+```bash
+GET /api/v1/stock/locations/estante-a/summary?include_children=false
+```
+
+### 3. Verificar distribución de un item
+Busca el item específico en la respuesta para ver en qué ubicaciones está y cuánto hay en cada una.
+
+## Notas Importantes
+
+### Unidades de Medida (UoM)
+- Las cantidades se muestran en la UoM definida para cada item en el catálogo
+- Si un item tiene `uom_id` configurado, el sistema lo muestra con su símbolo (kg, unidades, litros, etc.)
+- **Futuro**: Se agregará soporte para convertir cantidades a una UoM objetivo cuando los items tengan UoMs compatibles
+
+### Conversión de UoM (Roadmap)
+En una versión futura, se podrá:
+```bash
+GET /api/v1/stock/locations/{id}/summary?target_uom=kg
+```
+
+Esto sumará automáticamente cantidades que se puedan convertir:
+- Item A: 1500g → 1.5kg
+- Item B: 2kg → 2kg
+- Item C: 500ml → **NO** se suma (incompatible con kg)
+
+### Relación con Capacity
+Este endpoint complementa las capacidades de gestión de límites:
+- `/capacity/{locationId}/stats` → Capacidad y límites configurados
+- `/locations/{locationId}/summary` → Qué items hay y en qué cantidades
+
+### Performance
+- El endpoint consulta todas las ubicaciones hijas si `include_children=true`
+- Para bodegas grandes con muchos estantes, considerar:
+  - Usar `include_children=false` si solo necesitas la ubicación específica
+  - Implementar caché en el gateway de catálogo
+  - Usar índices en `stock_items.location_id` y `stock_items.item_id`
+
+## Ejemplos de Integración
+
+### React/TypeScript
+```typescript
+interface StockSummary {
+  location_id: string;
+  includes_children: boolean;
+  total_locations: number;
+  items: Array<{
+    item_id: string;
+    total_quantity: number;
+    available_quantity: number;
+    catalog_item: {
+      name: string;
+      uom_symbol: string;
+    };
+  }>;
+}
+
+const summary = await fetch(
+  `/api/v1/stock/locations/${locationId}/summary`
+).then(r => r.json()) as StockSummary;
+
+console.log(`${summary.total_items} items en ${summary.total_locations} ubicaciones`);
+```
+
+### Power BI / Reporting
+Usa este endpoint para reportes de inventario consolidado por bodega.

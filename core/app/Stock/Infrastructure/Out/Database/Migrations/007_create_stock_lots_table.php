@@ -30,9 +30,14 @@ return new class extends Migration {
             // Meta
             $table->json('meta')->nullable();
             
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             // Timestamps
             $table->timestamp('created_at')->nullable();
             $table->timestamp('updated_at')->nullable();
+            $table->softDeletes();
             
             // Indexes
             $table->index(['sku', 'status']);

@@ -17,6 +17,10 @@ return new class extends Migration {
 
             $table->uuid('workspace_id')->nullable();
 
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();
             $table->dateTime('deleted_at')->nullable();

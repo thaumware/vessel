@@ -1,0 +1,649 @@
+---
+sidebar_position: 7
+---
+
+# Reservations (Reservas de Stock)
+
+Sistema completo de reservas con **tracking ligero** para identificar quién reserva, para qué y cuándo expira.
+
+## 🎯 Problema que Resuelve
+
+Cuando tienes órdenes de venta, proyectos o préstamos que **necesitan garantizar stock** sin aún enviarlo físicamente:
+
+- ❌ **Sin reservas**: Dos órdenes pueden vender el mismo stock
+- ✅ **Con reservas**: Stock bloqueado hasta que se envíe o cancele
+- ✅ **Con tracking**: Sabes quién reservó, para qué y cuándo expira 🆕
+
+---
+
+## 📊 Modelo de Datos
+
+### Stock Item (con reservas)
+
+```json
+{
+  "id": "stock-abc-123",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 100,           // Total físico
+  "reserved_quantity": 30,   // Bloqueado (reservas activas)
+  "available_quantity": 70   // Libre para reservar/enviar
+}
+```
+
+**Fórmula**: `available_quantity = quantity - reserved_quantity`
+
+---
+
+### Reservation (entidad de tracking) 🆕
+
+```json
+{
+  "id": "res-abc-123",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 10,
+  "reserved_by": "user-123",           // Quién reserva
+  "reference_type": "sales_order",     // Para qué
+  "reference_id": "SO-2024-001",       // ID externo
+  "status": "active",                  // active | released | expired
+  "expires_at": "2024-12-31T23:59:59Z", // Opcional
+  "created_at": "2024-12-01T10:00:00Z",
+  "released_at": null
+}
+```
+
+**Estados**:
+- `active`: Reserva activa, bloqueando stock
+- `released`: Liberada manualmente (orden cancelada)
+- `expired`: Expiró automáticamente (por `expires_at`)
+
+---
+
+## 🔄 API Endpoints
+
+### 1. Validar Reserva (sin modificar estado)
+
+```http
+POST /api/v1/stock/reservations/validate
+
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 10
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "can_reserve": true,
+  "available_quantity": 70,
+  "reserved_quantity": 30,
+  "total_quantity": 100,
+  "max_reservation_allowed": 80,
+  "errors": [],
+  "warnings": [],
+  "item_info": {
+    "name": "Producto X",
+    "sku": "SKU-001",
+    "category": "Electronics"
+  },
+  "location_info": {
+    "name": "Almacén Principal",
+    "allow_negative_stock": false
+  }
+}
+```
+
+**Response** (422 Error):
+```json
+{
+  "can_reserve": false,
+  "errors": [
+    "Stock disponible insuficiente. Disponible: 5, solicitado: 10"
+  ]
+}
+```
+
+---
+
+### 2. Crear Reserva 🆕
+
+```http
+POST /api/v1/stock/reservations/reserve
+
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 10,
+  "reserved_by": "user-123",              // 🆕 Quién reserva
+  "reference_type": "sales_order",        // Para qué
+  "reference_id": "SO-2024-001",          // ID externo
+  "expires_at": "2024-12-31T23:59:59Z",   // 🆕 Opcional
+  "reason": "Orden de venta #001",
+  "skip_validation": false
+}
+```
+
+**Response** (201 Created):
+```json
+{
+  "success": true,
+  "reservation_id": "res-abc-123",        // 🆕 ID del tracking
+  "new_reserved_quantity": 40,
+  "new_available_quantity": 60,
+  "errors": [],
+  "movement": {
+    "id": "mov-xyz-456",
+    "type": "reserve",
+    "quantity": 10,
+    "created_at": "2024-12-08T10:00:00Z"
+  }
+}
+```
+
+**Campos nuevos**:
+- `reserved_by`: Identifica quién crea la reserva (user-id, system, etc)
+- `expires_at`: Fecha de expiración opcional (ISO 8601)
+- `reservation_id`: ID del tracking (diferente del movement_id)
+
+---
+
+### 3. Liberar Reserva 🆕
+
+```http
+POST /api/v1/stock/reservations/release
+
+{
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 10,
+  "reservation_id": "res-abc-123",  // 🆕 ID de la reserva a liberar
+  "reason": "Orden cancelada"
+}
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "new_reserved_quantity": 30,
+  "new_available_quantity": 70,
+  "errors": []
+}
+```
+
+**¿Por qué `reservation_id`?**
+- Si lo proporcionas, el sistema marca esa reserva específica como `released`
+- Si no lo proporcionas, solo libera el stock (sin actualizar tracking)
+
+---
+
+### 4. Listar Reservas Activas 🆕
+
+```http
+GET /api/v1/stock/reservations?item_id=ITEM-001&location_id=WAREHOUSE-MAIN
+```
+
+**Query params**:
+- `item_id`: Filtrar por item (opcional)
+- `location_id`: Filtrar por locación (opcional)
+- Si no envías filtros, trae TODAS las reservas activas
+
+**Response** (200 OK):
+```json
+{
+  "data": [
+    {
+      "id": "res-abc-123",
+      "item_id": "ITEM-001",
+      "location_id": "WAREHOUSE-MAIN",
+      "quantity": 10,
+      "reserved_by": "user-123",
+      "reference_type": "sales_order",
+      "reference_id": "SO-2024-001",
+      "status": "active",
+      "expires_at": "2024-12-31T23:59:59Z",
+      "created_at": "2024-12-01T10:00:00Z",
+      "released_at": null
+    },
+    {
+      "id": "res-def-456",
+      "item_id": "ITEM-001",
+      "location_id": "WAREHOUSE-MAIN",
+      "quantity": 20,
+      "reserved_by": "user-456",
+      "reference_type": "project",
+      "reference_id": "PROJ-2024-001",
+      "status": "active",
+      "expires_at": null,
+      "created_at": "2024-12-02T14:30:00Z",
+      "released_at": null
+    }
+  ],
+  "total": 2
+}
+```
+
+---
+
+### 5. Cancelar Reserva (por ID) 🆕
+
+```http
+DELETE /api/v1/stock/reservations/res-abc-123
+```
+
+**Response** (200 OK):
+```json
+{
+  "success": true,
+  "message": "Reserva cancelada y stock liberado",
+  "new_reserved_quantity": 20,
+  "new_available_quantity": 80
+}
+```
+
+**Response** (404 Not Found):
+```json
+{
+  "success": false,
+  "message": "Reserva no encontrada"
+}
+```
+
+**Response** (422 Unprocessable):
+```json
+{
+  "success": false,
+  "message": "La reserva ya no está activa"
+}
+```
+
+**¿Qué hace?**:
+1. Busca la reserva por ID
+2. Valida que esté `active`
+3. Libera el stock (crea Movement tipo `RELEASE`)
+4. Marca la reserva como `released`
+
+---
+
+## 🎭 Flujos Completos
+
+### Flujo: Orden de Venta
+
+```
+1. Cliente ordena 10 unidades
+   POST /validate → can_reserve: true ✅
+
+2. Sistema reserva con tracking
+   POST /reserve
+   {
+     "quantity": 10,
+     "reserved_by": "user-123",
+     "reference_type": "sales_order",
+     "reference_id": "SO-2024-001"
+   }
+   → reservation_id: "res-001" ✅
+
+3. Frontend lista reservas activas
+   GET /reservations?item_id=ITEM-001
+   → Muestra quién reservó, cuándo, para qué
+
+4a. Orden confirmada → Enviar
+    POST /movements/shipment
+    quantity: 100 → 90
+    reserved: 10 → 0 (consume automático)
+    → Reserva queda "released"
+
+4b. Orden cancelada → Cancelar reserva
+    DELETE /reservations/res-001
+    → Stock liberado + reserva marcada "released"
+```
+
+---
+
+### Flujo: Proyecto con Expiración
+
+```
+1. Proyecto solicita 50 unidades (expira en 7 días)
+   POST /reserve
+   {
+     "quantity": 50,
+     "reserved_by": "project-manager-456",
+     "reference_type": "project",
+     "reference_id": "PROJ-2024-001",
+     "expires_at": "2024-12-15T23:59:59Z"
+   }
+   → reservation_id: "res-002"
+
+2. Proyecto usa 30, devuelve 20
+   POST /movements/shipment (quantity: 30)
+   POST /release (quantity: 20, reservation_id: "res-002")
+
+3. Cron job marca expiradas (después del 15/12)
+   ReservationRepository::markExpired()
+   → Reservas con expires_at < NOW marcadas "expired"
+   → Stock liberado automáticamente
+```
+
+---
+
+### Flujo: Múltiples Reservas del Mismo Item
+
+```
+Stock inicial: quantity=100, reserved=0, available=100
+
+1. Usuario A reserva 30
+   POST /reserve (reserved_by: "user-a", quantity: 30)
+   → reserved=30, available=70
+
+2. Usuario B reserva 20
+   POST /reserve (reserved_by: "user-b", quantity: 20)
+   → reserved=50, available=50
+
+3. Listar reservas
+   GET /reservations?item_id=ITEM-001
+   → 2 reservas activas (user-a: 30, user-b: 20)
+
+4. Usuario A cancela
+   DELETE /reservations/res-a
+   → reserved=20, available=80
+
+5. Usuario B envía
+   POST /movements/shipment (quantity: 20)
+   → quantity=80, reserved=0, available=80
+```
+
+---
+
+## ⚙️ Configuración de Locación
+
+```http
+POST /api/v1/stock/capacity
+
+{
+  "location_id": "WAREHOUSE-MAIN",
+  "allow_negative_stock": false,
+  "max_reservation_percentage": 80,  // Máximo 80% del stock puede reservarse
+  "max_capacity": 10000
+}
+```
+
+**Efecto**:
+- Si `total_quantity = 100` y `max_reservation_percentage = 80`
+- Límite de reserva = 80 unidades
+- Intentar reservar 90 → ❌ Error
+
+---
+
+## ✅ Validaciones
+
+El endpoint `/validate` revisa:
+
+1. **Item existe** (en módulo Catalog)
+2. **Locación existe** (en módulo Locations)
+3. **Stock disponible** >= cantidad solicitada
+4. **Límite de reserva** no excedido (si está configurado)
+
+---
+
+## 🧪 Testing
+
+```php
+use App\Stock\Domain\ReservationRepository;
+use App\Stock\Application\UseCases\CreateReservation\CreateReservationRequest;
+
+// 1. Validar ANTES de reservar
+$validation = $this->validateReservation->execute(
+    new ReservationValidationRequest(
+        itemId: 'ITEM-001',
+        locationId: 'WAREHOUSE-MAIN',
+        quantity: 10
+    )
+);
+
+$this->assertTrue($validation->canReserve);
+$this->assertEmpty($validation->errors);
+
+// 2. Crear reserva con tracking
+$result = $this->createReservation->execute(
+    new CreateReservationRequest(
+        itemId: 'ITEM-001',
+        locationId: 'WAREHOUSE-MAIN',
+        quantity: 10,
+        reservedBy: 'user-123',              // 🆕
+        referenceType: 'sales_order',
+        referenceId: 'SO-001',
+        expiresAt: '2024-12-31T23:59:59Z'    // 🆕
+    )
+);
+
+$this->assertTrue($result->success);
+$this->assertNotNull($result->reservationId); // 🆕
+
+// 3. Verificar tracking en DB
+$reservations = $this->reservationRepo->findActiveByItemAndLocation(
+    'ITEM-001',
+    'WAREHOUSE-MAIN'
+);
+
+$this->assertCount(1, $reservations);
+$this->assertEquals('user-123', $reservations[0]->getReservedBy());
+$this->assertEquals('active', $reservations[0]->getStatus()->value);
+
+// 4. Liberar por ID
+$result = $this->releaseReservation->execute(
+    new ReleaseReservationRequest(
+        itemId: 'ITEM-001',
+        locationId: 'WAREHOUSE-MAIN',
+        quantity: 10,
+        reservationId: $result->reservationId // 🆕
+    )
+);
+
+$this->assertTrue($result->success);
+
+// 5. Verificar estado updated
+$reservation = $this->reservationRepo->findById($result->reservationId);
+$this->assertEquals('released', $reservation->getStatus()->value);
+$this->assertNotNull($reservation->getReleasedAt());
+```
+
+---
+
+## 🏗️ Arquitectura (Modular)
+
+```
+┌─────────────────────────────────────────────┐
+│          ReservationController              │
+│  POST /validate, /reserve, /release         │
+│  GET /  (list), DELETE /{id} (cancel)   🆕  │
+└──────────────┬──────────────────────────────┘
+               │
+               ▼
+┌─────────────────────────────────────────────┐
+│      ValidateReservationUseCase             │
+│  ┌──────────────────────────────┐           │
+│  │ 1. StockItemRepository       │ Stock     │
+│  │ 2. CatalogGateway            │ Catalog   │
+│  │ 3. LocationGateway           │ Locations │
+│  │ 4. LocationStockSettings     │ Stock     │
+│  └──────────────────────────────┘           │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│      CreateReservationUseCase           🆕  │
+│  ┌──────────────────────────────┐           │
+│  │ 1. ValidateReservation       │           │
+│  │ 2. StockMovementService      │           │
+│  │ 3. ReservationRepository  🆕 │ Tracking  │
+│  └──────────────────────────────┘           │
+└─────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────┐
+│      ReleaseReservationUseCase          🆕  │
+│  ┌──────────────────────────────┐           │
+│  │ 1. StockItemRepository       │           │
+│  │ 2. StockMovementService      │           │
+│  │ 3. ReservationRepository  🆕 │ Tracking  │
+│  └──────────────────────────────┘           │
+└─────────────────────────────────────────────┘
+```
+
+**Independencia de Módulos**:
+- Stock NO conoce Catalog directamente → usa `CatalogGateway` (interface)
+- Stock NO conoce Locations directamente → usa `LocationGateway` (interface)
+- Los Use Cases **orquestan** múltiples repositorios via interfaces
+- ReservationRepository: entidad ligera para tracking del frontend 🆕
+
+---
+
+## 📌 Diferencias con Movimientos Estándar
+
+| Aspecto | Movimientos Estándar | Reservations |
+|---------|----------------------|--------------|
+| **Objetivo** | Modificar stock físico | Bloquear stock temporalmente |
+| **API** | `POST /movements` | `POST /reservations/*` |
+| **Validación** | Manual | Automática (combina módulos) |
+| **Tracking** | Solo Movement | Movement + Reservation 🆕 |
+| **Frontend** | No sabe quién/cuándo | Lista reservas con metadata 🆕 |
+| **Casos de uso** | Envíos, recepciones | Órdenes, proyectos, préstamos |
+| **Expiración** | No | Sí (opcional con `expires_at`) 🆕 |
+| **Cancelación** | No directo | `DELETE /{id}` directo 🆕 |
+
+---
+
+## 💡 Cuándo Usar Qué
+
+### Usa `/reservations` cuando:
+- ✅ Necesitas **garantizar stock** antes de enviar
+- ✅ Tienes **órdenes pendientes** (venta, compra)
+- ✅ Necesitas **tracking** de quién/para qué/cuándo 🆕
+- ✅ Quieres **validación automática** (combina Stock + Locations + Catalog)
+- ✅ El frontend necesita listar reservas activas 🆕
+- ✅ Necesitas **expiración automática** de reservas 🆕
+
+### Usa `/movements` cuando:
+- ✅ Modificas stock **físico directamente**
+- ✅ Recepciones, envíos, ajustes, transferencias
+- ✅ No necesitas tracking detallado
+- ✅ Operaciones internas del warehouse
+
+---
+
+## 🔍 Base de Datos
+
+### Tabla: `stock_reservations`
+
+```sql
+CREATE TABLE stock_reservations (
+  id VARCHAR(36) PRIMARY KEY,
+  item_id VARCHAR(36) NOT NULL,
+  location_id VARCHAR(36) NOT NULL,
+  quantity DECIMAL(15,4) NOT NULL,
+  reserved_by VARCHAR(100) NOT NULL,      -- user-id, system, etc
+  reference_type VARCHAR(50) NOT NULL,    -- sales_order, project, loan
+  reference_id VARCHAR(100) NOT NULL,     -- ID externo
+  status ENUM('active','released','expired') DEFAULT 'active',
+  expires_at TIMESTAMP NULL,
+  created_at TIMESTAMP NULL,
+  released_at TIMESTAMP NULL,
+  
+  INDEX idx_item_location_status (item_id, location_id, status),
+  INDEX idx_reference (reference_type, reference_id),
+  INDEX idx_expires (status, expires_at)
+);
+```
+
+**Índices optimizados para**:
+- Listar reservas activas por item+location
+- Buscar por referencia (ej: todas las reservas de una orden)
+- Marcar expiradas (cron job)
+
+---
+
+## 🚀 Próximos Pasos
+
+### 1. Cron Job para Expiración Automática
+
+```php
+// app/Console/Commands/ExpireReservations.php
+
+use App\Stock\Domain\ReservationRepository;
+
+class ExpireReservations extends Command
+{
+    public function handle(ReservationRepository $repo): int
+    {
+        $expired = $repo->markExpired();
+        $this->info("Marcadas {$expired} reservas como expiradas");
+        
+        // TODO: Liberar stock automáticamente
+        // Por ahora solo marca el estado, no libera reserved_quantity
+        
+        return 0;
+    }
+}
+```
+
+**Registrar en `Kernel.php`**:
+```php
+$schedule->command('reservations:expire')->hourly();
+```
+
+---
+
+### 2. Notifications
+
+```php
+// Alertar cuando una reserva está por expirar (24h antes)
+$expiringReservations = $repo->findExpiringIn(hours: 24);
+
+foreach ($expiringReservations as $res) {
+    Mail::to($res->getReservedBy())
+        ->send(new ReservationExpiringNotification($res));
+}
+```
+
+---
+
+### 3. Analytics Dashboard
+
+```php
+// GET /api/v1/stock/reservations/stats
+
+{
+  "active_reservations": 42,
+  "total_reserved_quantity": 1250,
+  "expiring_soon": 5,
+  "by_type": {
+    "sales_order": 30,
+    "project": 10,
+    "loan": 2
+  }
+}
+```
+
+---
+
+### 4. Bulk Operations
+
+```php
+// Liberar todas las reservas de una orden completa
+POST /api/v1/stock/reservations/release-by-reference
+
+{
+  "reference_type": "sales_order",
+  "reference_id": "SO-2024-001"
+}
+```
+
+---
+
+## 🔗 Ver También
+
+- [Extensibility](./08-extensibility) - Tipos custom de movimiento
+- [Movements](./03-movements) - Movimientos estándar
+- [Location Settings](./04-location-settings) - Configuración de límites
+- [Quick Reference](./09-quick-reference) - Guía rápida

@@ -1,0 +1,297 @@
+# Comunicación Entre Módulos
+
+## Problema: ¿Cómo compartir datos entre módulos sin acoplamiento?
+
+Los módulos en Vessel son independientes y NO deben depender directamente unos de otros. Sin embargo, necesitan compartir datos. **La solución NO es usar DTOs compartidos**, sino usar **Gateways + Portal**.
+
+## ❌ Anti-patrón: DTOs Compartidos
+
+```php
+// ❌ MAL: Stock dependiendo de Catalog DTOs
+namespace App\Stock\Application;
+
+use App\Catalog\Application\DTOs\ItemDTO; // ¡Acoplamiento!
+
+class StockService {
+    public function getItem(string $id): ItemDTO {
+        // ...
+    }
+}
+```
+
+**Problema**: Si Catalog cambia su DTO, Stock se rompe.
+
+## ✅ Patrón Correcto: Gateway Interface
+
+### 1. Stock define qué necesita (no cómo obtenerlo)
+
+```php
+// Stock/Domain/Interfaces/CatalogGatewayInterface.php
+namespace App\Stock\Domain\Interfaces;
+
+interface CatalogGatewayInterface
+{
+    /**
+     * Enriquecer StockItems con datos del catálogo.
+     * Stock NO conoce la estructura interna de Catalog.
+     * 
+     * @param StockItem[] $stockItems
+     * @return array Array de datos enriquecidos (estructura flexible)
+     */
+    public function attachCatalogData(iterable $stockItems): array;
+}
+```
+
+### 2. Infrastructure implementa el Gateway usando Portal
+
+```php
+// Stock/Infrastructure/Out/Gateways/PortalCatalogGateway.php
+namespace App\Stock\Infrastructure\Out\Gateways;
+
+use Thaumware\Portal\Portal;
+
+class PortalCatalogGateway implements CatalogGatewayInterface
+{
+    public function attachCatalogData(iterable $stockItems): array
+    {
+        // Portal se encarga de cargar los datos desde catalog_items
+        return Portal::attach($stockItems);
+    }
+}
+```
+
+### 3. Portal hace la magia
+
+Portal es un sistema de **relaciones lazy-loaded**:
+
+1. **Registro**: Define de dónde vienen los datos
+```php
+Portal::register('catalog_items', 'catalog_items', 'table');
+```
+
+2. **Linking**: Vincula modelos locales con datos externos
+```php
+Portal::link(
+    $stockItem->getId(),
+    StockItem::class,
+    'catalog_items',  // origin
+    $stockItem->getItemId(),  // external_id
+    ['workspace_id' => 'plant-01']  // metadata
+);
+```
+
+3. **Attachment**: Carga y adjunta datos en batch
+```php
+$enriched = Portal::attach($stockItems);
+// Ahora cada item tiene $item->portal_catalog_items con datos del catálogo
+```
+
+## Flujo Completo: Location Stock Summary
+
+### Ejemplo Real del Código
+
+```php
+// 1. Use Case solicita datos del catálogo via Gateway
+class GetLocationStockSummaryUseCase
+{
+    public function __construct(
+        private StockItemRepositoryInterface $stockRepository,
+        private CatalogGatewayInterface $catalogGateway,  // ← Interface, no implementación
+    ) {}
+
+    public function execute(string $locationId): array
+    {
+        // 1. Obtener stock items
+        $stockItems = $this->stockRepository->findByLocation($locationId);
+        
+        // 2. Enriquecer con catálogo (sin saber CÓMO)
+        $enriched = $this->catalogGateway->attachCatalogData($stockItems);
+        
+        // 3. Usar datos enriquecidos (estructura flexible)
+        foreach ($enriched as $item) {
+            $catalogData = $item['catalog_item'] ?? null;
+            if ($catalogData) {
+                $name = $catalogData['name'] ?? 'Sin nombre';
+                $uom = $catalogData['uom_symbol'] ?? 'unidad';
+            }
+        }
+    }
+}
+```
+
+### ¿Qué pasa internamente?
+
+```
+1. Stock llama: $catalogGateway->attachCatalogData($items)
+                        ↓
+2. PortalCatalogGateway hace: Portal::attach($items)
+                        ↓
+3. Portal busca links previos en portal_links table
+                        ↓
+4. Portal carga datos de catalog_items (tabla o API)
+                        ↓
+5. Portal adjunta datos en $item->portal_catalog_items
+                        ↓
+6. PortalCatalogGateway retorna array estructurado
+                        ↓
+7. Use Case usa datos sin conocer detalles internos
+```
+
+## Ventajas de este Patrón
+
+### 1. **Desacoplamiento Total**
+- Stock NO importa clases de Catalog
+- Catalog NO sabe que Stock existe
+- Cambios en Catalog NO rompen Stock
+
+### 2. **Flexibilidad de Implementación**
+```php
+// Producción: Usa tabla local
+Portal::register('catalog_items', 'catalog_items', 'table');
+
+// Testing: Usa fixture JSON
+$adapter = new PortalJsonAdapter('catalog.json');
+Portal::install($adapter);
+
+// Microservicios: Usa HTTP API
+Portal::register('catalog_items', 'https://api.catalog.com/items', 'http');
+```
+
+### 3. **Performance (Batch Loading)**
+Portal carga relaciones en batch, no N+1:
+```php
+// ✅ 1 query para cargar 100 items del catálogo
+Portal::attach($stockItems);  // WHERE id IN (...)
+
+// ❌ 100 queries individuales
+foreach ($stockItems as $item) {
+    $catalog->getItem($item->getId());
+}
+```
+
+### 4. **Multitenancy Automático**
+```php
+Portal::link($id, 'StockItem', 'catalog_items', $externalId, [
+    'workspace_id' => 'plant-01'  // ← Metadata
+]);
+
+// Portal filtra automáticamente por workspace_id al cargar
+```
+
+## Estructura de Datos (no DTOs)
+
+En lugar de DTOs rígidos, usamos **arrays asociativos flexibles**:
+
+```php
+// ✅ Flexible: Catalog puede agregar campos sin romper Stock
+[
+    'item_id' => 'uuid',
+    'catalog_item' => [
+        'name' => 'Producto X',
+        'uom_id' => 'uuid',
+        'uom_symbol' => 'kg',
+        // Nuevos campos se ignoran si Stock no los usa
+        'category' => 'Tools',
+        'brand' => 'Makita',
+    ]
+]
+
+// ❌ Rígido: DTO requiere cambios en ambos módulos
+class ItemDTO {
+    public string $name;
+    public string $uomSymbol;
+    // Agregar campo requiere cambiar Stock también
+}
+```
+
+## Testing sin Acoplamiento
+
+```php
+class GetLocationStockSummaryTest extends TestCase
+{
+    public function test_enriquece_con_catalogo(): void
+    {
+        // Mock del gateway (sin saber cómo funciona internamente)
+        $catalogGateway = $this->createMock(CatalogGatewayInterface::class);
+        $catalogGateway
+            ->method('attachCatalogData')
+            ->willReturn([
+                [
+                    'item_id' => 'uuid',
+                    'catalog_item' => [
+                        'name' => 'Test Product',
+                        'uom_symbol' => 'kg',
+                    ],
+                ],
+            ]);
+        
+        $useCase = new GetLocationStockSummaryUseCase(
+            $stockRepo,
+            $locationGateway,
+            $catalogGateway  // ← Mock inyectado
+        );
+        
+        // Test funciona sin tocar Catalog
+    }
+}
+```
+
+## Módulos sin Application Layer
+
+Algunos módulos (como Catalog) **NO tienen capa Application**:
+
+```
+app/
+  Catalog/
+    Domain/           ✅ Entities, ValueObjects
+    Infrastructure/   ✅ Repositories, Migrations
+    Tests/            ✅
+    (NO Application)  ← Solo Domain + Infrastructure
+```
+
+**¿Por qué?** 
+- No necesitan Use Cases complejos
+- Son módulos de "datos maestros" (CRUD simple)
+- Se acceden via Repository directamente o via Gateway desde otros módulos
+
+**Para comunicación cross-module:**
+- Otros módulos NO llaman repositorios directamente
+- Usan Gateway + Portal para obtener datos
+- Mantienen independencia total
+
+## Resumen: Gateway + Portal > DTOs
+
+| Aspecto | DTOs Compartidos | Gateway + Portal |
+|---------|-----------------|------------------|
+| Acoplamiento | ❌ Alto (imports directos) | ✅ Bajo (interface) |
+| Cambios | ❌ Rompen ambos módulos | ✅ Cambios locales solo |
+| Testing | ❌ Requiere módulo real | ✅ Mock simple |
+| Performance | ⚠️ Depende | ✅ Batch loading |
+| Microservicios | ❌ Difícil migrar | ✅ Swap adapter |
+| Multitenancy | ⚠️ Manual | ✅ Automático |
+
+## Cuándo usar cada opción
+
+### Usa Gateway + Portal cuando:
+- ✅ Comunicación entre módulos
+- ✅ Datos de otros bounded contexts
+- ✅ Preparación para microservicios
+- ✅ Multitenancy requerido
+
+### Usa DTOs cuando:
+- ✅ Dentro del mismo módulo (Application → Domain)
+- ✅ API pública (request/response)
+- ✅ Validación estricta requerida
+
+### Usa Arrays cuando:
+- ✅ Estructura flexible
+- ✅ Datos enriquecidos de múltiples fuentes
+- ✅ Evolución independiente de esquemas
+
+## Referencias
+
+- `app/Stock/Domain/Interfaces/CatalogGatewayInterface.php` - Interface del gateway
+- `app/Stock/Infrastructure/Out/Gateways/PortalCatalogGateway.php` - Implementación con Portal
+- `app/Stock/Application/UseCases/GetLocationStockSummary/` - Uso real del patrón
+- `packages/portal/` - Sistema de relaciones lazy-loaded
+- `docs/modules/portal.mdx` - Documentación de Portal

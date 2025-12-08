@@ -31,6 +31,7 @@ class LocationStockSettings
         private string $id,
         private string $locationId,
         private ?int $maxQuantity = null,
+        private ?string $storageUomId = null,  // Unidad de medida para capacidad
         private ?float $maxWeight = null,
         private ?float $maxVolume = null,
         private ?array $allowedItemTypes = null,
@@ -58,6 +59,11 @@ class LocationStockSettings
     public function getMaxQuantity(): ?int
     {
         return $this->maxQuantity;
+    }
+
+    public function getStorageUomId(): ?string
+    {
+        return $this->storageUomId;
     }
 
     public function getMaxWeight(): ?float
@@ -196,6 +202,7 @@ class LocationStockSettings
             $this->id,
             $this->locationId,
             $maxQuantity,
+            $this->storageUomId,
             $this->maxWeight,
             $this->maxVolume,
             $this->allowedItemTypes,
@@ -216,6 +223,7 @@ class LocationStockSettings
             $this->id,
             $this->locationId,
             $this->maxQuantity,
+            $this->storageUomId,
             $maxWeight,
             $this->maxVolume,
             $this->allowedItemTypes,
@@ -236,6 +244,7 @@ class LocationStockSettings
             $this->id,
             $this->locationId,
             $this->maxQuantity,
+            $this->storageUomId,
             $this->maxWeight,
             $this->maxVolume,
             $this->allowedItemTypes,
@@ -256,6 +265,7 @@ class LocationStockSettings
             $this->id,
             $this->locationId,
             $this->maxQuantity,
+            $this->storageUomId,
             $this->maxWeight,
             $this->maxVolume,
             $this->allowedItemTypes,
@@ -278,6 +288,7 @@ class LocationStockSettings
             'id' => $this->getId(),
             'location_id' => $this->locationId,
             'max_quantity' => $this->maxQuantity,
+            'storage_uom_id' => $this->storageUomId,
             'max_weight' => $this->maxWeight,
             'max_volume' => $this->maxVolume,
             'allowed_item_types' => $this->allowedItemTypes,

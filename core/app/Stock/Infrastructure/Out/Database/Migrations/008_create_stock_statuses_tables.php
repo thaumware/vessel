@@ -17,6 +17,11 @@ return new class extends Migration
             $table->text('description')->nullable();
             $table->boolean('is_active')->default(true);
             $table->integer('sort_order')->default(0);
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
             
             $table->unique(['workspace_id', 'code']);
@@ -30,6 +35,11 @@ return new class extends Migration
             $table->string('rule_type', 50); // allow_movements, blocks_availability, requires_approval
             $table->boolean('rule_value')->default(true);
             $table->text('notes')->nullable();
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
             
             $table->foreign('status_id')->references('id')->on('stock_statuses')->onDelete('cascade');
@@ -44,6 +54,11 @@ return new class extends Migration
             $table->boolean('requires_approval')->default(false);
             $table->string('condition', 100)->nullable(); // on_movement_complete, lot_expired, manual
             $table->integer('priority')->default(0); // orden de evaluación
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
             
             $table->foreign('from_status_id')->references('id')->on('stock_statuses')->onDelete('cascade');
@@ -59,6 +74,11 @@ return new class extends Migration
             $table->json('metadata')->nullable(); // datos del evento
             $table->uuid('triggered_by')->nullable(); // user_id
             $table->timestamp('occurred_at')->useCurrent();
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
             
             $table->foreign('status_id')->references('id')->on('stock_statuses')->onDelete('cascade');
@@ -87,6 +107,11 @@ return new class extends Migration
             $table->json('metadata')->nullable();
             $table->uuid('changed_by')->nullable(); // user_id
             $table->timestamp('changed_at')->useCurrent();
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
             
             $table->foreign('stock_item_id')->references('id')->on('stock_items')->onDelete('cascade');

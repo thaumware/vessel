@@ -34,6 +34,9 @@ enum MovementType: string
     case COUNT = 'count';               // Conteo de inventario
     case RELOCATION = 'relocation';     // Reubicación interna (mismo almacén)
 
+    // === Movimiento EXTENSIBLE (custom handlers) ===
+    case CUSTOM = 'custom';             // Movimiento personalizado (usa referenceType para identificar)
+
     /**
      * ¿Este movimiento suma stock?
      */
@@ -157,6 +160,7 @@ enum MovementType: string
             self::RELEASE => 'Liberación',
             self::COUNT => 'Conteo',
             self::RELOCATION => 'Reubicación',
+            self::CUSTOM => 'Personalizado',
         };
     }
 

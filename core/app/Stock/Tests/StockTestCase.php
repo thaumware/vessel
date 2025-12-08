@@ -3,13 +3,17 @@
 namespace App\Stock\Tests;
 
 use PHPUnit\Framework\TestCase;
+use App\Shared\Tests\Traits\ModuleAwareTesting;
 
 /**
  * Base TestCase for Stock module unit tests.
  * Does NOT boot Laravel - for pure domain/application logic testing.
+ * 
+ * Includes ModuleAwareTesting for conditional cross-module loading.
  */
 abstract class StockTestCase extends TestCase
 {
+    use ModuleAwareTesting;
     protected function generateUuid(): string
     {
         return sprintf(
@@ -49,7 +53,7 @@ abstract class StockTestCase extends TestCase
     {
         return array_merge([
             'id' => $this->generateUuid(),
-            'sku' => 'BATCH-SKU-' . mt_rand(1000, 9999),
+            'itemId' => 'BATCH-ITEM-' . mt_rand(1000, 9999),
             'locationId' => $this->generateUuid(),
             'quantity' => 50,
             'lotNumber' => 'LOT-' . mt_rand(10000, 99999),
@@ -61,7 +65,7 @@ abstract class StockTestCase extends TestCase
         return array_merge([
             'id' => $this->generateUuid(),
             'movementId' => 'MOV-' . mt_rand(10000, 99999),
-            'sku' => 'MOV-SKU-' . mt_rand(1000, 9999),
+            'itemId' => 'MOV-ITEM-' . mt_rand(1000, 9999),
             'locationFromId' => $this->generateUuid(),
             'locationFromType' => 'warehouse',
             'locationToId' => $this->generateUuid(),

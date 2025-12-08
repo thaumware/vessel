@@ -1,0 +1,447 @@
+---
+sidebar_position: 8
+---
+
+# Extensibility (Tipos Custom de Movimiento)
+
+Sistema de **Movement Handlers** para agregar tipos de movimiento personalizados **sin modificar el código core**.
+
+## 🎯 Problema que Resuelve
+
+**Antes**: Para agregar un tipo de movimiento (ej: préstamos, consignación, reparaciones), había que:
+1. Modificar el enum `MovementType`
+2. Modificar validaciones hardcodeadas
+3. Desplegar código core
+
+**Ahora**: Crea un **Handler** en Infrastructure y regístralo. Listo.
+
+---
+
+## 🏗️ Arquitectura
+
+### Domain (Rígido - NO modificar)
+
+```php
+enum MovementType {
+    RECEIPT, RETURN, SHIPMENT, RESERVE, RELEASE, ...
+    CUSTOM  // ← Tipo genérico para extensiones
+}
+
+interface MovementHandlerInterface {
+    supports(string $type): bool
+    validate(Movement, StockItem): void
+    handle(Movement, StockItem): StockItem
+}
+```
+
+### Infrastructure (Flexible - EXTENDER aquí)
+
+```php
+class MovementHandlerRegistry {
+    register(MovementHandlerInterface $handler)
+}
+
+// Handlers ejemplo incluidos:
+CustomerLoanHandler       // customer_loan, loan_return
+ConsignmentHandler        // consignment_out, consignment_return
+```
+
+---
+
+## ✅ Cómo Agregar un Tipo Custom
+
+### 1. Crear el Handler
+
+```php title="app/Stock/Infrastructure/Handlers/RepairInHandler.php"
+<?php
+
+namespace App\Stock\Infrastructure\Handlers;
+
+use App\Stock\Domain\Interfaces\MovementHandlerInterface;
+use App\Stock\Domain\Entities\Movement;
+use App\Stock\Domain\Entities\StockItem;
+
+class RepairInHandler implements MovementHandlerInterface
+{
+    public function supports(string $movementType): bool
+    {
+        return $movementType === 'repair_in';
+    }
+
+    public function validate(Movement $movement, StockItem $stockItem): void
+    {
+        // Validaciones custom
+        $meta = $movement->getMeta();
+        if (!isset($meta['repair_order_id'])) {
+            throw new \DomainException('repair_order_id es requerido en meta');
+        }
+    }
+
+    public function handle(Movement $movement, StockItem $stockItem): StockItem
+    {
+        // IMPORTANTE: StockItem es inmutable, retornar nuevo objeto
+        return $stockItem->adjustQuantity($movement->getQuantity());
+    }
+
+    public function describe(): string
+    {
+        return 'Repair In Handler: Entrada de items desde reparación';
+    }
+}
+```
+
+### 2. Registrar en ServiceProvider
+
+```php title="app/Stock/Infrastructure/StockServiceProvider.php"
+$this->app->singleton(MovementHandlerRegistry::class, function ($app) {
+    $registry = new MovementHandlerRegistry();
+    
+    // ✅ AGREGAR TU HANDLER AQUÍ
+    $registry->register(new RepairInHandler());
+    
+    return $registry;
+});
+```
+
+### 3. Usar desde API
+
+```http
+POST /api/v1/stock/movements
+Content-Type: application/json
+
+{
+  "type": "custom",
+  "reference_type": "repair_in",
+  "item_id": "ITEM-001",
+  "location_id": "SERVICE-CENTER",
+  "quantity": 1,
+  "meta": {
+    "repair_order_id": "RO-12345",
+    "technician": "John Doe",
+    "condition": "refurbished"
+  }
+}
+```
+
+---
+
+## 📦 Handlers Incluidos (Ejemplos)
+
+### CustomerLoanHandler
+
+Maneja préstamos a cliente y devoluciones.
+
+**Tipos soportados**: `customer_loan`, `loan_return`
+
+#### Préstamo
+
+```http
+POST /api/v1/stock/movements
+
+{
+  "type": "custom",
+  "reference_type": "customer_loan",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 5,
+  "meta": {
+    "customer_id": "CUST-123",
+    "expected_return_date": "2024-12-31",
+    "loan_type": "demo"
+  }
+}
+```
+
+**Comportamiento**: RESTA stock (como shipment) pero con metadata de préstamo.
+
+#### Devolución de Préstamo
+
+```http
+POST /api/v1/stock/movements
+
+{
+  "type": "custom",
+  "reference_type": "loan_return",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 5,
+  "reference_id": "LOAN-2024-001"
+}
+```
+
+**Comportamiento**: SUMA stock (devolución).
+
+---
+
+### ConsignmentHandler
+
+Maneja envíos en consignación y devoluciones.
+
+**Tipos soportados**: `consignment_out`, `consignment_return`
+
+#### Envío en Consignación
+
+```http
+POST /api/v1/stock/movements
+
+{
+  "type": "custom",
+  "reference_type": "consignment_out",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 20,
+  "meta": {
+    "consignee": "RETAIL-STORE-001",
+    "agreement_expires": "2025-01-31"
+  }
+}
+```
+
+**Comportamiento**: RESTA stock (salida a consignatario).
+
+#### Devolución de Consignación
+
+```http
+POST /api/v1/stock/movements
+
+{
+  "type": "custom",
+  "reference_type": "consignment_return",
+  "item_id": "ITEM-001",
+  "location_id": "WAREHOUSE-MAIN",
+  "quantity": 8,
+  "meta": {
+    "sold": false,
+    "reason": "No vendido en tienda"
+  }
+}
+```
+
+**Comportamiento**: SUMA stock (no se vendió, vuelve).
+
+---
+
+## 🔑 Puntos Clave
+
+### 1. MovementType::CUSTOM es Genérico
+
+- NO modifica el enum
+- `referenceType` identifica el tipo específico
+- Mantiene type safety en Domain
+
+### 2. StockItem es INMUTABLE
+
+```php
+// ❌ MAL
+public function handle(Movement $movement, StockItem $stockItem): StockItem
+{
+    $stockItem->quantity -= 10; // ❌ No funciona (propiedad readonly)
+    return $stockItem;
+}
+
+// ✅ BIEN
+public function handle(Movement $movement, StockItem $stockItem): StockItem
+{
+    return $stockItem->adjustQuantity(-10); // ✅ Retorna nuevo objeto
+}
+```
+
+### 3. Validación Custom
+
+```php
+public function validate(Movement $movement, StockItem $stockItem): void
+{
+    // Lanza DomainException si falla
+    if ($stockItem->getAvailableQuantity() < $movement->getQuantity()) {
+        throw new \DomainException('Stock insuficiente para préstamo');
+    }
+    
+    // Validar metadata
+    $meta = $movement->getMeta();
+    if (!isset($meta['customer_id'])) {
+        throw new \DomainException('customer_id requerido para préstamos');
+    }
+}
+```
+
+### 4. Handlers son Opcionales
+
+- Si NO hay handler para `referenceType`, usa lógica estándar del enum
+- Puedes registrar múltiples handlers (coexisten)
+- Tipos estándar siguen funcionando normalmente
+
+---
+
+## 🎓 Cuándo Usar Qué
+
+### Usar Enum Estándar
+
+✅ Movimientos comunes (receipt, shipment, return, reserve, etc.)  
+✅ Sin validaciones especiales  
+✅ Comportamiento estándar (suma/resta stock)
+
+**Ejemplo**:
+```json
+{
+  "type": "receipt",
+  "item_id": "ITEM-001",
+  "quantity": 100
+}
+```
+
+---
+
+### Usar Handler Custom
+
+✅ Lógica de negocio especial  
+✅ Validaciones complejas (ej: validar contra API externa)  
+✅ Metadata custom requerida  
+✅ Comportamiento condicional
+
+**Ejemplo**:
+```json
+{
+  "type": "custom",
+  "reference_type": "repair_in",
+  "meta": {"repair_order_id": "RO-123"}
+}
+```
+
+---
+
+### Usar Meta + ReferenceType (sin handler)
+
+✅ Solo necesitas metadata extra  
+✅ Comportamiento estándar (suma/resta)  
+✅ No requiere validaciones custom
+
+**Ejemplo**:
+```json
+{
+  "type": "shipment",
+  "reference_type": "demo_shipment",
+  "meta": {
+    "is_demo": true,
+    "customer_type": "trial"
+  }
+}
+```
+
+---
+
+## 🧪 Testing
+
+Los handlers custom son completamente testeables:
+
+```php title="CustomMovementHandlersTest.php"
+public function test_custom_loan_handler_reduces_stock(): void
+{
+    $movement = new Movement(
+        type: MovementType::CUSTOM,
+        itemId: 'ITEM-001',
+        locationId: 'WAREHOUSE-MAIN',
+        quantity: 5,
+        referenceType: 'customer_loan',
+        meta: ['customer_id' => 'CUST-123']
+    );
+
+    $service = new StockMovementService(
+        customHandlers: [new CustomerLoanHandler()]
+    );
+
+    $result = $service->process($movement);
+
+    $this->assertTrue($result->isSuccess());
+    $this->assertEquals(95, $result->getStockItem()->getQuantity());
+}
+```
+
+**Tests incluidos**: 7 tests, 17 assertions ✅ PASSING
+
+---
+
+## 🔧 Activar Handlers Ejemplo
+
+En `StockServiceProvider.php`:
+
+```php
+$registry = new MovementHandlerRegistry();
+
+// ✅ DESCOMENTA PARA ACTIVAR
+$registry->register(new CustomerLoanHandler());
+$registry->register(new ConsignmentHandler());
+
+return $registry;
+```
+
+---
+
+## 📊 Comparación
+
+| Aspecto | Antes | Ahora |
+|---------|-------|-------|
+| **Agregar tipo** | Modificar enum + deploy | Crear handler + registrar |
+| **Validaciones custom** | ❌ Hardcodeadas en service | ✅ En handler |
+| **Deploy requerido** | ✅ Sí (código core) | ⚠️ Solo si es nuevo handler |
+| **Testing** | ❌ Acoplado | ✅ Aislado por handler |
+| **Tipos soportados** | 18 fijos | 18 + ∞ custom |
+
+---
+
+## ✅ Checklist: Agregar Tipo Custom
+
+- [ ] Crear `MyCustomHandler.php` en `app/Stock/Infrastructure/Handlers/`
+- [ ] Implementar `supports(string $movementType): bool`
+- [ ] Implementar `validate(Movement, StockItem): void`
+- [ ] Implementar `handle(Movement, StockItem): StockItem` (retornar nuevo StockItem)
+- [ ] Implementar `describe(): string`
+- [ ] Registrar en `StockServiceProvider::register()`
+- [ ] Crear test en `Tests/Feature/`
+- [ ] Documentar en README del proyecto
+
+---
+
+## 🏗️ Arquitectura Interna
+
+### Flujo de Procesamiento
+
+```
+1. Movement recibido con type: CUSTOM
+   └─> StockMovementService.process()
+       
+2. ¿Es CUSTOM?
+   └─> SÍ: Buscar handler por referenceType
+       └─> Handler encontrado?
+           ├─> SÍ: handler.validate() → handler.handle()
+           └─> NO: Lógica estándar del enum
+           
+   └─> NO: Lógica estándar del enum (addsStock/removesStock)
+```
+
+### Separación de Responsabilidades
+
+| Capa | Responsabilidad |
+|------|-----------------|
+| **Domain** | Enum cerrado (18 tipos + CUSTOM) |
+| **Handler** | Lógica custom por tipo |
+| **Registry** | Registro de handlers |
+| **Service** | Detecta CUSTOM y delega a handler |
+
+✅ **Domain** no conoce tipos custom específicos  
+✅ **Infrastructure** agrega funcionalidad sin modificar core
+
+---
+
+## 📝 Resumen
+
+**Domain** = Rígido (18 tipos enum + CUSTOM genérico)  
+**Infrastructure** = Flexible (handlers ilimitados)  
+**Extensión** = Fácil (crear handler + registrar)  
+**Testing** = 7 tests passing ✅  
+**Type Safety** = Preservado (enum sigue cerrado)
+
+**Handlers incluidos**:
+- `CustomerLoanHandler` (préstamos)
+- `ConsignmentHandler` (consignación)
+
+**Ready to extend**: Crea tu handler en 5 minutos.

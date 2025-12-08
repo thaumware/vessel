@@ -22,6 +22,11 @@ return new class extends Migration
             $table->string('serial_number')->nullable();
             $table->uuid('workspace_id')->nullable();
             $table->json('meta')->nullable();
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
             $table->softDeletes();
 

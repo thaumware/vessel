@@ -10,6 +10,7 @@ use App\Stock\Domain\Entities\Lot;
 use App\Stock\Domain\Interfaces\MovementRepositoryInterface;
 use App\Stock\Domain\Interfaces\StockItemRepositoryInterface;
 use App\Stock\Domain\Interfaces\LotRepositoryInterface;
+use App\Stock\Domain\Interfaces\MovementHandlerInterface;
 use App\Stock\Domain\ValueObjects\MovementType;
 use App\Stock\Domain\ValueObjects\ValidationResult;
 use Illuminate\Support\Str;
@@ -19,36 +20,46 @@ use Illuminate\Support\Str;
  * 
  * Coordina la lógica de negocio de movimientos:
  * - Valida pre-condiciones (configurable)
- * - Ejecuta el movimiento
+ * - Ejecuta el movimiento (estándar o custom via handlers)
  * - Actualiza stock items y lotes
+ * 
+ * EXTENSIBILIDAD:
+ * Puede recibir un array de MovementHandlerInterface para soportar tipos custom.
  */
 class StockMovementService
 {
+    /** @var MovementHandlerInterface[] */
+    private array $customHandlers = [];
+
     public function __construct(
         private MovementRepositoryInterface $movementRepository,
         private StockItemRepositoryInterface $stockItemRepository,
         private ?LotRepositoryInterface $lotRepository = null,
         private ?StockCapacityService $capacityService = null,
-        private bool $allowNegativeStock = false
+        private bool $allowNegativeStock = false,
+        array $customHandlers = []
     ) {
+        $this->customHandlers = $customHandlers;
     }
 
     /**
      * Procesa un movimiento y actualiza el stock.
+     * 
+     * Soporta handlers custom para tipos extendidos.
      */
     public function process(Movement $movement): ProcessMovementResult
     {
-        // Validar pre-condiciones
-        $validation = $this->validate($movement);
-        if ($validation->isInvalid()) {
-            return ProcessMovementResult::failure($movement, $validation->getErrors());
-        }
-
         // Obtener o crear stock item
         $stockItem = $this->getOrCreateStockItem($movement);
         $previousBalance = $stockItem->getQuantity();
 
-        // Procesar según tipo de movimiento
+        // Validar pre-condiciones (estándar O custom)
+        $validation = $this->validateMovement($movement, $stockItem);
+        if ($validation->isInvalid()) {
+            return ProcessMovementResult::failure($movement, $validation->getErrors());
+        }
+
+        // Procesar según tipo: custom handler O lógica estándar
         $stockItem = $this->applyMovement($stockItem, $movement);
 
         // Marcar como completado
@@ -66,8 +77,9 @@ class StockMovementService
 
     /**
      * Valida un movimiento antes de procesarlo.
+     * Ruta PRIVADA - usa validateMovement() para incluir custom handlers.
      */
-    public function validate(Movement $movement): ValidationResult
+    private function validate(Movement $movement): ValidationResult
     {
         $result = ValidationResult::valid();
 
@@ -103,6 +115,51 @@ class StockMovementService
         }
 
         return $result;
+    }
+
+    /**
+     * Validación completa: estándar + custom handlers.
+     */
+    private function validateMovement(Movement $movement, StockItem $stockItem): ValidationResult
+    {
+        // 1. Intentar handler custom primero
+        $handler = $this->findHandler($movement);
+        if ($handler !== null) {
+            try {
+                $handler->validate($movement, $stockItem);
+                return ValidationResult::valid();
+            } catch (\DomainException $e) {
+                return ValidationResult::withError($e->getMessage());
+            }
+        }
+
+        // 2. Validación estándar (enum)
+        return $this->validate($movement);
+    }
+
+    /**
+     * Encuentra handler custom para un tipo de movimiento.
+     */
+    private function findHandler(Movement $movement): ?MovementHandlerInterface
+    {
+        // Solo buscar handler si el tipo es CUSTOM
+        if ($movement->getType() !== MovementType::CUSTOM) {
+            return null;
+        }
+
+        // El referenceType identifica el tipo custom
+        $customType = $movement->getReferenceType();
+        if ($customType === null) {
+            return null;
+        }
+
+        foreach ($this->customHandlers as $handler) {
+            if ($handler->supports($customType)) {
+                return $handler;
+            }
+        }
+
+        return null;
     }
 
     // === Validaciones privadas ===
@@ -228,6 +285,13 @@ class StockMovementService
 
     private function applyMovement(StockItem $stockItem, Movement $movement): StockItem
     {
+        // 1. Intentar handler custom primero
+        $handler = $this->findHandler($movement);
+        if ($handler !== null) {
+            return $handler->handle($movement, $stockItem);
+        }
+
+        // 2. Lógica estándar (enum)
         $type = $movement->getType();
         $quantity = $movement->getQuantity();
 

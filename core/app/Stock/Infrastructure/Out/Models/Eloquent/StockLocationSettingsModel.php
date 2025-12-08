@@ -21,6 +21,7 @@ class StockLocationSettingsModel extends Model
         'id',
         'location_id',
         'max_quantity',
+        'storage_uom_id',
         'max_weight',
         'max_volume',
         'allowed_item_types',

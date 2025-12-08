@@ -8,6 +8,8 @@ use App\Stock\Infrastructure\In\Http\Controllers\BatchController;
 use App\Stock\Infrastructure\In\Http\Controllers\LotController;
 use App\Stock\Infrastructure\In\Http\MovementController;
 use App\Stock\Infrastructure\In\Http\CapacityController;
+use App\Stock\Infrastructure\In\Http\Controllers\LocationStockSummaryController;
+use App\Stock\Infrastructure\In\Http\ReservationController;
 
 Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
 
@@ -43,6 +45,15 @@ Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
         Route::post('/transfer', [MovementController::class, 'transfer']);
     });
 
+    // === Reservations (flujo simplificado de reservas) ===
+    Route::prefix('reservations')->group(function () {
+        Route::get('/', [ReservationController::class, 'index']); // Listar activas
+        Route::post('/validate', [ReservationController::class, 'validate']);
+        Route::post('/reserve', [ReservationController::class, 'reserve']);
+        Route::post('/release', [ReservationController::class, 'release']);
+        Route::delete('/{id}', [ReservationController::class, 'destroy']); // Cancelar por ID
+    });
+
     // === Capacity (configuración de capacidad por ubicación) ===
     Route::prefix('capacity')->group(function () {
         Route::get('/{locationId}', [CapacityController::class, 'show']);
@@ -56,6 +67,11 @@ Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
         Route::get('/{locationId}/total-stock', [CapacityController::class, 'totalStock']);
         Route::get('/{locationId}/unique-item-ids', [CapacityController::class, 'uniqueItemIds']);
         Route::get('/{locationId}/is-full', [CapacityController::class, 'isFull']);
+    });
+
+    // === Locations (resumen de stock por ubicación) ===
+    Route::prefix('locations')->group(function () {
+        Route::get('/{locationId}/summary', [LocationStockSummaryController::class, 'summary']);
     });
 
     // === Units (unidades de medida para stock) ===

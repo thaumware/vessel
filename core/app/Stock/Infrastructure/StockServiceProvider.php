@@ -16,6 +16,9 @@ use App\Stock\Domain\Interfaces\LotRepositoryInterface;
 use App\Stock\Domain\Services\StockCapacityService;
 use App\Stock\Infrastructure\Out\Gateways\PortalCatalogGateway;
 use App\Stock\Infrastructure\Out\Gateways\LocationsModuleGateway;
+use App\Stock\Infrastructure\Services\MovementHandlerRegistry;
+use App\Stock\Infrastructure\Handlers\CustomerLoanHandler;
+use App\Stock\Infrastructure\Handlers\ConsignmentHandler;
 use App\Shared\Domain\Interfaces\IdGeneratorInterface;
 use App\Shared\Infrastructure\ModuleRegistry;
 use App\Shared\Infrastructure\Services\UuidGenerator;
@@ -82,6 +85,12 @@ class StockServiceProvider extends ServiceProvider
             \App\Stock\Infrastructure\Out\InMemory\InMemoryLotRepository::class
         );
 
+        // Reservation Repository (tracking ligero de reservas)
+        $this->app->bind(
+            \App\Stock\Domain\ReservationRepository::class,
+            \App\Stock\Infrastructure\Persistence\MySQLReservationRepository::class
+        );
+
         // === Domain Services ===
         $this->app->singleton(StockCapacityService::class, function ($app) {
             return new StockCapacityService(
@@ -89,6 +98,21 @@ class StockServiceProvider extends ServiceProvider
                 $app->make(LocationGatewayInterface::class),
                 $app->make(StockRepositoryInterface::class)
             );
+        });
+
+        // === Movement Handler Registry (Extensibilidad) ===
+        $this->app->singleton(MovementHandlerRegistry::class, function ($app) {
+            $registry = new MovementHandlerRegistry();
+            
+            // Registrar handlers custom EJEMPLO
+            // Descomenta para activar:
+            // $registry->register(new CustomerLoanHandler());
+            // $registry->register(new ConsignmentHandler());
+            
+            // Los usuarios pueden agregar sus propios handlers aquí
+            // O registrarlos desde su propio ServiceProvider
+            
+            return $registry;
         });
 
         // === Adapter Configuration for Middleware ===

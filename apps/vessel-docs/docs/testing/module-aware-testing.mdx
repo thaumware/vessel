@@ -1,0 +1,382 @@
+# Testing con Módulos Configurables
+
+## Problema: Tests que dependen de módulos opcionales
+
+Algunos tests necesitan cargar relaciones de otros módulos (Catalog, Locations, UoM), pero esos módulos podrían no estar activos. Los tests deben adaptarse automáticamente.
+
+## ✅ Solución: `ModuleAwareTesting` Trait
+
+### Características
+
+1. **Detección automática** de módulos activos
+2. **Mocks inteligentes** que se adaptan según módulos disponibles
+3. **Skip automático** de tests que requieren módulos específicos
+4. **Ejecución condicional** de código según módulo
+
+## Uso Básico
+
+### 1. Incluir el Trait en tu TestCase
+
+```php
+// app/Stock/Tests/StockTestCase.php
+namespace App\Stock\Tests;
+
+use PHPUnit\Framework\TestCase;
+use App\Shared\Tests\Traits\ModuleAwareTesting;
+
+abstract class StockTestCase extends TestCase
+{
+    use ModuleAwareTesting;
+    
+    // ...
+}
+```
+
+### 2. Verificar si un módulo está activo
+
+```php
+public function test_algo(): void
+{
+    if ($this->isModuleEnabled('catalog')) {
+        // Código que usa Catalog
+    }
+}
+```
+
+### 3. Skip test si módulo no está disponible
+
+```php
+public function test_requiere_catalog(): void
+{
+    $this->requireModule('catalog');
+    
+    // Este test solo se ejecuta si Catalog está activo
+    // Si no, se marca como "Skipped"
+}
+
+public function test_requiere_varios_modulos(): void
+{
+    $this->requireModules(['catalog', 'locations', 'uom']);
+    
+    // Solo se ejecuta si TODOS los módulos están activos
+}
+```
+
+### 4. Ejecutar código condicionalmente
+
+```php
+public function test_con_enriquecimiento_opcional(): void
+{
+    $result = $this->useCase->execute($id);
+    
+    // Siempre verificar lo básico
+    $this->assertEquals(100, $result['quantity']);
+    
+    // Solo verificar enriquecimiento si Catalog está activo
+    $this->whenModuleEnabled('catalog', function () use ($result) {
+        $this->assertArrayHasKey('catalog_item', $result);
+        $this->assertEquals('Test Product', $result['catalog_item']['name']);
+    });
+}
+```
+
+## Mocks Inteligentes
+
+### CatalogGateway Mock
+
+El mock de `CatalogGateway` se adapta automáticamente:
+
+```php
+public function test_con_catalog_gateway(): void
+{
+    // Crear mock inteligente
+    $catalogGateway = $this->createCatalogGatewayMock();
+    
+    $useCase = new GetLocationStockSummaryUseCase(
+        $stockRepo,
+        $locationGateway,
+        $catalogGateway  // ← Se adapta solo
+    );
+    
+    $result = $useCase->execute($locationId);
+    
+    // Si Catalog está activo: devuelve datos enriquecidos
+    // Si NO está activo: devuelve solo item_id básico
+}
+```
+
+**Comportamiento automático:**
+
+```php
+// Catalog ACTIVO
+$enriched = $gateway->attachCatalogData($items);
+// Retorna:
+[
+    'item_id' => 'uuid',
+    'catalog_item' => [
+        'name' => 'Test Item',
+        'uom_symbol' => 'kg',
+    ]
+]
+
+// Catalog INACTIVO
+$enriched = $gateway->attachCatalogData($items);
+// Retorna:
+[
+    'item_id' => 'uuid'
+]
+```
+
+### LocationGateway Mock
+
+```php
+// Con hijos
+$gateway = $this->createLocationGatewayMock(['child-id-1', 'child-id-2']);
+
+// Sin hijos
+$gateway = $this->createLocationGatewayMock([]);
+```
+
+## Ejemplo Completo: Test con Módulos Opcionales
+
+```php
+namespace App\Stock\Tests\Application;
+
+use App\Stock\Application\UseCases\GetLocationStockSummary\GetLocationStockSummaryUseCase;
+use App\Stock\Domain\Entities\StockItem;
+use App\Stock\Tests\StockTestCase;
+
+class GetLocationStockSummaryTest extends StockTestCase
+{
+    private GetLocationStockSummaryUseCase $useCase;
+    private $stockRepo;
+    private $locationGateway;
+    private $catalogGateway;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        
+        // Mocks que se auto-adaptan
+        $this->stockRepo = $this->createMock(StockItemRepositoryInterface::class);
+        $this->locationGateway = $this->createLocationGatewayMock();
+        $this->catalogGateway = $this->createCatalogGatewayMock();  // ← Inteligente
+        
+        $this->useCase = new GetLocationStockSummaryUseCase(
+            $this->stockRepo,
+            $this->locationGateway,
+            $this->catalogGateway
+        );
+    }
+
+    public function test_suma_stock(): void
+    {
+        $locationId = $this->generateUuid();
+        $itemId = $this->generateUuid();
+
+        $this->stockRepo
+            ->method('findByLocation')
+            ->willReturn([
+                new StockItem(
+                    id: $this->generateUuid(),
+                    itemId: $itemId,
+                    locationId: $locationId,
+                    quantity: 100
+                ),
+            ]);
+
+        $result = $this->useCase->execute($locationId);
+
+        // ✅ Verificaciones básicas (siempre)
+        $this->assertEquals(1, $result['total_items']);
+        $this->assertEquals(100, $result['items'][0]['total_quantity']);
+        
+        // ✅ Verificaciones opcionales (solo si Catalog activo)
+        $this->whenModuleEnabled('catalog', function () use ($result) {
+            $item = $result['items'][0];
+            $this->assertArrayHasKey('catalog_item', $item);
+            $this->assertArrayHasKey('name', $item['catalog_item']);
+            $this->assertArrayHasKey('uom_symbol', $item['catalog_item']);
+        });
+    }
+}
+```
+
+## Ventajas del Patrón
+
+### 1. **Tests Resilientes**
+```php
+// ✅ Test pasa con o sin Catalog
+$this->whenModuleEnabled('catalog', function () {
+    $this->assertArrayHasKey('catalog_item', $data);
+});
+
+// ❌ Test falla si Catalog no está activo
+$this->assertArrayHasKey('catalog_item', $data);
+```
+
+### 2. **CI/CD Flexible**
+```yaml
+# GitHub Actions - ejecutar solo módulos core
+- name: Test Core Only
+  run: phpunit --testsuite Unit
+  # Tests con requireModules se skipean automáticamente
+
+# GitHub Actions - ejecutar con todos los módulos
+- name: Test Full Stack
+  run: phpunit
+  env:
+    MODULES_ENABLED: catalog,locations,uom
+```
+
+### 3. **Desarrollo Modular**
+- Desarrollador A trabaja en Stock (sin Catalog instalado) → Tests pasan
+- Desarrollador B trabaja con stack completo → Tests con enriquecimiento pasan
+- CI ejecuta ambos escenarios
+
+### 4. **Mocks Simplificados**
+```php
+// ❌ ANTES: Mock manual complejo
+$catalogGateway = $this->createMock(CatalogGatewayInterface::class);
+$catalogGateway->method('attachCatalogData')->willReturnCallback(function ($items) {
+    return array_map(function ($item) {
+        return [
+            'item_id' => $item->getItemId(),
+            'catalog_item' => ['name' => 'Test', 'uom_symbol' => 'kg'],
+        ];
+    }, $items);
+});
+
+// ✅ AHORA: Mock inteligente auto-configurable
+$catalogGateway = $this->createCatalogGatewayMock();
+```
+
+## API del Trait
+
+### Métodos de Detección
+
+```php
+// Verificar si módulo está activo
+bool isModuleEnabled(string $module)
+
+// Skip test si módulo no está activo
+void requireModule(string $module, ?string $reason = null)
+
+// Skip test si ALGUNO no está activo
+void requireModules(array $modules, ?string $reason = null)
+
+// Ejecutar callback solo si módulo activo
+mixed whenModuleEnabled(string $module, callable $callback)
+```
+
+### Métodos de Mocks
+
+```php
+// Mock de CatalogGateway inteligente
+object createCatalogGatewayMock()
+
+// Mock de LocationGateway con descendientes
+object createLocationGatewayMock(array $descendants = [])
+```
+
+## Testing en Diferentes Entornos
+
+### Tests Unitarios (sin Laravel)
+```php
+// En tests unitarios puros (TestCase de PHPUnit)
+// isModuleEnabled retorna TRUE por defecto
+$this->assertTrue($this->isModuleEnabled('catalog'));
+```
+
+### Tests de Integración (con Laravel)
+```php
+// En tests de integración (TestCase de Laravel)
+// isModuleEnabled consulta ModuleRegistry real
+$this->assertEquals(
+    config('modules.enabled.catalog', false),
+    $this->isModuleEnabled('catalog')
+);
+```
+
+## Patrones de Uso
+
+### Patrón 1: Verificación Básica + Enriquecimiento Opcional
+
+```php
+public function test_operacion_basica(): void
+{
+    $result = $this->service->execute($id);
+    
+    // ✅ Siempre verificar funcionalidad core
+    $this->assertNotNull($result);
+    $this->assertEquals('expected-value', $result['core_field']);
+    
+    // ✅ Verificar enriquecimiento si disponible
+    $this->whenModuleEnabled('catalog', function () use ($result) {
+        $this->assertArrayHasKey('enriched_data', $result);
+    });
+}
+```
+
+### Patrón 2: Test Suite Completo con Skipeos
+
+```php
+public function test_funcionalidad_core(): void
+{
+    // NO requiere módulos adicionales
+    // Siempre se ejecuta
+}
+
+public function test_integracion_con_catalog(): void
+{
+    $this->requireModule('catalog');
+    
+    // Solo se ejecuta si Catalog está activo
+    // Se skipea automáticamente si no
+}
+
+public function test_integracion_completa(): void
+{
+    $this->requireModules(['catalog', 'locations', 'uom']);
+    
+    // Solo se ejecuta con stack completo
+}
+```
+
+### Patrón 3: Assertions Condicionales
+
+```php
+public function test_con_multiples_validaciones(): void
+{
+    $result = $this->service->execute($id);
+    
+    $this->assertEquals(100, $result['quantity']);
+    
+    // Validación condicional: Catalog
+    $this->whenModuleEnabled('catalog', function () use ($result) {
+        $this->assertEquals('Product Name', $result['catalog_item']['name']);
+    });
+    
+    // Validación condicional: Locations
+    $this->whenModuleEnabled('locations', function () use ($result) {
+        $this->assertArrayHasKey('location_hierarchy', $result);
+    });
+}
+```
+
+## Resumen
+
+| Aspecto | Sin ModuleAwareTesting | Con ModuleAwareTesting |
+|---------|------------------------|------------------------|
+| Dependencias | ❌ Tests fallan si falta módulo | ✅ Se adaptan automáticamente |
+| Mocks | ⚠️ Configuración manual compleja | ✅ Auto-configurables |
+| CI/CD | ❌ Requiere todos los módulos | ✅ Flexible por entorno |
+| Mantenimiento | ❌ Actualizar múltiples tests | ✅ Cambios centralizados |
+| Desarrollo | ❌ Stack completo obligatorio | ✅ Módulos opcionales |
+
+## Referencias
+
+- `app/Shared/Tests/Traits/ModuleAwareTesting.php` - Implementación del trait
+- `app/Stock/Tests/StockTestCase.php` - Uso en TestCase base
+- `app/Stock/Tests/Application/ModuleConditionalLoadingTest.php` - Tests de demostración
+- `app/Stock/Tests/Application/GetLocationStockSummaryTest.php` - Uso real

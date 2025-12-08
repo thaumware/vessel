@@ -33,40 +33,40 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'breed_group',
                 value: 'Sporting / Retriever',
-                dataType: SpecDataType::String,
-                displayOrder: 1
+                data_type: SpecDataType::String,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'typical_weight_kg',
                 value: json_encode(['min' => 25, 'max' => 34]),
-                dataType: SpecDataType::Json,
-                displayOrder: 2
+                data_type: SpecDataType::Json,
+                sort_order: 2
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'life_expectancy_years',
                 value: json_encode(['min' => 10, 'max' => 12]),
-                dataType: SpecDataType::Json,
-                displayOrder: 3
+                data_type: SpecDataType::Json,
+                sort_order: 3
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'akc_recognized',
                 value: 'true',
-                dataType: SpecDataType::Boolean,
-                displayOrder: 4
+                data_type: SpecDataType::Boolean,
+                sort_order: 4
             ),
         ];
 
-        $this->assertEquals('Golden Retriever', $item->name());
-        $this->assertEquals(ItemStatus::Active, $item->status());
+        $this->assertEquals('Golden Retriever', $item->getName());
+        $this->assertEquals(ItemStatus::Active, $item->getStatus());
         $this->assertCount(4, $specs);
         $this->assertEquals('breed_group', $specs[0]->key());
     }
@@ -84,31 +84,31 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'species',
                 value: 'Bos taurus',
-                dataType: SpecDataType::String,
-                displayOrder: 1
+                data_type: SpecDataType::String,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'purpose',
                 value: json_encode(['Carne']),
-                dataType: SpecDataType::Json,
-                displayOrder: 2
+                data_type: SpecDataType::Json,
+                sort_order: 2
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'typical_weight_kg',
                 value: json_encode(['bull' => ['min' => 850, 'max' => 1100], 'cow' => ['min' => 500, 'max' => 700]]),
-                dataType: SpecDataType::Json,
-                displayOrder: 3
+                data_type: SpecDataType::Json,
+                sort_order: 3
             ),
         ];
 
-        $this->assertEquals('Aberdeen Angus', $item->name());
+        $this->assertEquals('Aberdeen Angus', $item->getName());
         $this->assertCount(3, $specs);
     }
 
@@ -125,39 +125,39 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'scientific_name',
                 value: 'Ara ararauna',
-                dataType: SpecDataType::String,
-                displayOrder: 1
+                data_type: SpecDataType::String,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'cites_appendix',
                 value: 'II',
-                dataType: SpecDataType::String,
-                displayOrder: 2
+                data_type: SpecDataType::String,
+                sort_order: 2
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'requires_cites_permit',
                 value: 'true',
-                dataType: SpecDataType::Boolean,
-                displayOrder: 3
+                data_type: SpecDataType::Boolean,
+                sort_order: 3
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'lifespan_years',
                 value: json_encode(['min' => 30, 'max' => 50]),
-                dataType: SpecDataType::Json,
-                displayOrder: 4
+                data_type: SpecDataType::Json,
+                sort_order: 4
             ),
         ];
 
-        $this->assertEquals('Ara ararauna (Guacamayo Azul y Amarillo)', $item->name());
+        $this->assertEquals('Ara ararauna (Guacamayo Azul y Amarillo)', $item->getName());
         $this->assertEquals('cites_appendix', $specs[1]->key());
         $this->assertEquals('II', $specs[1]->value());
     }
@@ -175,31 +175,31 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'origin',
                 value: 'Estados Unidos (Maine)',
-                dataType: SpecDataType::String,
-                displayOrder: 1
+                data_type: SpecDataType::String,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'typical_weight_kg',
                 value: json_encode(['male' => ['min' => 6, 'max' => 11], 'female' => ['min' => 4, 'max' => 7]]),
-                dataType: SpecDataType::Json,
-                displayOrder: 2
+                data_type: SpecDataType::Json,
+                sort_order: 2
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'hypoallergenic',
                 value: 'false',
-                dataType: SpecDataType::Boolean,
-                displayOrder: 3
+                data_type: SpecDataType::Boolean,
+                sort_order: 3
             ),
         ];
 
-        $this->assertEquals('Maine Coon', $item->name());
+        $this->assertEquals('Maine Coon', $item->getName());
         $this->assertCount(3, $specs);
     }
 
@@ -216,39 +216,39 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'scientific_name',
                 value: 'Betta splendens',
-                dataType: SpecDataType::String,
-                displayOrder: 1
+                data_type: SpecDataType::String,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'water_type',
                 value: 'Dulce',
-                dataType: SpecDataType::String,
-                displayOrder: 2
+                data_type: SpecDataType::String,
+                sort_order: 2
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'temperature_celsius',
                 value: json_encode(['min' => 24, 'max' => 28]),
-                dataType: SpecDataType::Json,
-                displayOrder: 3
+                data_type: SpecDataType::Json,
+                sort_order: 3
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'tank_size_liters_min',
                 value: '10',
-                dataType: SpecDataType::Number,
-                displayOrder: 4
+                data_type: SpecDataType::Number,
+                sort_order: 4
             ),
         ];
 
-        $this->assertEquals('Betta splendens (Pez Betta)', $item->name());
+        $this->assertEquals('Betta splendens (Pez Betta)', $item->getName());
         $tempSpec = $specs[2];
         $tempRange = json_decode($tempSpec->value(), true);
         $this->assertEquals(24, $tempRange['min']);
@@ -268,24 +268,24 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'parent_breeds',
                 value: json_encode(['Pomeranian', 'Siberian Husky']),
-                dataType: SpecDataType::Json,
-                displayOrder: 1
+                data_type: SpecDataType::Json,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'akc_recognized',
                 value: 'false',
-                dataType: SpecDataType::Boolean,
-                displayOrder: 2
+                data_type: SpecDataType::Boolean,
+                sort_order: 2
             ),
         ];
 
-        $this->assertEquals(ItemStatus::Draft, $item->status());
-        $this->assertEquals('Pomsky', $item->name());
+        $this->assertEquals(ItemStatus::Draft, $item->getStatus());
+        $this->assertEquals('Pomsky', $item->getName());
         $this->assertEquals('false', $specs[1]->value());
     }
 
@@ -302,23 +302,23 @@ class AnimalCatalogTest extends CatalogTestCase
         $specs = [
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'extinction_year',
                 value: '1920',
-                dataType: SpecDataType::Number,
-                displayOrder: 1
+                data_type: SpecDataType::Number,
+                sort_order: 1
             ),
             new ItemSpecification(
                 id: Uuid::uuid4()->toString(),
-                itemId: $item->id(),
+                item_id: $item->getId(),
                 key: 'contributed_to_breeds',
                 value: json_encode(['Bull Terrier', 'Boston Terrier']),
-                dataType: SpecDataType::Json,
-                displayOrder: 2
+                data_type: SpecDataType::Json,
+                sort_order: 2
             ),
         ];
 
-        $this->assertEquals(ItemStatus::Archived, $item->status());
+        $this->assertEquals(ItemStatus::Archived, $item->getStatus());
         $this->assertCount(2, $specs);
     }
 }

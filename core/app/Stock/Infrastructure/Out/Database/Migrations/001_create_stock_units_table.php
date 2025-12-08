@@ -16,6 +16,10 @@ return new class extends Migration {
             // Multi-tenant / workspace support
             $table->uuid('workspace_id')->nullable();
 
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+
             // Use nullable datetimes to match Taxonomy style
             $table->dateTime('created_at')->nullable();
             $table->dateTime('updated_at')->nullable();

@@ -23,6 +23,11 @@ return new class extends Migration
             $table->boolean('is_active')->default(true);
             $table->uuid('workspace_id')->nullable()->index();
             $table->json('meta')->nullable();
+            
+            // Auditoría estándar
+            $table->uuid('created_by_id')->nullable()->index();
+            $table->string('created_by_type', 100)->nullable();
+            
             $table->timestamps();
 
             $table->index('location_id');

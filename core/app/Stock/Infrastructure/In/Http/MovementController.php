@@ -12,6 +12,7 @@ use App\Stock\Application\Factories\MovementFactory;
 use App\Stock\Application\UseCases\Movements\SearchMovements;
 use App\Stock\Application\UseCases\Movements\ShowMovement;
 use App\Stock\Application\UseCases\Movements\CreateMovement;
+use App\Stock\Infrastructure\Out\Models\Eloquent\MovementModel;
 
 /**
  * Controller REST para movimientos de stock.
@@ -94,14 +95,14 @@ class MovementController extends Controller
     public function create(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'type' => 'required|string',
-            'item_id' => 'required|string|max:100',
+            'type' => 'required|string|max:' . MovementModel::MAX_MOVEMENT_TYPE_LENGTH,
+            'item_id' => 'required|string|max:255',
             'location_id' => 'required|uuid',
             'quantity' => 'required|numeric|min:0.01',
-            'lot_id' => 'nullable|string|max:100',
+            'lot_id' => 'nullable|string|max:255',
             'reference_type' => 'nullable|string|max:50',
-            'reference_id' => 'nullable|string|max:100',
-            'reason' => 'nullable|string|max:500',
+            'reference_id' => 'nullable|string|max:255',
+            'reason' => 'nullable|string|max:' . MovementModel::MAX_REFERENCE_LENGTH,
             'workspace_id' => 'nullable|uuid',
         ]);
 
@@ -187,10 +188,10 @@ class MovementController extends Controller
     public function adjustment(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'item_id' => 'required|string|max:100',
+            'item_id' => 'required|string|max:255',
             'location_id' => 'required|uuid',
             'delta' => 'required|integer',
-            'reason' => 'nullable|string|max:500',
+            'reason' => 'nullable|string|max:' . MovementModel::MAX_REFERENCE_LENGTH,
             'workspace_id' => 'nullable|uuid',
         ]);
 
@@ -352,12 +353,12 @@ class MovementController extends Controller
     private function validateBasicMovement(Request $request): array
     {
         return $request->validate([
-            'item_id' => 'required|string|max:100',
+            'item_id' => 'required|string|max:255',
             'location_id' => 'required|uuid',
             'quantity' => 'required|numeric|min:0.01',
-            'lot_id' => 'nullable|string|max:100',
-            'reference_id' => 'nullable|string|max:100',
-            'reason' => 'nullable|string|max:500',
+            'lot_id' => 'nullable|string|max:255',
+            'reference_id' => 'nullable|string|max:255',
+            'reason' => 'nullable|string|max:' . MovementModel::MAX_REFERENCE_LENGTH,
             'workspace_id' => 'nullable|uuid',
         ]);
     }

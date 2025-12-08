@@ -13,14 +13,14 @@ class BatchTest extends StockTestCase
 
         $batch = new Batch(
             id: $data['id'],
-            itemId: $data['sku'],
+            itemId: $data['itemId'],
             locationId: $data['locationId'],
             quantity: $data['quantity'],
             lotNumber: $data['lotNumber']
         );
 
         $this->assertEquals($data['id'], $batch->id());
-        $this->assertEquals($data['sku'], $batch->itemId());
+        $this->assertEquals($data['itemId'], $batch->itemId());
         $this->assertEquals($data['locationId'], $batch->locationId());
         $this->assertEquals($data['quantity'], $batch->quantity());
         $this->assertEquals($data['lotNumber'], $batch->lotNumber());
@@ -44,7 +44,7 @@ class BatchTest extends StockTestCase
 
         $batch = new Batch(
             id: $data['id'],
-            itemId: $data['sku'],
+            itemId: $data['itemId'],
             locationId: $data['locationId'],
             quantity: $data['quantity'],
             lotNumber: $data['lotNumber']

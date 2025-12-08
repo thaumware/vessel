@@ -44,6 +44,7 @@ class CapacityController extends Controller
         $validated = $request->validate([
             'location_id' => 'required|uuid',
             'max_quantity' => 'nullable|integer|min:0',
+            'storage_uom_id' => 'nullable|uuid|exists:stock_units,id',
             'max_weight' => 'nullable|numeric|min:0',
             'weight_unit' => 'nullable|string|max:10',
             'allowed_item_types' => 'nullable|array',

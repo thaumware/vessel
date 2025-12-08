@@ -9,6 +9,7 @@ class ManageLocationSettingsInput
     public function __construct(
         public readonly string $locationId,
         public readonly ?int $maxQuantity = null,
+        public readonly ?string $storageUomId = null,
         public readonly ?float $maxWeight = null,
         public readonly ?float $maxVolume = null,
         public readonly ?array $allowedItemTypes = null,
@@ -25,6 +26,7 @@ class ManageLocationSettingsInput
         return new self(
             locationId: $data['location_id'],
             maxQuantity: $data['max_quantity'] ?? null,
+            storageUomId: $data['storage_uom_id'] ?? null,
             maxWeight: $data['max_weight'] ?? null,
             maxVolume: $data['max_volume'] ?? null,
             allowedItemTypes: $data['allowed_item_types'] ?? null,
