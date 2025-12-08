@@ -26,7 +26,8 @@ class LocationsModuleGateway implements LocationGatewayInterface
     public function getDescendantIds(string $locationId): array
     {
         $descendants = [];
-        $this->collectDescendants($locationId, $descendants);
+        $visited = [];
+        $this->collectDescendants($locationId, $descendants, $visited);
 
         return $descendants;
     }
@@ -97,13 +98,21 @@ class LocationsModuleGateway implements LocationGatewayInterface
      * @param string $locationId
      * @param string[] $descendants Array por referencia donde acumular IDs
      */
-    private function collectDescendants(string $locationId, array &$descendants): void
+    private function collectDescendants(string $locationId, array &$descendants, array &$visited): void
     {
+        if (in_array($locationId, $visited, true)) {
+            return; // prevent cycles
+        }
+        $visited[] = $locationId;
+
         $childrenIds = $this->getChildrenIds($locationId);
 
         foreach ($childrenIds as $childId) {
+            if (in_array($childId, $visited, true)) {
+                continue;
+            }
             $descendants[] = $childId;
-            $this->collectDescendants($childId, $descendants);
+            $this->collectDescendants($childId, $descendants, $visited);
         }
     }
 }

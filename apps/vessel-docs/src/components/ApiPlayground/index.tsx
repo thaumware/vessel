@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import useDocusaurusContext from '@docusaurus/useDocusaurusContext';
 import styles from './ApiPlayground.module.css';
 
 interface ApiPlaygroundProps {
@@ -20,6 +21,7 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
     headers = {},
     description,
 }) => {
+    const { siteConfig } = useDocusaurusContext();
     const [response, setResponse] = useState<any>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
@@ -28,9 +30,13 @@ const ApiPlayground: React.FC<ApiPlaygroundProps> = ({
     const [editableQuery, setEditableQuery] = useState(queryParams);
     const [editableHeaders, setEditableHeaders] = useState(headers);
 
+    const configuredApiUrl = (siteConfig.customFields as { apiUrl?: string })?.apiUrl;
     const apiUrl = typeof window !== 'undefined'
-        ? (window as any).ENV?.API_URL || 'http://localhost:8000/api'
-        : 'http://localhost:8000/api';
+        ? localStorage.getItem('API_URL')
+            || configuredApiUrl
+            || (window as any).ENV?.API_URL
+            || 'http://localhost:8000/api'
+        : configuredApiUrl || 'http://localhost:8000/api';
 
     const buildUrl = () => {
         let url = endpoint;

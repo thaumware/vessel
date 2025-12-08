@@ -72,6 +72,10 @@ class LocationController
             'parent_id' => 'sometimes|nullable|string|uuid',
         ]);
 
+        if ($cycleError = $this->validateParent($request->input('parent_id'))) {
+            return response()->json(['error' => $cycleError], 422);
+        }
+
         try {
             $dto = CreateLocationRequest::fromArray($request->all());
             $location = $this->createLocation->execute(Uuid::v4(), $dto->toArray());
@@ -95,6 +99,10 @@ class LocationController
             'description' => 'sometimes|nullable|string',
             'parent_id' => 'sometimes|nullable|string|uuid',
         ]);
+
+        if ($cycleError = $this->validateParent($request->input('parent_id'), $id)) {
+            return response()->json(['error' => $cycleError], 422);
+        }
 
         try {
             $location = $this->updateLocation->execute($id, $request->all());
@@ -121,5 +129,41 @@ class LocationController
         } catch (\Exception $e) {
             return response()->json(['error' => $e->getMessage()], 400);
         }
+    }
+
+    private function validateParent(?string $parentId, ?string $selfId = null): ?string
+    {
+        if (!$parentId) {
+            return null;
+        }
+
+        // No puede ser su propio padre
+        if ($selfId !== null && $parentId === $selfId) {
+            return 'A location cannot be its own parent';
+        }
+
+        // Debe existir
+        $parent = $this->getLocation->execute($parentId);
+        if ($parent === null) {
+            return 'Parent location does not exist';
+        }
+
+        // Evitar ciclos recorriendo ancestros
+        $current = $parent;
+        $visited = [];
+        while ($current) {
+            $id = $current->getId();
+            if (in_array($id, $visited, true)) {
+                return 'Location hierarchy cycle detected';
+            }
+            if ($selfId !== null && $id === $selfId) {
+                return 'Cycle detected: the selected parent is a descendant of this location';
+            }
+            $visited[] = $id;
+            $parentId = $current->getParentId();
+            $current = $parentId ? $this->getLocation->execute($parentId) : null;
+        }
+
+        return null;
     }
 }

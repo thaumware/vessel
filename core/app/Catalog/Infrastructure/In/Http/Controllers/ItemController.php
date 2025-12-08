@@ -11,6 +11,8 @@ use App\Shared\Domain\DTOs\PaginationParams;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\DB;
 use Thaumware\Support\Uuid\Uuid;
 
 class ItemController extends Controller
@@ -60,18 +62,35 @@ class ItemController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
-            'uom_id' => 'nullable|string|uuid',
+            'uom_id' => [
+                'nullable',
+                'string',
+                function (string $attribute, $value, $fail) {
+                    $exists = DB::table('uom_measures')
+                        ->whereNull('deleted_at')
+                        ->where(function ($q) use ($value) {
+                            $q->where('id', $value)->orWhere('code', $value);
+                        })
+                        ->exists();
+
+                    if (!$exists) {
+                        $fail('The selected ' . $attribute . ' is invalid.');
+                    }
+                },
+            ],
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:active,draft,archived',
             'term_ids' => 'nullable|array',
             'term_ids.*' => 'string|uuid',
         ]);
 
+        $resolvedUomId = $this->resolveUomId($validated['uom_id'] ?? null);
+
         $item = $createItem->execute(
             id: Uuid::v4(),
             name: $validated['name'],
             description: $validated['description'] ?? null,
-            uomId: $validated['uom_id'] ?? null,
+            uomId: $resolvedUomId,
             notes: $validated['notes'] ?? null,
             status: $validated['status'] ?? 'active',
         );
@@ -91,18 +110,35 @@ class ItemController extends Controller
         $validated = $request->validate([
             'name' => 'nullable|string|max:255',
             'description' => 'nullable|string',
-            'uom_id' => 'nullable|string|uuid',
+            'uom_id' => [
+                'nullable',
+                'string',
+                function (string $attribute, $value, $fail) {
+                    $exists = DB::table('uom_measures')
+                        ->whereNull('deleted_at')
+                        ->where(function ($q) use ($value) {
+                            $q->where('id', $value)->orWhere('code', $value);
+                        })
+                        ->exists();
+
+                    if (!$exists) {
+                        $fail('The selected ' . $attribute . ' is invalid.');
+                    }
+                },
+            ],
             'notes' => 'nullable|string',
             'status' => 'nullable|string|in:active,draft,archived',
             'term_ids' => 'nullable|array',
             'term_ids.*' => 'string|uuid',
         ]);
 
+        $resolvedUomId = $this->resolveUomId($validated['uom_id'] ?? null);
+
         $item = $updateItem->execute(
             id: $id,
             name: $validated['name'] ?? null,
             description: $validated['description'] ?? null,
-            uomId: $validated['uom_id'] ?? null,
+            uomId: $resolvedUomId,
             notes: $validated['notes'] ?? null,
             status: $validated['status'] ?? null,
         );
@@ -130,4 +166,20 @@ class ItemController extends Controller
 
         return response()->json(['message' => 'Item deleted'], 200);
     }
+
+        private function resolveUomId(?string $input): ?string
+        {
+            if (!$input) {
+                return null;
+            }
+
+            $row = DB::table('uom_measures')
+                ->whereNull('deleted_at')
+                ->where(function ($q) use ($input) {
+                    $q->where('id', $input)->orWhere('code', $input);
+                })
+                ->first();
+
+            return $row?->id;
+        }
 }

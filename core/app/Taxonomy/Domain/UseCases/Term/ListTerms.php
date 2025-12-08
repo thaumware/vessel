@@ -12,10 +12,10 @@ class ListTerms
         private TermRepositoryInterface $repository
     ) {}
 
-    public function execute(PaginationParams $params, ?string $vocabularyId = null): PaginatedResult
+    public function execute(PaginationParams $params, ?string $vocabularyId = null, ?string $workspaceId = null): PaginatedResult
     {
         if ($vocabularyId) {
-            return $this->repository->findByVocabulary($vocabularyId, $params);
+            return $this->repository->findByVocabulary($vocabularyId, $params, $workspaceId);
         }
 
         return $this->repository->findAll($params);

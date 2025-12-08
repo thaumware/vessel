@@ -70,6 +70,15 @@ class TermRepository implements TermRepositoryInterface
         );
     }
 
+    private function mapWithRelations(array $termArray): array
+    {
+        $termId = $termArray['id'];
+        $termArray['parent_id'] = $this->relationRepository->getParentId($termId);
+        $termArray['children_ids'] = $this->relationRepository->getChildrenIds($termId);
+
+        return $termArray;
+    }
+
     public function findAll(PaginationParams $params): PaginatedResult
     {
         $query = TermModel::query();
@@ -92,15 +101,21 @@ class TermRepository implements TermRepositoryInterface
 
         // Map to arrays
         $data = $models->map(function ($model) {
-            return $this->mapToEntity($model)->toArray();
+            return $this->mapWithRelations($this->mapToEntity($model)->toArray());
         })->all();
 
         return PaginatedResult::fromArray($data, $total, $params);
     }
 
-    public function findByVocabulary(string $vocabularyId, PaginationParams $params): PaginatedResult
+    public function findByVocabulary(string $vocabularyId, PaginationParams $params, ?string $workspaceId = null): PaginatedResult
     {
         $query = TermModel::where('vocabulary_id', $vocabularyId);
+
+        if ($workspaceId !== null) {
+            $query->where(function ($q) use ($workspaceId) {
+                $q->whereNull('workspace_id')->orWhere('workspace_id', $workspaceId);
+            });
+        }
 
         // Apply sorting
         if ($params->sortBy) {
@@ -120,14 +135,23 @@ class TermRepository implements TermRepositoryInterface
 
         // Map to arrays
         $data = $models->map(function ($model) {
-            return $this->mapToEntity($model)->toArray();
+            return $this->mapWithRelations($this->mapToEntity($model)->toArray());
         })->all();
 
         return PaginatedResult::fromArray($data, $total, $params);
     }
 
-    public function getTree(string $vocabularyId, ?string $parentId = null): array
+    public function getTree(string $vocabularyId, ?string $parentId = null, ?int $maxDepth = null): array
     {
+        $visited = [];
+        return $this->buildTree($vocabularyId, $parentId, $visited, 0, $maxDepth);
+    }
+
+    private function buildTree(string $vocabularyId, ?string $parentId, array &$visited, int $depth, ?int $maxDepth): array
+    {
+        if ($maxDepth !== null && $depth >= $maxDepth) {
+            return [];
+        }
         // Get root terms or children of parentId
         if ($parentId === null) {
             // Get all terms in vocabulary
@@ -158,11 +182,17 @@ class TermRepository implements TermRepositoryInterface
                 ->get();
         }
 
-        return $terms->map(function ($model) use ($vocabularyId) {
-            $term = $this->mapToEntity($model)->toArray();
-            $term['children'] = $this->getTree($vocabularyId, $model->id);
+        return $terms->map(function ($model) use ($vocabularyId, &$visited, $depth, $maxDepth) {
+            // Break potential cycles
+            if (in_array($model->id, $visited, true)) {
+                return null;
+            }
+            $visited[] = $model->id;
+
+            $term = $this->mapWithRelations($this->mapToEntity($model)->toArray());
+            $term['children'] = $this->buildTree($vocabularyId, $model->id, $visited, $depth + 1, $maxDepth);
             return $term;
-        })->all();
+        })->filter()->all();
     }
 
     public function getBreadcrumb(string $termId): string

@@ -92,9 +92,19 @@ class InMemoryTermRepository implements TermRepositoryInterface
         );
     }
 
-    public function findByVocabulary(string $vocabularyId, PaginationParams $params): PaginatedResult
+    public function findByVocabulary(string $vocabularyId, PaginationParams $params, ?string $workspaceId = null): PaginatedResult
     {
-        $filteredTerms = array_filter($this->terms, fn(Term $term) => $term->getVocabularyId() === $vocabularyId);
+        $filteredTerms = array_filter($this->terms, function (Term $term) use ($vocabularyId, $workspaceId) {
+            if ($term->getVocabularyId() !== $vocabularyId) {
+                return false;
+            }
+
+            if ($workspaceId === null) {
+                return true;
+            }
+
+            return $term->getWorkspaceId() === null || $term->getWorkspaceId() === $workspaceId;
+        });
         $allTerms = array_values($filteredTerms);
         $total = count($allTerms);
 
@@ -112,13 +122,13 @@ class InMemoryTermRepository implements TermRepositoryInterface
         );
     }
 
-    public function getTree(string $vocabularyId, ?string $parentId = null): array
+    public function getTree(string $vocabularyId, ?string $parentId = null, ?int $maxDepth = null): array
     {
         $rootTerms = $this->findRootTerms($vocabularyId, $parentId);
         $tree = [];
 
         foreach ($rootTerms as $term) {
-            $tree[] = $this->buildTreeNode($term, 0);
+            $tree[] = $this->buildTreeNode($term, 0, $maxDepth);
         }
 
         return $tree;
@@ -161,13 +171,17 @@ class InMemoryTermRepository implements TermRepositoryInterface
         }
     }
 
-    private function buildTreeNode(Term $term, int $depth): array
+    private function buildTreeNode(Term $term, int $depth, ?int $maxDepth): array
     {
+        if ($maxDepth !== null && $depth >= $maxDepth) {
+            return array_merge($term->toArray(), ['children' => []]);
+        }
+
         $children = $this->findChildTerms($term->getId());
         $childNodes = [];
 
         foreach ($children as $child) {
-            $childNodes[] = $this->buildTreeNode($child, $depth + 1);
+            $childNodes[] = $this->buildTreeNode($child, $depth + 1, $maxDepth);
         }
 
         $node = $term->toArray();

@@ -64,7 +64,7 @@ class StockCapacityService
             );
         }
 
-        // Validar cantidad maxima
+        // Validar cantidad maxima (si se configuró)
         if ($settings->getMaxQuantity() !== null) {
             $result = $this->validateMaxQuantity($locationId, $quantity, $settings);
             if ($result->isInvalid()) {
@@ -75,6 +75,14 @@ class StockCapacityService
         // Validar mezcla de items
         if (!$settings->allowsMixedSkus() && $itemId !== null) {
             $result = $this->validateMixedItems($locationId, $itemId);
+            if ($result->isInvalid()) {
+                return $result;
+            }
+        }
+
+        // Validar mezcla de lotes: si no se permiten lotes mezclados y ya hay más de un lote
+        if (!$settings->allowsMixedLots()) {
+            $result = $this->validateMixedLots($locationId);
             if ($result->isInvalid()) {
                 return $result;
             }
@@ -216,6 +224,28 @@ class StockCapacityService
 
         // Si no hay items existentes o el nuevo item ya existe, OK
         if (empty($existingItemIds) || in_array($newItemId, $existingItemIds, true)) {
+            return CapacityValidationResult::valid();
+        }
+
+        return CapacityValidationResult::mixedItemsNotAllowed($locationId);
+    }
+
+    private function validateMixedLots(string $locationId): CapacityValidationResult
+    {
+        // En este dominio no tenemos entidad de lote por ubicación aquí, así que
+        // aproximamos usando los lotes asociados a stock actual. Si el repositorio
+        // no provee lotes, asumimos válido.
+        $repo = $this->stockRepository;
+        $callable = [$repo, 'getLotNumbersByLocation'];
+        if (!is_callable($callable)) {
+            return CapacityValidationResult::valid();
+        }
+
+        $lots = (array) call_user_func($callable, $locationId);
+
+        // Si no hay más de un lote diferente, se permite
+        $uniqueLots = array_unique(array_filter($lots));
+        if (count($uniqueLots) <= 1) {
             return CapacityValidationResult::valid();
         }
 

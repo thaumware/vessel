@@ -39,6 +39,14 @@ class MovementController extends Controller
     // ========================================
 
     /**
+     * Listar movimientos (alias de search para compatibilidad REST index).
+     */
+    public function index(Request $request): JsonResponse
+    {
+        return $this->search($request);
+    }
+
+    /**
      * Buscar movimientos con filtros (una sola query).
      * 
      * GET /movements?item_id=X&location_id=Y&type=receipt&...
@@ -118,6 +126,14 @@ class MovementController extends Controller
         );
 
         return $this->processAndRespond($movement, 'Movimiento procesado');
+    }
+
+    /**
+     * Alias RESTful para create().
+     */
+    public function store(Request $request): JsonResponse
+    {
+        return $this->create($request);
     }
 
     /**
@@ -227,6 +243,16 @@ class MovementController extends Controller
         );
 
         return $this->processAndRespond($movement, 'Reserva liberada');
+    }
+
+    /**
+     * Validación básica sin procesar (devuelve el payload validado).
+     */
+    public function validate(Request $request): JsonResponse
+    {
+        $validated = $this->validateBasicMovement($request);
+
+        return response()->json(['data' => $validated]);
     }
 
     /**

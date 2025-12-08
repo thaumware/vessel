@@ -16,9 +16,9 @@ interface TermRepositoryInterface
 
     public function findAll(PaginationParams $params): PaginatedResult;
 
-    public function findByVocabulary(string $vocabularyId, PaginationParams $params): PaginatedResult;
+    public function findByVocabulary(string $vocabularyId, PaginationParams $params, ?string $workspaceId = null): PaginatedResult;
 
-    public function getTree(string $vocabularyId, ?string $parentId = null): array;
+    public function getTree(string $vocabularyId, ?string $parentId = null, ?int $maxDepth = null): array;
 
     public function getBreadcrumb(string $termId): string;
 

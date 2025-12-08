@@ -48,9 +48,18 @@ class Term
         return $this->slug;
     }
 
+    public function setSlug(string $slug): void
+    {
+        $this->slug = $slug;
+    }
+
     public function getDescription(): ?string
     {
         return $this->description;
+    }
+    public function setDescription(?string $description): void
+    {
+        $this->description = $description;
     }
 
     public function getVocabularyId(): string

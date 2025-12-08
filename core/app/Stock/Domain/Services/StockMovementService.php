@@ -12,6 +12,7 @@ use App\Stock\Domain\Interfaces\StockItemRepositoryInterface;
 use App\Stock\Domain\Interfaces\LotRepositoryInterface;
 use App\Stock\Domain\ValueObjects\MovementType;
 use App\Stock\Domain\ValueObjects\ValidationResult;
+use Illuminate\Support\Str;
 
 /**
  * Servicio de dominio para procesar movimientos de stock.
@@ -291,13 +292,6 @@ class StockMovementService
 
     private function generateId(): string
     {
-        return sprintf(
-            '%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff),
-            mt_rand(0, 0xffff),
-            mt_rand(0, 0x0fff) | 0x4000,
-            mt_rand(0, 0x3fff) | 0x8000,
-            mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
-        );
+        return (string) Str::uuid();
     }
 }

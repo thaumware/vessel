@@ -3,6 +3,7 @@
 namespace App\Taxonomy\Infrastructure\In\Http\Controllers;
 
 use App\Shared\Domain\DTOs\PaginationParams;
+use App\Taxonomy\Domain\Interfaces\VocabularyRepositoryInterface;
 use App\Taxonomy\Domain\UseCases\Term\CreateTerm;
 use App\Taxonomy\Domain\UseCases\Term\DeleteTerm;
 use App\Taxonomy\Domain\UseCases\Term\GetTerm;
@@ -21,6 +22,7 @@ use App\Taxonomy\Domain\UseCases\Vocabulary\UpdateVocabulary;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Facades\DB;
 use Thaumware\Support\Uuid\Uuid;
 
 class TaxonomyController extends Controller
@@ -32,11 +34,132 @@ class TaxonomyController extends Controller
         ListTerms $listTerms
     ): JsonResponse {
         $vocabularyId = $request->query('vocabulary_id');
-        
+        $vocabularySlug = $request->query('vocabulary_slug');
+        $workspaceId = $request->query('workspace_id');
+        $format = $request->query('format'); // null | tree
+        $maxDepth = $request->query('depth') !== null ? (int) $request->query('depth') : null;
+
+        $vocabularyFound = false;
+
+        if ($vocabularySlug) {
+            $vocabulary = app(VocabularyRepositoryInterface::class)->findBySlug($vocabularySlug, $workspaceId);
+            if (!$vocabulary) {
+                return response()->json([
+                    'error' => 'Vocabulary not found',
+                    'code' => 'vocabulary_not_found',
+                    'error_code' => 422,
+                ], 422);
+            }
+            $vocabularyId = $vocabulary->getId();
+            $vocabularyFound = true;
+        }
+
+        if ($vocabularyId && !$vocabularyFound) {
+            $vocabulary = app(VocabularyRepositoryInterface::class)->findById($vocabularyId);
+            if (!$vocabulary) {
+                return response()->json([
+                    'error' => 'Vocabulary not found',
+                    'code' => 'vocabulary_not_found',
+                    'error_code' => 422,
+                ], 422);
+            }
+        }
+
         $params = PaginationParams::fromRequest($request->query());
-        $result = $listTerms->execute($params, $vocabularyId);
+        if ($format === 'tree') {
+            if (!$vocabularyId) {
+                return response()->json(['error' => 'vocabulary_id or vocabulary_slug is required for tree format'], 422);
+            }
+            $treeData = app(\App\Taxonomy\Domain\Interfaces\TermRepositoryInterface::class)
+                ->getTree($vocabularyId, null, $maxDepth);
+
+            return response()->json(['data' => $treeData]);
+        }
+
+        $result = $listTerms->execute($params, $vocabularyId, $workspaceId);
 
         return response()->json($result->toArray());
+    }
+
+    /**
+     * GET /taxonomy/terms/snapshot
+     * Resumen por término: cantidad de items catalogados y suma de stock (si existe stock_current).
+     * Params: vocabulary_id | vocabulary_slug, workspace_id (opcional)
+     */
+    public function termSnapshot(Request $request): JsonResponse
+    {
+        $vocabularyId = $request->query('vocabulary_id');
+        $vocabularySlug = $request->query('vocabulary_slug');
+        $workspaceId = $request->query('workspace_id');
+
+        if (!$vocabularyId && !$vocabularySlug) {
+            return response()->json(['error' => 'vocabulary_id or vocabulary_slug is required'], 422);
+        }
+
+        $vocabularyFound = false;
+
+        if ($vocabularySlug) {
+            $vocab = app(VocabularyRepositoryInterface::class)->findBySlug($vocabularySlug, $workspaceId);
+            if (!$vocab) {
+                return response()->json([
+                    'error' => 'Vocabulary not found',
+                    'code' => 'vocabulary_not_found',
+                    'error_code' => 422,
+                ], 422);
+            }
+            $vocabularyId = $vocab->getId();
+            $vocabularyFound = true;
+        }
+
+        if ($vocabularyId && !$vocabularyFound) {
+            $vocab = app(VocabularyRepositoryInterface::class)->findById($vocabularyId);
+            if (!$vocab) {
+                return response()->json([
+                    'error' => 'Vocabulary not found',
+                    'code' => 'vocabulary_not_found',
+                    'error_code' => 422,
+                ], 422);
+            }
+        }
+
+        $terms = DB::table('catalog_terms')
+            ->where('vocabulary_id', $vocabularyId)
+            ->select('id', 'name', 'slug', 'vocabulary_id', 'workspace_id')
+            ->get()
+            ->keyBy('id');
+
+        if ($terms->isEmpty()) {
+            return response()->json(['data' => []]);
+        }
+
+        $itemCounts = DB::table('catalog_item_terms')
+            ->select('term_id', DB::raw('COUNT(DISTINCT item_id) as items_count'))
+            ->whereIn('term_id', $terms->keys())
+            ->groupBy('term_id')
+            ->pluck('items_count', 'term_id');
+
+        $stockSums = [];
+        if (DB::getSchemaBuilder()->hasTable('stock_current')) {
+            $stockSums = DB::table('catalog_item_terms as cit')
+                ->join('stock_current as sc', 'sc.sku', '=', 'cit.item_id')
+                ->select('cit.term_id', DB::raw('SUM(sc.quantity) as stock_quantity'))
+                ->whereIn('cit.term_id', $terms->keys())
+                ->groupBy('cit.term_id')
+                ->pluck('stock_quantity', 'cit.term_id');
+        }
+
+        $data = [];
+        foreach ($terms as $termId => $term) {
+            $data[] = [
+                'term_id' => $termId,
+                'name' => $term->name,
+                'slug' => $term->slug,
+                'items_count' => (int) ($itemCounts[$termId] ?? 0),
+                'stock_quantity' => isset($stockSums[$termId]) ? (int) $stockSums[$termId] : null,
+            ];
+        }
+
+        return response()->json(['data' => $data]);
     }
 
     public function termProfile(
@@ -49,7 +172,26 @@ class TaxonomyController extends Controller
             return response()->json(['error' => 'Term not found'], 404);
         }
 
-        return response()->json(['data' => $term->toArray()]);
+        $data = $term->toArray();
+
+        $data['items_count'] = 0;
+        $data['stock_quantity'] = null;
+
+        if (DB::getSchemaBuilder()->hasTable('catalog_item_terms')) {
+            $data['items_count'] = (int) DB::table('catalog_item_terms')
+                ->where('term_id', $id)
+                ->distinct('item_id')
+                ->count('item_id');
+        }
+
+        if (DB::getSchemaBuilder()->hasTable('catalog_item_terms') && DB::getSchemaBuilder()->hasTable('stock_current')) {
+            $data['stock_quantity'] = (int) DB::table('catalog_item_terms as cit')
+                ->join('stock_current as sc', 'sc.sku', '=', 'cit.item_id')
+                ->where('cit.term_id', $id)
+                ->sum('sc.quantity');
+        }
+
+        return response()->json(['data' => $data]);
     }
 
     public function createTerm(
@@ -59,18 +201,38 @@ class TaxonomyController extends Controller
     ): JsonResponse {
         $validated = $request->validate([
             'name' => 'required|string|max:255',
-            'vocabulary_id' => 'required|string|uuid',
+            'vocabulary_id' => 'required_without:vocabulary_slug|string|uuid',
+            'vocabulary_slug' => 'nullable|string',
+            'workspace_id' => 'nullable|string|uuid',
             'description' => 'nullable|string',
-            // Relations - optional, will be created after the term
             'parent_id' => 'nullable|string|uuid',
         ]);
 
+        $vocabulary = null;
+        if (!empty($validated['vocabulary_slug'])) {
+            $vocabulary = app(VocabularyRepositoryInterface::class)->findBySlug(
+                $validated['vocabulary_slug'],
+                $validated['workspace_id'] ?? null
+            );
+        } elseif (!empty($validated['vocabulary_id'])) {
+            $vocabulary = app(VocabularyRepositoryInterface::class)->findById($validated['vocabulary_id']);
+        }
+
+        if (!$vocabulary) {
+            return response()->json([
+                'error' => 'Vocabulary not found',
+                'code' => 'vocabulary_not_found',
+                'error_code' => 422,
+            ], 422);
+        }
+
+        $vocabularyId = $vocabulary->getId();
+
         try {
-            // Create the term first
             $term = $createTerm->execute(
                 id: Uuid::v4(),
                 name: $validated['name'],
-                vocabularyId: $validated['vocabulary_id'],
+                vocabularyId: $vocabularyId,
                 description: $validated['description'] ?? null
             );
         } catch (\Illuminate\Database\UniqueConstraintViolationException $e) {
@@ -85,7 +247,6 @@ class TaxonomyController extends Controller
             ], 500);
         }
 
-        // If parent_id is provided, create a parent relation
         if (!empty($validated['parent_id'])) {
             try {
                 $addTermRelation->execute(
@@ -95,8 +256,6 @@ class TaxonomyController extends Controller
                     relationType: 'parent'
                 );
             } catch (\DomainException $e) {
-                // If relation fails, we should still return the created term
-                // but include the error
                 return response()->json([
                     'data' => $term->toArray(),
                     'warning' => 'Term created but parent relation failed: ' . $e->getMessage()
@@ -115,13 +274,30 @@ class TaxonomyController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'vocabulary_id' => 'required|string|uuid',
+            'description' => 'nullable|string',
+            'parent_id' => 'nullable|string|uuid',
         ]);
 
-        $term = $updateTerm->execute(
-            id: $id,
-            name: $validated['name'],
-            vocabularyId: $validated['vocabulary_id']
-        );
+        $vocabulary = app(VocabularyRepositoryInterface::class)->findById($validated['vocabulary_id']);
+        if (!$vocabulary) {
+            return response()->json([
+                'error' => 'Vocabulary not found',
+                'code' => 'vocabulary_not_found',
+                'error_code' => 422,
+            ], 422);
+        }
+
+        try {
+            $term = $updateTerm->execute(
+                id: $id,
+                name: $validated['name'],
+                vocabularyId: $validated['vocabulary_id'],
+                description: $validated['description'] ?? null,
+                parentId: $validated['parent_id'] ?? null,
+            );
+        } catch (\DomainException $e) {
+            return response()->json(['error' => $e->getMessage()], 422);
+        }
 
         if (!$term) {
             return response()->json(['error' => 'Term not found'], 404);
@@ -281,17 +457,17 @@ class TaxonomyController extends Controller
         ]);
 
         try {
-            $relation = $addTermRelation->execute(
+            $addTermRelation->execute(
                 id: Uuid::v4(),
                 fromTermId: $validated['from_term_id'],
                 toTermId: $validated['to_term_id'],
                 relationType: $validated['relation_type'] ?? 'parent'
             );
-
-            return response()->json(['data' => $relation->toArray()], 201);
         } catch (\DomainException $e) {
-            return response()->json(['error' => $e->getMessage()], 409);
+            return response()->json(['error' => $e->getMessage()], 422);
         }
+
+        return response()->json(['message' => 'Relation added'], 201);
     }
 
     public function removeTermRelation(
@@ -305,9 +481,9 @@ class TaxonomyController extends Controller
         ]);
 
         $removed = $removeTermRelation->execute(
-            fromTermId: $validated['from_term_id'],
-            toTermId: $validated['to_term_id'],
-            relationType: $validated['relation_type'] ?? 'parent'
+            $validated['from_term_id'],
+            $validated['to_term_id'],
+            $validated['relation_type'] ?? 'parent'
         );
 
         if (!$removed) {

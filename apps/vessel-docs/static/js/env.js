@@ -1,10 +1,5 @@
-// Load API URL from environment or use default
-window.ENV = {
-  API_URL: 'http://localhost:8016/api'
-};
-
-// Override with local storage if set
+// Prefer user override stored in localStorage, else use sensible default
 const localApiUrl = localStorage.getItem('API_URL');
-if (localApiUrl) {
-  window.ENV.API_URL = localApiUrl;
-}
+window.ENV = {
+  API_URL: localApiUrl || 'http://localhost:8000/api'
+};

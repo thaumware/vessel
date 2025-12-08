@@ -38,6 +38,14 @@ class AddTermRelation
             throw new \DomainException("A term cannot be related to itself");
         }
 
+        // Business rule: prevent cycles in parent relations
+        if ($relationType === 'parent') {
+            $descendants = $this->relationRepository->getDescendantIds($fromTermId);
+            if (in_array($toTermId, $descendants, true)) {
+                throw new \DomainException('Cycle detected: the target term is a descendant of the source term');
+            }
+        }
+
         $relation = new TermRelation(
             id: $id,
             fromTermId: $fromTermId,

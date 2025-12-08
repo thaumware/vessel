@@ -11,6 +11,7 @@ Route::prefix('api/v1/taxonomy')
         Route::post('/create', [TaxonomyController::class, 'createTerm']);
 
         Route::get('/read', [TaxonomyController::class, 'termList']);
+        Route::get('/snapshot', [TaxonomyController::class, 'termSnapshot']);
         Route::get('/show/{id}', [TaxonomyController::class, 'termProfile']);
 
         Route::put('/update/{id}', [TaxonomyController::class, 'updateTerm']);

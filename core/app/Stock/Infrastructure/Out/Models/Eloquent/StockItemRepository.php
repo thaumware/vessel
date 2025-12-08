@@ -78,21 +78,26 @@ class StockItemRepository implements StockItemRepositoryInterface
 
     public function save(StockItem $stockItem): StockItem
     {
-        StockItemModel::create([
-            'id' => $stockItem->getId(),
-            'sku' => $stockItem->getItemId(),
-            'catalog_item_id' => $stockItem->getCatalogItemId(),
-            'catalog_origin' => $stockItem->getCatalogOrigin(),
-            'location_id' => $stockItem->getLocationId(),
-            'location_type' => $stockItem->getLocationType(),
-            'quantity' => $stockItem->getQuantity(),
-            'reserved_quantity' => $stockItem->getReservedQuantity(),
-            'lot_number' => $stockItem->getLotNumber(),
-            'expiration_date' => $stockItem->getExpirationDate()?->format('Y-m-d'),
-            'serial_number' => $stockItem->getSerialNumber(),
-            'workspace_id' => $stockItem->getWorkspaceId(),
-            'meta' => $stockItem->getMeta(),
-        ]);
+        StockItemModel::updateOrCreate(
+            ['id' => $stockItem->getId()],
+            [
+                'sku' => $stockItem->getItemId(),
+                'catalog_item_id' => $stockItem->getCatalogItemId(),
+                'catalog_origin' => $stockItem->getCatalogOrigin(),
+                'location_id' => $stockItem->getLocationId(),
+                'location_type' => $stockItem->getLocationType(),
+                'status_id' => null,
+                'item_type' => 'unit',
+                'item_id' => $stockItem->getId(),
+                'quantity' => $stockItem->getQuantity(),
+                'reserved_quantity' => $stockItem->getReservedQuantity(),
+                'lot_number' => $stockItem->getLotNumber(),
+                'expiration_date' => $stockItem->getExpirationDate()?->format('Y-m-d'),
+                'serial_number' => $stockItem->getSerialNumber(),
+                'workspace_id' => $stockItem->getWorkspaceId(),
+                'meta' => $stockItem->getMeta(),
+            ]
+        );
 
         return $stockItem;
     }
@@ -105,6 +110,8 @@ class StockItemRepository implements StockItemRepositoryInterface
             'catalog_origin' => $stockItem->getCatalogOrigin(),
             'location_id' => $stockItem->getLocationId(),
             'location_type' => $stockItem->getLocationType(),
+            'item_type' => 'unit',
+            'item_id' => $stockItem->getId(),
             'quantity' => $stockItem->getQuantity(),
             'reserved_quantity' => $stockItem->getReservedQuantity(),
             'lot_number' => $stockItem->getLotNumber(),

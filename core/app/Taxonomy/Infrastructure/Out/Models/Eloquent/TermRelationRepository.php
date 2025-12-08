@@ -136,12 +136,26 @@ class TermRelationRepository implements TermRelationRepositoryInterface
      */
     public function getDescendantIds(string $termId): array
     {
+        $visited = [];
+        return $this->collectDescendants($termId, $visited);
+    }
+
+    private function collectDescendants(string $termId, array &$visited): array
+    {
+        if (in_array($termId, $visited, true)) {
+            return [];
+        }
+        $visited[] = $termId;
+
         $descendants = [];
         $childrenIds = $this->getChildrenIds($termId);
 
         foreach ($childrenIds as $childId) {
+            if (in_array($childId, $visited, true)) {
+                continue;
+            }
             $descendants[] = $childId;
-            $descendants = array_merge($descendants, $this->getDescendantIds($childId));
+            $descendants = array_merge($descendants, $this->collectDescendants($childId, $visited));
         }
 
         return $descendants;
