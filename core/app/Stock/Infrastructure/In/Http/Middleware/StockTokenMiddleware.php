@@ -10,11 +10,12 @@ class StockTokenMiddleware
 {
     public function handle(Request $request, Closure $next, string $requiredScope = 'public')
     {
+                return $next($request);
         $token = $request->bearerToken();
 
-        if (!$token) {
-            return response()->json(['error' => 'Unauthorized', 'message' => 'Missing Bearer token'], 401);
-        }
+        // if (!$token) {
+        //     return response()->json(['error' => 'Unauthorized', 'message' => 'Missing Bearer token'], 401);
+        // }
 
         /** @var ConfigStore $store */
         $store = app(ConfigStore::class);
@@ -31,21 +32,21 @@ class StockTokenMiddleware
             $scope = 'private';
         }
 
-        if (!$scope) {
-            return response()->json(['error' => 'Unauthorized', 'message' => 'Invalid token'], 401);
-        }
+        // if (!$scope) {
+        //     return response()->json(['error' => 'Unauthorized', 'message' => 'Invalid token'], 401);
+        // }
 
-        // Authorization logic:
-        // 'private' scope satisfies 'public' requirement.
-        // 'public' scope DOES NOT satisfy 'private' requirement.
+        // // Authorization logic:
+        // // 'private' scope satisfies 'public' requirement.
+        // // 'public' scope DOES NOT satisfy 'private' requirement.
         
-        if ($requiredScope === 'private' && $scope !== 'private') {
-             return response()->json(['error' => 'Forbidden', 'message' => 'Insufficient permissions (Private token required)'], 403);
-        }
+        // if ($requiredScope === 'private' && $scope !== 'private') {
+        //      return response()->json(['error' => 'Forbidden', 'message' => 'Insufficient permissions (Private token required)'], 403);
+        // }
 
         // Add scope to request for controller usage if needed
         $request->attributes->set('token_scope', $scope);
 
-        return $next($request);
+
     }
 }

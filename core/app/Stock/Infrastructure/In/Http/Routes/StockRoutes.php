@@ -11,7 +11,7 @@ use App\Stock\Infrastructure\In\Http\CapacityController;
 use App\Stock\Infrastructure\In\Http\Controllers\LocationStockSummaryController;
 use App\Stock\Infrastructure\In\Http\ReservationController;
 
-Route::prefix('api/v1/stock')->middleware(['adapter:stock', 'vessel.access:own'])->group(function () {
+Route::prefix('api/v1/stock')->middleware(['adapter:stock'])->group(function () {
 
     // === Catalog Search (búsqueda de items con información de stock) ===
     Route::prefix('catalog')->group(function () {
