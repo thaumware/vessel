@@ -27,15 +27,21 @@ final class MySQLReservationRepository implements ReservationRepository
                 'expires_at' => $reservation->getExpiresAt()?->format('Y-m-d H:i:s'),
                 'created_at' => $reservation->getCreatedAt()?->format('Y-m-d H:i:s'),
                 'released_at' => $reservation->getReleasedAt()?->format('Y-m-d H:i:s'),
+                'rejection_reason' => $reservation->getRejectionReason(),
             ],
             ['id'],
-            ['quantity', 'status', 'released_at']
+            ['quantity', 'status', 'released_at', 'rejection_reason']
         );
     }
 
     public function findById(string $id): ?Reservation
     {
-        $row = DB::table('stock_reservations')->where('id', $id)->first();
+        $row = DB::table('stock_reservations')
+            ->select('stock_reservations.*', 'catalog_items.name as item_name')
+            ->leftJoin('stock_items', 'stock_reservations.item_id', '=', 'stock_items.id')
+            ->leftJoin('catalog_items', 'stock_items.catalog_item_id', '=', 'catalog_items.id')
+            ->where('stock_reservations.id', $id)
+            ->first();
 
         if ($row === null) {
             return null;
@@ -47,9 +53,12 @@ final class MySQLReservationRepository implements ReservationRepository
     public function findActiveByItemAndLocation(string $itemId, string $locationId): array
     {
         $rows = DB::table('stock_reservations')
-            ->where('item_id', $itemId)
-            ->where('location_id', $locationId)
-            ->where('status', ReservationStatus::ACTIVE->value)
+            ->select('stock_reservations.*', 'catalog_items.name as item_name')
+            ->leftJoin('stock_items', 'stock_reservations.item_id', '=', 'stock_items.id')
+            ->leftJoin('catalog_items', 'stock_items.catalog_item_id', '=', 'catalog_items.id')
+            ->where('stock_reservations.item_id', $itemId)
+            ->where('stock_reservations.location_id', $locationId)
+            ->where('stock_reservations.status', ReservationStatus::ACTIVE->value)
             ->get();
 
         return array_map([$this, 'hydrate'], $rows->all());
@@ -58,8 +67,11 @@ final class MySQLReservationRepository implements ReservationRepository
     public function findActive(): array
     {
         $rows = DB::table('stock_reservations')
-            ->where('status', ReservationStatus::ACTIVE->value)
-            ->orderBy('created_at', 'desc')
+            ->select('stock_reservations.*', 'catalog_items.name as item_name')
+            ->leftJoin('stock_items', 'stock_reservations.item_id', '=', 'stock_items.id')
+            ->leftJoin('catalog_items', 'stock_items.catalog_item_id', '=', 'catalog_items.id')
+            ->where('stock_reservations.status', ReservationStatus::ACTIVE->value)
+            ->orderBy('stock_reservations.created_at', 'desc')
             ->get();
 
         return array_map([$this, 'hydrate'], $rows->all());
@@ -68,8 +80,11 @@ final class MySQLReservationRepository implements ReservationRepository
     public function findByStatus(ReservationStatus $status): array
     {
         $rows = DB::table('stock_reservations')
-            ->where('status', $status->value)
-            ->orderBy('created_at', 'desc')
+            ->select('stock_reservations.*', 'catalog_items.name as item_name')
+            ->leftJoin('stock_items', 'stock_reservations.item_id', '=', 'stock_items.id')
+            ->leftJoin('catalog_items', 'stock_items.catalog_item_id', '=', 'catalog_items.id')
+            ->where('stock_reservations.status', $status->value)
+            ->orderBy('stock_reservations.created_at', 'desc')
             ->get();
 
         return array_map([$this, 'hydrate'], $rows->all());
@@ -78,8 +93,11 @@ final class MySQLReservationRepository implements ReservationRepository
     public function findByReference(string $referenceType, string $referenceId): array
     {
         $rows = DB::table('stock_reservations')
-            ->where('reference_type', $referenceType)
-            ->where('reference_id', $referenceId)
+            ->select('stock_reservations.*', 'catalog_items.name as item_name')
+            ->leftJoin('stock_items', 'stock_reservations.item_id', '=', 'stock_items.id')
+            ->leftJoin('catalog_items', 'stock_items.catalog_item_id', '=', 'catalog_items.id')
+            ->where('stock_reservations.reference_type', $referenceType)
+            ->where('stock_reservations.reference_id', $referenceId)
             ->get();
 
         return array_map([$this, 'hydrate'], $rows->all());
@@ -115,6 +133,8 @@ final class MySQLReservationRepository implements ReservationRepository
             expiresAt: $row->expires_at ? new DateTimeImmutable($row->expires_at) : null,
             createdAt: $row->created_at ? new DateTimeImmutable($row->created_at) : null,
             releasedAt: $row->released_at ? new DateTimeImmutable($row->released_at) : null,
+            itemName: $row->item_name ?? null,
+            rejectionReason: $row->rejection_reason ?? null,
         );
     }
 }

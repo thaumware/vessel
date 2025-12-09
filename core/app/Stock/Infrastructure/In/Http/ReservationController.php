@@ -117,7 +117,7 @@ class ReservationController
     {
         $validated = $request->validate([
             'item_id' => 'required|string',
-            'location_id' => 'required|string',
+            'location_id' => 'required_unless:status,pending|nullable|string',
             'quantity' => 'required|numeric|min:0.01',
             'reference_type' => 'nullable|string',
             'reference_id' => 'nullable|string',
@@ -228,16 +228,21 @@ class ReservationController
 
     /**
      * POST /api/v1/stock/reservations/{id}/reject
+     * Body: { "reason": "Motivo del rechazo (opcional)" }
      */
-    public function reject(string $id): JsonResponse
+    public function reject(string $id, Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'reason' => 'nullable|string|max:500',
+        ]);
+
         $reservation = $this->reservationRepository->findById($id);
         if (!$reservation) {
              return response()->json(['success' => false, 'message' => 'Reserva no encontrada'], 404);
         }
 
         try {
-            $rejected = $reservation->reject();
+            $rejected = $reservation->reject($validated['reason'] ?? null);
             $this->reservationRepository->save($rejected);
              return response()->json(['success' => true, 'message' => 'Reserva rechazada']);
         } catch (\DomainException $e) {

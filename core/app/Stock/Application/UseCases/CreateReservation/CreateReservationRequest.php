@@ -11,7 +11,7 @@ class CreateReservationRequest
 {
     public function __construct(
         public readonly string $itemId,
-        public readonly string $locationId,
+        public readonly ?string $locationId,
         public readonly float $quantity,
         public readonly string $referenceType = 'reservation',
         public readonly ?string $referenceId = null,

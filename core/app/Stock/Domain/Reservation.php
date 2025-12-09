@@ -15,7 +15,7 @@ final class Reservation
     public function __construct(
         private string $id,
         private string $itemId,
-        private string $locationId,
+        private ?string $locationId,
         private float $quantity,
         private string $reservedBy, // user-id, system, etc
         private string $referenceType, // order, project, loan, etc
@@ -24,6 +24,8 @@ final class Reservation
         private ?DateTimeImmutable $expiresAt = null,
         private ?DateTimeImmutable $createdAt = null,
         private ?DateTimeImmutable $releasedAt = null,
+        private ?string $itemName = null,
+        private ?string $rejectionReason = null,
     ) {
         $this->createdAt ??= new DateTimeImmutable();
     }
@@ -31,13 +33,14 @@ final class Reservation
     public static function create(
         string $id,
         string $itemId,
-        string $locationId,
+        ?string $locationId,
         float $quantity,
         string $reservedBy,
         string $referenceType,
         string $referenceId,
         ?DateTimeImmutable $expiresAt = null,
         ReservationStatus $status = ReservationStatus::ACTIVE,
+        ?string $itemName = null,
     ): self {
         return new self(
             id: $id,
@@ -49,6 +52,7 @@ final class Reservation
             referenceId: $referenceId,
             status: $status,
             expiresAt: $expiresAt,
+            itemName: $itemName,
         );
     }
 
@@ -68,10 +72,11 @@ final class Reservation
             status: ReservationStatus::ACTIVE,
             expiresAt: $this->expiresAt,
             createdAt: $this->createdAt,
+            itemName: $this->itemName,
         );
     }
 
-    public function reject(): self
+    public function reject(?string $reason = null): self
     {
         if ($this->status !== ReservationStatus::PENDING) {
             throw new \DomainException("Solo reservas pendientes pueden ser rechazadas");
@@ -87,6 +92,8 @@ final class Reservation
             status: ReservationStatus::REJECTED,
             expiresAt: $this->expiresAt,
             createdAt: $this->createdAt,
+            itemName: $this->itemName,
+            rejectionReason: $reason,
         );
     }
 
@@ -104,6 +111,7 @@ final class Reservation
             expiresAt: $this->expiresAt,
             createdAt: $this->createdAt,
             releasedAt: new DateTimeImmutable(),
+            itemName: $this->itemName,
         );
     }
 
@@ -121,6 +129,7 @@ final class Reservation
             expiresAt: $this->expiresAt,
             createdAt: $this->createdAt,
             releasedAt: new DateTimeImmutable(),
+            itemName: $this->itemName,
         );
     }
 
@@ -148,6 +157,11 @@ final class Reservation
     public function getItemId(): string
     {
         return $this->itemId;
+    }
+
+    public function getItemName(): ?string
+    {
+        return $this->itemName;
     }
 
     public function getLocationId(): string
@@ -195,11 +209,17 @@ final class Reservation
         return $this->releasedAt;
     }
 
+    public function getRejectionReason(): ?string
+    {
+        return $this->rejectionReason;
+    }
+
     public function toArray(): array
     {
         return [
             'id' => $this->id,
             'item_id' => $this->itemId,
+            'item_name' => $this->itemName,
             'location_id' => $this->locationId,
             'quantity' => $this->quantity,
             'reserved_by' => $this->reservedBy,
@@ -209,6 +229,7 @@ final class Reservation
             'expires_at' => $this->expiresAt?->format('Y-m-d H:i:s'),
             'created_at' => $this->createdAt?->format('Y-m-d H:i:s'),
             'released_at' => $this->releasedAt?->format('Y-m-d H:i:s'),
+            'rejection_reason' => $this->rejectionReason,
         ];
     }
 }

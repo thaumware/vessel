@@ -38,24 +38,22 @@ class ApproveReservationUseCase
             throw new DomainException("La reserva no está pendiente de aprobación");
         }
 
-        // 1. Validar disponibilidad de stock
+        // 1. Validar disponibilidad de stock (Informativo - Admin puede forzar deuda)
         $validation = $this->validateReservation->execute(
             new ReservationValidationRequest(
                 itemId: $reservation->getItemId(),
                 locationId: $reservation->getLocationId(),
                 quantity: $reservation->getQuantity(),
-                // lotId? stored in reservation reference? Reservation entity lacks lotId field in constructor displayed earlier? 
-                // Wait, Reservation entity doesn't store lotId explicitly in the code I saw earlier.
-                // Step 708: Reservation entity has id, itemId, locationId, quantity... NO lotId.
-                // So we assume generic reservation or check meta?
-                // For now, no lotId validation if not stored.
-                workspaceId: null // We might need to store workspaceId in Reservation too if pertinent.
+                workspaceId: null 
             )
         );
 
+        // Comentado para permitir "deuda" / stock negativo al aprobar manualmente
+        /*
         if (!$validation->canReserve) {
             return CreateReservationResult::failure($validation->errors);
         }
+        */
 
         // 2. Crear movimiento de reserva
         $movement = new Movement(
