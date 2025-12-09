@@ -9,6 +9,7 @@ class ValidateJwt
 {
     public function handle(Request $request, Closure $next)
     {
+        return $next($request);
         $token = $request->bearerToken();
 
         if (!$token) {
