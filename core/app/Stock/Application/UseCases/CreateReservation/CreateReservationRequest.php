@@ -24,6 +24,7 @@ class CreateReservationRequest
         // Nuevos campos para tracking
         public readonly ?string $reservedBy = null, // user-id, system, etc
         public readonly ?string $expiresAt = null, // ISO 8601 date
+        public readonly string $status = 'active', // 'active' | 'pending'
     ) {
     }
 }

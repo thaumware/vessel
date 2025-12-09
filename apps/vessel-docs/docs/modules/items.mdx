@@ -1,0 +1,132 @@
+---
+sidebar_position: 2
+---
+
+# Items API
+
+API para gestionar el catálogo de items del inventario. Permite CRUD completo y asociación con taxonomía (categorías, tags).
+
+## Endpoints
+
+| Método | Endpoint | Descripción |
+|--------|----------|-------------|
+| GET | `/api/v1/items/read` | Listar todos los items |
+| GET | `/api/v1/items/show/{id}` | Obtener item específico |
+| POST | `/api/v1/items/create` | Crear nuevo item |
+| PUT | `/api/v1/items/update/{id}` | Actualizar item |
+| DELETE | `/api/v1/items/delete/{id}` | Eliminar item |
+
+## Query Parameters (GET /read)
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `with_stock` | bool | Incluir resumen de stock por ubicación |
+| `with_terms` | bool | Incluir nombres de términos de taxonomía |
+| `term_id` | uuid | Filtrar por término específico |
+| `location_id` | uuid | Filtrar por ubicación con stock |
+| `low_stock` | bool | Solo items con stock bajo |
+| `max_quantity` | int | Umbral de stock bajo (default: 5) |
+
+## Crear Item
+
+```bash
+curl -X POST http://127.0.0.1:10999/api/v1/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Mouse USB",
+    "description": "Mouse óptico con cable USB",
+    "uom_id": "UNIT",
+    "term_ids": ["uuid-categoria-electronica"]
+  }'
+```
+
+### Request Body
+
+| Campo | Tipo | Requerido | Descripción |
+|-------|------|-----------|-------------|
+| `name` | string | ✅ | Nombre del item |
+| `description` | string | ❌ | Descripción |
+| `uom_id` | string | ❌ | ID o código de unidad de medida |
+| `notes` | string | ❌ | Notas adicionales |
+| `status` | enum | ❌ | `active`, `draft`, `archived` |
+| `term_ids` | uuid[] | ❌ | IDs de términos de taxonomía |
+
+### Response (201)
+
+```json
+{
+  "data": {
+    "id": "uuid-item",
+    "name": "Mouse USB",
+    "description": "Mouse óptico con cable USB",
+    "uom_id": "uuid-uom",
+    "status": "active",
+    "term_ids": ["uuid-categoria"]
+  }
+}
+```
+
+## Listar con Enriquecimiento
+
+```bash
+# Items con stock y taxonomía
+curl "http://127.0.0.1:10999/api/v1/items/read?with_stock=true&with_terms=true"
+```
+
+### Response Enriched
+
+```json
+{
+  "data": [
+    {
+      "id": "uuid-item",
+      "name": "Mouse USB",
+      "term_ids": ["uuid-cat"],
+      "terms": [
+        { "id": "uuid-cat", "name": "Electrónica" }
+      ],
+      "stock_summary": {
+        "total_quantity": 150,
+        "reserved_quantity": 30,
+        "available_quantity": 120,
+        "location_count": 2,
+        "locations": [
+          { "location_id": "uuid-loc1", "quantity": 100 },
+          { "location_id": "uuid-loc2", "quantity": 50 }
+        ]
+      }
+    }
+  ],
+  "total": 1,
+  "page": 1,
+  "per_page": 15
+}
+```
+
+## Filtrar por Categoría
+
+```bash
+# Items en categoría específica
+curl "http://127.0.0.1:10999/api/v1/items/read?term_id={uuid-termino}"
+```
+
+## Flujo Completo: Registrar Item con Categoría
+
+```bash
+# 1. Obtener vocabulario de categorías
+curl http://127.0.0.1:10999/api/v1/taxonomy/vocabularies/read
+
+# 2. Obtener términos del vocabulario
+curl "http://127.0.0.1:10999/api/v1/taxonomy/terms/read?vocabulary_slug=categorias"
+
+# 3. Crear item asociado a categoría
+curl -X POST http://127.0.0.1:10999/api/v1/items/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Teclado Mecánico",
+    "term_ids": ["uuid-categoria-electronica"]
+  }'
+
+# 4. Verificar asociación
+curl "http://127.0.0.1:10999/api/v1/items/read?with_terms=true&term_id=uuid-categoria-electronica"
+```

@@ -173,6 +173,7 @@ class FakeCatalogGateway implements CatalogGatewayInterface
     public function catalogItemExists(string $catalogItemId, ?string $origin = null): bool { return $this->itemExists; }
     public function getDefaultOriginName(): string { return 'internal'; }
     public function registerOrigin(string $name, string $source, string $type = 'table'): string { return $name; }
+    public function searchItems(string $searchTerm, int $limit = 50): array { return []; }
 
     // Extra helper used by ValidateReservationUseCase (not declared in interface)
     public function getItem(string $itemId): ?array

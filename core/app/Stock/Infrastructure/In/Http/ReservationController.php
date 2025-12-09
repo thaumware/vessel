@@ -10,6 +10,7 @@ use App\Stock\Application\UseCases\CreateReservation\CreateReservationUseCase;
 use App\Stock\Application\UseCases\CreateReservation\CreateReservationRequest;
 use App\Stock\Application\UseCases\ReleaseReservation\ReleaseReservationUseCase;
 use App\Stock\Application\UseCases\ReleaseReservation\ReleaseReservationRequest;
+use App\Stock\Application\UseCases\ApproveReservation\ApproveReservationUseCase;
 use App\Stock\Domain\ReservationRepository;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -30,6 +31,7 @@ class ReservationController
         private ValidateReservationUseCase $validateReservation,
         private CreateReservationUseCase $createReservation,
         private ReleaseReservationUseCase $releaseReservation,
+        private ApproveReservationUseCase $approveReservation,
         private ReservationRepository $reservationRepository
     ) {
     }
@@ -127,6 +129,7 @@ class ReservationController
             'meta' => 'nullable|array',
             'workspace_id' => 'nullable|string',
             'skip_validation' => 'nullable|boolean',
+            'status' => 'nullable|in:active,pending',
         ]);
 
         $result = $this->createReservation->execute(
@@ -143,7 +146,8 @@ class ReservationController
                 workspaceId: $validated['workspace_id'] ?? null,
                 skipValidation: $validated['skip_validation'] ?? false,
                 reservedBy: $validated['reserved_by'] ?? null,
-                expiresAt: $validated['expires_at'] ?? null
+                expiresAt: $validated['expires_at'] ?? null,
+                status: $validated['status'] ?? 'active'
             )
         );
 
@@ -210,6 +214,38 @@ class ReservationController
     }
 
     /**
+     * POST /api/v1/stock/reservations/{id}/approve
+     */
+    public function approve(string $id): JsonResponse
+    {
+        try {
+            $result = $this->approveReservation->execute($id);
+            return response()->json($result->toArray(), $result->success ? 200 : 422);
+        } catch (\DomainException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
+     * POST /api/v1/stock/reservations/{id}/reject
+     */
+    public function reject(string $id): JsonResponse
+    {
+        $reservation = $this->reservationRepository->findById($id);
+        if (!$reservation) {
+             return response()->json(['success' => false, 'message' => 'Reserva no encontrada'], 404);
+        }
+
+        try {
+            $rejected = $reservation->reject();
+            $this->reservationRepository->save($rejected);
+             return response()->json(['success' => true, 'message' => 'Reserva rechazada']);
+        } catch (\DomainException $e) {
+             return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        }
+    }
+
+    /**
      * GET /api/v1/stock/reservations
      * 
      * Lista reservas activas.
@@ -244,17 +280,21 @@ class ReservationController
         $validated = $request->validate([
             'item_id' => 'nullable|string',
             'location_id' => 'nullable|string',
-            'status' => 'nullable|in:active,released,expired',
+            'status' => 'nullable|in:active,released,expired,pending,rejected',
         ]);
 
-        // Por ahora solo soporta "active" (las más útiles para el frontend)
-        if (isset($validated['item_id']) && isset($validated['location_id'])) {
+        $status = $validated['status'] ?? 'active';
+        $statusEnum = \App\Stock\Domain\ReservationStatus::tryFrom($status);
+
+        if ($statusEnum === \App\Stock\Domain\ReservationStatus::ACTIVE && isset($validated['item_id']) && isset($validated['location_id'])) {
             $reservations = $this->reservationRepository->findActiveByItemAndLocation(
                 $validated['item_id'],
                 $validated['location_id']
             );
         } else {
-            $reservations = $this->reservationRepository->findActive();
+            // Si el enum es válido, buscamos por ese estado. Si no (o null), default a ACTIVE
+            $searchStatus = $statusEnum ?? \App\Stock\Domain\ReservationStatus::ACTIVE;
+            $reservations = $this->reservationRepository->findByStatus($searchStatus);
         }
 
         return response()->json([

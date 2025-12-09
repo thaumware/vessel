@@ -322,8 +322,8 @@ class StockMovementService
         return new StockItem(
             id: $this->generateId(),
             itemId: $movement->getItemId(),
-            catalogItemId: null,
-            catalogOrigin: null,
+            catalogItemId: $movement->getItemId(),
+            catalogOrigin: 'local',
             locationId: $movement->getLocationId(),
             locationType: 'default',
             quantity: 0,

@@ -60,6 +60,10 @@ Route::prefix('api/v1/stock')->middleware(['adapter:stock', 'vessel.access:own']
         Route::post('/reserve', [ReservationController::class, 'reserve']);
         Route::post('/release', [ReservationController::class, 'release']);
         Route::delete('/{id}', [ReservationController::class, 'destroy']); // Cancelar por ID
+        
+        // Flujo aprobación
+        Route::post('/{id}/approve', [ReservationController::class, 'approve']);
+        Route::post('/{id}/reject', [ReservationController::class, 'reject']);
     });
 
     // === Capacity (configuración de capacidad por ubicación) ===

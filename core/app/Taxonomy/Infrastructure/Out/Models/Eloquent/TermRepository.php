@@ -66,7 +66,8 @@ class TermRepository implements TermRepositoryInterface
             slug: $model->slug,
             vocabularyId: $model->vocabulary_id,
             description: $model->description,
-            workspaceId: $model->workspace_id
+            workspaceId: $model->workspace_id,
+            itemsCount: (int) ($model->items_count ?? 0)
         );
     }
 
@@ -81,7 +82,7 @@ class TermRepository implements TermRepositoryInterface
 
     public function findAll(PaginationParams $params): PaginatedResult
     {
-        $query = TermModel::query();
+        $query = TermModel::query()->withCount('items');
 
         // Apply sorting
         if ($params->sortBy) {
@@ -109,7 +110,7 @@ class TermRepository implements TermRepositoryInterface
 
     public function findByVocabulary(string $vocabularyId, PaginationParams $params, ?string $workspaceId = null): PaginatedResult
     {
-        $query = TermModel::where('vocabulary_id', $vocabularyId);
+        $query = TermModel::where('vocabulary_id', $vocabularyId)->withCount('items');
 
         if ($workspaceId !== null) {
             $query->where(function ($q) use ($workspaceId) {

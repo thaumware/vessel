@@ -26,6 +26,8 @@ interface ReservationRepository
      */
     public function findActive(): array;
 
+    public function findByStatus(ReservationStatus $status): array;
+
     /**
      * Encuentra reservas por reference (para liberar por orden completa)
      */

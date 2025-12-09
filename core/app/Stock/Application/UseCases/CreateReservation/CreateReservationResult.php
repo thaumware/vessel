@@ -58,6 +58,18 @@ class CreateReservationResult
         );
     }
 
+    public static function pending(string $reservationId): self
+    {
+        return new self(
+            success: true,
+            movement: null,
+            reservationId: $reservationId,
+            newReservedQuantity: null,
+            newAvailableQuantity: null,
+            errors: []
+        );
+    }
+
     public function toArray(): array
     {
         return [

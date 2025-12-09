@@ -60,4 +60,17 @@ class TermModel extends EloquentModel
     {
         return $this->hasMany(TermRelationModel::class, 'from_term_id', 'id');
     }
+
+    /**
+     * Items tagged with this term
+     */
+    public function items()
+    {
+        return $this->belongsToMany(
+            \App\Catalog\Infrastructure\Out\Models\EloquentItem::class,
+            'catalog_item_terms',
+            'term_id',
+            'item_id'
+        );
+    }
 }

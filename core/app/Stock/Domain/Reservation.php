@@ -37,6 +37,7 @@ final class Reservation
         string $referenceType,
         string $referenceId,
         ?DateTimeImmutable $expiresAt = null,
+        ReservationStatus $status = ReservationStatus::ACTIVE,
     ): self {
         return new self(
             id: $id,
@@ -46,8 +47,46 @@ final class Reservation
             reservedBy: $reservedBy,
             referenceType: $referenceType,
             referenceId: $referenceId,
-            status: ReservationStatus::ACTIVE,
+            status: $status,
             expiresAt: $expiresAt,
+        );
+    }
+
+    public function approve(): self
+    {
+        if ($this->status !== ReservationStatus::PENDING) {
+            throw new \DomainException("Solo reservas pendientes pueden ser aprobadas");
+        }
+        return new self(
+            id: $this->id,
+            itemId: $this->itemId,
+            locationId: $this->locationId,
+            quantity: $this->quantity,
+            reservedBy: $this->reservedBy,
+            referenceType: $this->referenceType,
+            referenceId: $this->referenceId,
+            status: ReservationStatus::ACTIVE,
+            expiresAt: $this->expiresAt,
+            createdAt: $this->createdAt,
+        );
+    }
+
+    public function reject(): self
+    {
+        if ($this->status !== ReservationStatus::PENDING) {
+            throw new \DomainException("Solo reservas pendientes pueden ser rechazadas");
+        }
+        return new self(
+            id: $this->id,
+            itemId: $this->itemId,
+            locationId: $this->locationId,
+            quantity: $this->quantity,
+            reservedBy: $this->reservedBy,
+            referenceType: $this->referenceType,
+            referenceId: $this->referenceId,
+            status: ReservationStatus::REJECTED,
+            expiresAt: $this->expiresAt,
+            createdAt: $this->createdAt,
         );
     }
 

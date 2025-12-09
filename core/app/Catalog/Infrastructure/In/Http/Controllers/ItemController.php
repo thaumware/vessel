@@ -117,7 +117,15 @@ class ItemController extends Controller
             return response()->json(['error' => 'Item not found'], 404);
         }
 
-        return response()->json(['data' => $item->toArray()]);
+        $itemArray = $item->toArray();
+        // Cargar term_ids
+        $termIds = DB::table('catalog_item_terms')
+            ->where('item_id', $id)
+            ->pluck('term_id')
+            ->toArray();
+        $itemArray['term_ids'] = $termIds;
+
+        return response()->json(['data' => $itemArray]);
     }
 
     /**
@@ -167,7 +175,15 @@ class ItemController extends Controller
             status: $validated['status'] ?? 'active',
         );
 
-        return response()->json(['data' => $item->toArray()], 201);
+        // Sync term_ids si se proporcionaron
+        if (!empty($validated['term_ids'])) {
+            $this->syncItemTerms($item->id, $validated['term_ids']);
+        }
+
+        $itemArray = $item->toArray();
+        $itemArray['term_ids'] = $validated['term_ids'] ?? [];
+
+        return response()->json(['data' => $itemArray], 201);
     }
 
     /**
@@ -219,7 +235,20 @@ class ItemController extends Controller
             return response()->json(['error' => 'Item not found'], 404);
         }
 
-        return response()->json(['data' => $item->toArray()]);
+        // Sync term_ids si se proporcionaron (incluso si es array vacío para limpiar)
+        if (array_key_exists('term_ids', $validated)) {
+            $this->syncItemTerms($id, $validated['term_ids'] ?? []);
+        }
+
+        $itemArray = $item->toArray();
+        // Cargar term_ids actuales
+        $termIds = DB::table('catalog_item_terms')
+            ->where('item_id', $id)
+            ->pluck('term_id')
+            ->toArray();
+        $itemArray['term_ids'] = $termIds;
+
+        return response()->json(['data' => $itemArray]);
     }
 
     /**
@@ -254,4 +283,25 @@ class ItemController extends Controller
 
             return $row?->id;
         }
+
+    /**
+     * Sync term_ids for an item in the pivot table
+     */
+    private function syncItemTerms(string $itemId, array $termIds): void
+    {
+        // Delete existing associations
+        DB::table('catalog_item_terms')
+            ->where('item_id', $itemId)
+            ->delete();
+
+        // Insert new associations
+        if (!empty($termIds)) {
+            $rows = array_map(fn($termId) => [
+                'item_id' => $itemId,
+                'term_id' => $termId,
+            ], $termIds);
+
+            DB::table('catalog_item_terms')->insert($rows);
+        }
+    }
 }

@@ -20,6 +20,7 @@ class Term
         string $vocabularyId,
         ?string $description = null,
         ?string $workspaceId = null,
+        private int $itemsCount = 0,
     ) {
         $this->setId($id);
         $this->name = $name;
@@ -27,6 +28,7 @@ class Term
         $this->vocabularyId = $vocabularyId;
         $this->description = $description;
         $this->workspaceId = $workspaceId;
+        $this->itemsCount = $itemsCount;
     }
 
     public function getId(): string
@@ -79,8 +81,13 @@ class Term
             'name' => $this->getName(),
             'slug' => $this->getSlug(),
             'description' => $this->getDescription(),
-            'vocabulary_id' => $this->getVocabularyId(),
             'workspace_id' => $this->getWorkspaceId(),
+            'items_count' => $this->getItemsCount(),
         ];
+    }
+    
+    public function getItemsCount(): int
+    {
+        return $this->itemsCount;
     }
 }

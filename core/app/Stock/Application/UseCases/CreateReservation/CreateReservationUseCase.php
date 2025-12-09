@@ -11,6 +11,7 @@ use App\Stock\Application\UseCases\ValidateReservation\ValidateReservationUseCas
 use App\Stock\Application\UseCases\ValidateReservation\ReservationValidationRequest;
 use App\Stock\Domain\Reservation;
 use App\Stock\Domain\ReservationRepository;
+use App\Stock\Domain\ReservationStatus;
 use App\Shared\Domain\Interfaces\IdGeneratorInterface;
 use DateTimeImmutable;
 
@@ -31,6 +32,27 @@ class CreateReservationUseCase
 
     public function execute(CreateReservationRequest $request): CreateReservationResult
     {
+        $status = ReservationStatus::tryFrom($request->status) ?? ReservationStatus::ACTIVE;
+        $reservationId = $this->idGenerator->generate();
+
+        // 0. Si es PENDING, crear solo la entidad Reservation (flujo aprobación)
+        if ($status === ReservationStatus::PENDING) {
+            $reservation = Reservation::create(
+                id: $reservationId,
+                itemId: $request->itemId,
+                locationId: $request->locationId,
+                quantity: $request->quantity,
+                reservedBy: $request->reservedBy ?? $request->performedBy ?? 'system',
+                referenceType: $request->referenceType,
+                referenceId: $request->referenceId ?? $reservationId,
+                expiresAt: $request->expiresAt ? new DateTimeImmutable($request->expiresAt) : null,
+                status: ReservationStatus::PENDING
+            );
+            $this->reservationRepository->save($reservation);
+
+            return CreateReservationResult::pending($reservationId);
+        }
+
         // 1. Validar ANTES de reservar (si no se skipea)
         if (!$request->skipValidation) {
             $validation = $this->validateReservation->execute(
@@ -68,7 +90,6 @@ class CreateReservationUseCase
         $result = $this->movementService->process($movement);
 
         // 4. Guardar Reservation para tracking del frontend
-        $reservationId = $this->idGenerator->generate();
         $reservation = Reservation::create(
             id: $reservationId,
             itemId: $request->itemId,
@@ -77,7 +98,8 @@ class CreateReservationUseCase
             reservedBy: $request->reservedBy ?? $request->performedBy ?? 'system',
             referenceType: $request->referenceType,
             referenceId: $request->referenceId ?? $reservationId, // fallback al ID de reserva
-            expiresAt: $request->expiresAt ? new DateTimeImmutable($request->expiresAt) : null
+            expiresAt: $request->expiresAt ? new DateTimeImmutable($request->expiresAt) : null,
+            status: ReservationStatus::ACTIVE
         );
         $this->reservationRepository->save($reservation);
 

@@ -65,6 +65,16 @@ final class MySQLReservationRepository implements ReservationRepository
         return array_map([$this, 'hydrate'], $rows->all());
     }
 
+    public function findByStatus(ReservationStatus $status): array
+    {
+        $rows = DB::table('stock_reservations')
+            ->where('status', $status->value)
+            ->orderBy('created_at', 'desc')
+            ->get();
+
+        return array_map([$this, 'hydrate'], $rows->all());
+    }
+
     public function findByReference(string $referenceType, string $referenceId): array
     {
         $rows = DB::table('stock_reservations')
