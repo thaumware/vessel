@@ -10,9 +10,7 @@ COPY --from=composer_bin /usr/bin/composer /usr/bin/composer
 
 FROM base AS builder
 COPY . .
-RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader --no-scripts \
-    && php artisan config:clear || true \
-    && php artisan key:generate --force || true
+RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader --no-scripts
 
 FROM base AS final
 WORKDIR /usr/share/nginx/html
