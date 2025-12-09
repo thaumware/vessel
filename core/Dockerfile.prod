@@ -10,7 +10,9 @@ COPY --from=composer_bin /usr/bin/composer /usr/bin/composer
 
 FROM base AS builder
 COPY . .
-RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader \
+# Skip auto-discovery during install to avoid timeout
+RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader --no-scripts \
+    && php -d memory_limit=-1 artisan package:discover --ansi || true \
     && php artisan config:clear || true \
     && php artisan key:generate --force || true
 
