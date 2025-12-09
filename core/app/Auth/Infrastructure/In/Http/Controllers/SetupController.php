@@ -57,166 +57,195 @@ class SetupController
 
     public function store(Request $request)
     {
-        $driver = $request->input('db_driver', 'sqlite');
-        
-        // Log raw input para debug
-        Log::info('Setup Request Received', [
-            'all' => $request->all(),
-            'driver' => $driver,
-        ]);
-        
-        $rules = [
-            'db_driver' => 'required|in:mysql,sqlite',
-            'db_pass' => 'nullable|string',
-            'app_url' => 'required|string',
-            'admin_user' => 'required|string',
-            'admin_pass' => 'required|string',
-            'fresh' => 'nullable|boolean',
-        ];
-        
-        if ($driver === 'mysql') {
-            $rules['db_host'] = 'required|string';
-            $rules['db_port'] = 'required|string';
-            $rules['db_name'] = 'required|string';
-            $rules['db_user'] = 'required|string';
-        } else {
-            $rules['db_host'] = 'nullable|string';
-            $rules['db_port'] = 'nullable|string';
-            $rules['db_name'] = 'nullable|string';
-            $rules['db_user'] = 'nullable|string';
-            $rules['db_path'] = 'required|string';
-        }
-
-        $validator = Validator::make($request->all(), $rules);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'error' => $validator->errors()->first(),
-            ], 422);
-        }
-
-        $data = $validator->validated();
-
-        $driver = $data['db_driver'];
-
-        if ($driver === 'sqlite') {
-            // Relax MySQL-specific requirements
-            $data['db_host'] = $data['db_host'] ?? '';
-            $data['db_port'] = $data['db_port'] ?? '';
-            $data['db_name'] = $data['db_name'] ?? ''; // unused
-            $data['db_user'] = $data['db_user'] ?? '';
-            $data['db_pass'] = $data['db_pass'] ?? '';
-            $data['db_path'] = $data['db_path'] ?? base_path('database/database.sqlite');
-            $dir = dirname($data['db_path']);
-            if (!is_dir($dir)) {
-                @mkdir($dir, 0777, true);
-            }
-        }
-
-        // Update runtime config to run migrations with provided DB
-        if ($driver === 'mysql') {
-            Config::set('database.default', 'mysql');
-            Config::set('database.connections.mysql.host', $data['db_host']);
-            Config::set('database.connections.mysql.port', (int)$data['db_port']);
-            Config::set('database.connections.mysql.database', $data['db_name']);
-            Config::set('database.connections.mysql.username', $data['db_user']);
-            Config::set('database.connections.mysql.password', $data['db_pass'] ?? '');
-            Config::set('database.connections.mysql.unix_socket', '');
+        try {
+            $driver = $request->input('db_driver', 'sqlite');
             
-            // Log para debug
-            Log::info('MySQL Config', [
-                'host' => $data['db_host'],
-                'port' => $data['db_port'],
-                'database' => $data['db_name'],
-                'username' => $data['db_user'],
-                'password_empty' => empty($data['db_pass']),
+            // Log raw input para debug
+            Log::info('Setup Request Received', [
+                'all' => $request->all(),
+                'driver' => $driver,
             ]);
             
-            // Limpiar conexiones cacheadas
-            DB::purge('mysql');
-        } else {
-            Config::set('database.default', 'sqlite');
-            Config::set('database.connections.sqlite.database', $data['db_path']);
-            // Ensure file exists
-            if (!file_exists($data['db_path'])) {
-                @touch($data['db_path']);
-            }
+            $rules = [
+                'db_driver' => 'required|in:mysql,sqlite',
+                'db_pass' => 'nullable|string',
+                'app_url' => 'required|string',
+                'admin_user' => 'required|string',
+                'admin_pass' => 'required|string',
+                'fresh' => 'nullable|boolean',
+            ];
             
-            // Limpiar conexiones cacheadas
-            DB::purge('sqlite');
-        }
-
-        // NO usar DB::reconnect() - crear nueva conexión desde cero
-
-        // Test connection - forzar conexión específica
-        try {
             if ($driver === 'mysql') {
-                // Purge again to ensure clean state
-                DB::purge('mysql');
-                
-                // Log config actual antes de conectar
-                $actualConfig = Config::get('database.connections.mysql');
-                Log::info('Config actual antes de conectar', $actualConfig);
-                
-                $pdo = DB::connection('mysql')->getPdo();
-                Log::info('Conexión exitosa');
+                $rules['db_host'] = 'required|string';
+                $rules['db_port'] = 'required|string';
+                $rules['db_name'] = 'required|string';
+                $rules['db_user'] = 'required|string';
             } else {
-                DB::purge('sqlite');
-                DB::connection('sqlite')->getPdo();
+                $rules['db_host'] = 'nullable|string';
+                $rules['db_port'] = 'nullable|string';
+                $rules['db_name'] = 'nullable|string';
+                $rules['db_user'] = 'nullable|string';
+                $rules['db_path'] = 'required|string';
             }
+
+            $validator = Validator::make($request->all(), $rules);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'error' => $validator->errors()->first(),
+                ], 422);
+            }
+
+            $data = $validator->validated();
+
+            $driver = $data['db_driver'];
+
+            if ($driver === 'sqlite') {
+                // Relax MySQL-specific requirements
+                $data['db_host'] = $data['db_host'] ?? '';
+                $data['db_port'] = $data['db_port'] ?? '';
+                $data['db_name'] = $data['db_name'] ?? ''; // unused
+                $data['db_user'] = $data['db_user'] ?? '';
+                $data['db_pass'] = $data['db_pass'] ?? '';
+                $data['db_path'] = $data['db_path'] ?? base_path('database/database.sqlite');
+                $dir = dirname($data['db_path']);
+                if (!is_dir($dir)) {
+                    @mkdir($dir, 0777, true);
+                }
+            }
+
+            // Update runtime config to run migrations with provided DB
+            if ($driver === 'mysql') {
+                Config::set('database.default', 'mysql');
+                Config::set('database.connections.mysql.host', $data['db_host']);
+                Config::set('database.connections.mysql.port', (int)$data['db_port']);
+                Config::set('database.connections.mysql.database', $data['db_name']);
+                Config::set('database.connections.mysql.username', $data['db_user']);
+                Config::set('database.connections.mysql.password', $data['db_pass'] ?? '');
+                Config::set('database.connections.mysql.unix_socket', '');
+                
+                // Log para debug
+                Log::info('MySQL Config', [
+                    'host' => $data['db_host'],
+                    'port' => $data['db_port'],
+                    'database' => $data['db_name'],
+                    'username' => $data['db_user'],
+                    'password_empty' => empty($data['db_pass']),
+                ]);
+                
+                // Limpiar conexiones cacheadas
+                DB::purge('mysql');
+            } else {
+                Config::set('database.default', 'sqlite');
+                Config::set('database.connections.sqlite.database', $data['db_path']);
+                // Ensure file exists
+                if (!file_exists($data['db_path'])) {
+                    @touch($data['db_path']);
+                }
+                
+                // Limpiar conexiones cacheadas
+                DB::purge('sqlite');
+            }
+
+            // NO usar DB::reconnect() - crear nueva conexión desde cero
+
+            // Test connection - forzar conexión específica
+            try {
+                if ($driver === 'mysql') {
+                    // Purge again to ensure clean state
+                    DB::purge('mysql');
+                    
+                    // Log config actual antes de conectar
+                    $actualConfig = Config::get('database.connections.mysql');
+                    Log::info('Config actual antes de conectar', $actualConfig);
+                    
+                    $pdo = DB::connection('mysql')->getPdo();
+                    Log::info('Conexión exitosa');
+                } else {
+                    DB::purge('sqlite');
+                    DB::connection('sqlite')->getPdo();
+                }
+            } catch (\Throwable $e) {
+                Log::error('Error en test de conexión', [
+                    'message' => $e->getMessage(),
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+                return response()->json(['success' => false, 'error' => 'No se pudo conectar a la base de datos: ' . $e->getMessage()], 422);
+            }
+
+            $fresh = filter_var($data['fresh'] ?? false, FILTER_VALIDATE_BOOLEAN);
+
+            // Run migrations (fresh by default to avoid table-exists issues in clean installs)
+            try {
+                if ($fresh) {
+                    Artisan::call('migrate:fresh', ['--force' => true]);
+                } else {
+                    Artisan::call('migrate', ['--force' => true]);
+                }
+            } catch (\Throwable $e) {
+                Log::error('Migration Error', ['message' => $e->getMessage(), 'trace' => $e->getTraceAsString()]);
+                return response()->json(['success' => false, 'error' => 'Migraciones fallaron: ' . $e->getMessage()], 500);
+            }
+
+            // Hashear password del admin
+            $hashedPassword = password_hash($data['admin_pass'], PASSWORD_BCRYPT);
+
+            /** @var ConfigStore $store */
+            try {
+                $store = app(ConfigStore::class);
+                $store->set('admin.root', $data['admin_user']);
+                $store->set('admin.root_password', $hashedPassword);
+                $store->set('app.installed', true);
+            } catch (\Throwable $e) {
+                Log::error('ConfigStore Error', ['message' => $e->getMessage()]);
+                // Ignorar error de config store y seguir con .env
+            }
+
+            // Persist to .env for next boots con password hasheado
+            try {
+                $this->writeEnv([
+                    'APP_URL' => $data['app_url'],
+                    'DB_CONNECTION' => $driver,
+                    'DB_HOST' => $data['db_host'] ?? '',
+                    'DB_PORT' => $data['db_port'] ?? '',
+                    'DB_DATABASE' => $driver === 'sqlite' ? $data['db_path'] : $data['db_name'],
+                    'DB_USERNAME' => $data['db_user'] ?? '',
+                    'DB_PASSWORD' => $data['db_pass'] ?? '',
+                    'ADMIN_ROOT' => $data['admin_user'],
+                    'ADMIN_ROOT_PASSWORD' => $hashedPassword,
+                    'APP_INSTALLED' => 'true',
+                    'APP_DEBUG' => 'true', // Force debug for now
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('WriteEnv Error', ['message' => $e->getMessage()]);
+                return response()->json(['success' => false, 'error' => 'No se pudo escribir el archivo .env: ' . $e->getMessage()], 500);
+            }
+
+            // Mirror config for tests (.env.testing) so PHPUnit can target a dedicated DB
+            $this->writeTestingEnv($data, $driver);
+
+            Artisan::call('config:clear');
+
+            return response()->json(['success' => true]);
+
         } catch (\Throwable $e) {
-            Log::error('Error en test de conexión', [
+            Log::critical('Unhandled Exception in SetupController::store', [
                 'message' => $e->getMessage(),
                 'file' => $e->getFile(),
                 'line' => $e->getLine(),
                 'trace' => $e->getTraceAsString(),
             ]);
-            return response()->json(['success' => false, 'error' => 'No se pudo conectar a la base de datos: ' . $e->getMessage()], 422);
+            
+            return response()->json([
+                'success' => false,
+                'message' => 'DEBUG ERROR: ' . $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ], 500);
         }
-
-        $fresh = filter_var($data['fresh'] ?? false, FILTER_VALIDATE_BOOLEAN);
-
-        // Run migrations (fresh by default to avoid table-exists issues in clean installs)
-        try {
-            if ($fresh) {
-                Artisan::call('migrate:fresh', ['--force' => true]);
-            } else {
-                Artisan::call('migrate', ['--force' => true]);
-            }
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'error' => 'Migraciones fallaron: ' . $e->getMessage()], 500);
-        }
-
-        // Hashear password del admin
-        $hashedPassword = password_hash($data['admin_pass'], PASSWORD_BCRYPT);
-
-        /** @var ConfigStore $store */
-        $store = app(ConfigStore::class);
-        $store->set('admin.root', $data['admin_user']);
-        $store->set('admin.root_password', $hashedPassword);
-        $store->set('app.installed', true);
-
-        // Persist to .env for next boots con password hasheado
-        $this->writeEnv([
-            'APP_URL' => $data['app_url'],
-            'DB_CONNECTION' => $driver,
-            'DB_HOST' => $data['db_host'] ?? '',
-            'DB_PORT' => $data['db_port'] ?? '',
-            'DB_DATABASE' => $driver === 'sqlite' ? $data['db_path'] : $data['db_name'],
-            'DB_USERNAME' => $data['db_user'] ?? '',
-            'DB_PASSWORD' => $data['db_pass'] ?? '',
-            'ADMIN_ROOT' => $data['admin_user'],
-            'ADMIN_ROOT_PASSWORD' => $hashedPassword,
-            'APP_INSTALLED' => 'true',
-        ]);
-
-        // Mirror config for tests (.env.testing) so PHPUnit can target a dedicated DB
-        $this->writeTestingEnv($data, $driver);
-
-        Artisan::call('config:clear');
-
-        return response()->json(['success' => true]);
     }
 
     private function writeEnv(array $pairs): void
