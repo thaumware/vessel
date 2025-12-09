@@ -159,6 +159,12 @@ class SetupController
                     // Log config actual antes de conectar
                     $actualConfig = Config::get('database.connections.mysql');
                     Log::info('Config actual antes de conectar', $actualConfig);
+
+                    // Configurar timeout corto para evitar 504
+                     Config::set('database.connections.mysql.options', [
+                        \PDO::ATTR_TIMEOUT => 5,
+                        \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION
+                    ]);
                     
                     $pdo = DB::connection('mysql')->getPdo();
                     Log::info('Conexión exitosa');
