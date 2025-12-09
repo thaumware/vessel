@@ -35,12 +35,11 @@ Route::middleware('web')->group(function () {
     })->name('admin.login');
 });
 
-// Solo disponible en entorno local/desarrollo
-if (app()->environment('local', 'development', 'testing')) {
-    Route::prefix('admin')->name('admin.')
-        ->middleware(['web', SetupRedirect::class, \App\Auth\Infrastructure\In\Http\Middleware\AdminPanelAuth::class])
-        ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
-        ->group(function () {
+// Admin panel routes - available in all environments
+Route::prefix('admin')->name('admin.')
+    ->middleware(['web', SetupRedirect::class, \App\Auth\Infrastructure\In\Http\Middleware\AdminPanelAuth::class])
+    ->withoutMiddleware([\Illuminate\Foundation\Http\Middleware\VerifyCsrfToken::class])
+    ->group(function () {
         Route::get('/', [AdminPanelController::class, 'index'])->name('dashboard');
         Route::post('/tests/run', [AdminPanelController::class, 'runTests'])->name('tests.run');
         Route::get('/database', [AdminPanelController::class, 'database'])->name('database');
@@ -61,4 +60,3 @@ if (app()->environment('local', 'development', 'testing')) {
         Route::post('/tokens', [AdminPanelController::class, 'createToken'])->name('tokens.create');
         Route::delete('/tokens/{id}', [AdminPanelController::class, 'deleteToken'])->name('tokens.delete');
     });
-}
