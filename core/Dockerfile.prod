@@ -1,26 +1,28 @@
 # Production build - PHP-FPM + Nginx
-FROM composer:2 AS composer_stage
-WORKDIR /app
+FROM composer:2 AS deps
+WORKDIR /build
 COPY composer.json composer.lock ./
-RUN composer install --no-interaction --no-dev --prefer-dist --optimize-autoloader --no-scripts
+RUN composer install --no-interaction --no-dev --prefer-dist --no-scripts
 
-FROM php:8.2-fpm-alpine AS final
+FROM php:8.2-fpm-alpine
 
-# Install nginx and required PHP extensions
+# Install nginx and PHP extensions
 RUN apk add --no-cache nginx \
     && docker-php-ext-install pdo pdo_mysql bcmath
 
 WORKDIR /var/www/html
 
-# Copy app files
-COPY . .
-COPY --from=composer_stage /app/vendor ./vendor
+# Copy vendor from deps stage
+COPY --from=deps /build/vendor ./vendor
 
-# Copy nginx config
+# Copy all app files
+COPY . .
+
+# Nginx config
 COPY docker/nginx.conf /etc/nginx/http.d/default.conf
 
-# Fix permissions
-RUN chown -R www-data:www-data storage bootstrap/cache database || true \
+# Permissions
+RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 775 storage bootstrap/cache || true
 
 EXPOSE 80

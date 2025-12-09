@@ -3,15 +3,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.prod
-      target: final
     image: vessel-core:latest
+    container_name: vessel_core
     env_file:
       - .env
     ports:
-      - "${APP_PORT:-8000}:80"
+      - "${APP_PORT:-10999}:80"
     volumes:
-      - storage:/usr/share/nginx/html/storage
-      - dbdata:/usr/share/nginx/html/database
+      - storage:/var/www/html/storage
+      - dbdata:/var/www/html/database
 
 volumes:
   storage:
