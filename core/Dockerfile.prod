@@ -1,29 +1,43 @@
-# Production build - PHP-FPM + Nginx
-FROM composer:2 AS deps
-WORKDIR /build
-COPY composer.json composer.lock ./
-RUN composer install --no-interaction --no-dev --prefer-dist --no-scripts
-
+# Vessel Production - Laravel con Nginx
 FROM php:8.2-fpm-alpine
 
-# Install nginx and PHP extensions
-RUN apk add --no-cache nginx \
+# Instalar dependencias
+RUN apk add --no-cache \
+    nginx \
+    git \
+    curl \
+    zip \
+    unzip \
     && docker-php-ext-install pdo pdo_mysql bcmath
+
+# Instalar Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 WORKDIR /var/www/html
 
-# Copy vendor from deps stage
-COPY --from=deps /build/vendor ./vendor
-
-# Copy all app files
+# Copiar archivos
 COPY . .
 
-# Nginx config
-COPY docker/nginx.conf /etc/nginx/http.d/default.conf
+# Instalar dependencias PHP
+RUN composer install --no-dev --optimize-autoloader --no-scripts --no-interaction
 
-# Permissions
-RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 775 storage bootstrap/cache || true
+# Crear directorios de storage
+RUN mkdir -p storage/logs storage/framework/cache storage/framework/sessions storage/framework/views bootstrap/cache \
+    && chmod -R 777 storage bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html
+
+# Nginx config
+RUN echo 'server { \
+    listen 80; \
+    root /var/www/html/public; \
+    index index.php; \
+    location / { try_files $uri $uri/ /index.php?$query_string; } \
+    location ~ \.php$ { \
+    fastcgi_pass 127.0.0.1:9000; \
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name; \
+    include fastcgi_params; \
+    } \
+    }' > /etc/nginx/http.d/default.conf
 
 EXPOSE 80
 
