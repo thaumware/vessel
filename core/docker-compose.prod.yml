@@ -16,3 +16,9 @@ services:
 volumes:
   storage:
   dbdata:
+
+
+networks:
+  default:
+    external: true
+    name: fablab-web_default
