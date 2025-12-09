@@ -31,6 +31,21 @@ interface CatalogGatewayInterface
     public function catalogItemExists(string $catalogItemId, ?string $origin = null): bool;
 
     /**
+     * Obtener información básica del item desde el catálogo.
+     */
+    public function getItem(string $itemId): ?array;
+
+    /**
+     * Buscar items en el catálogo por término de búsqueda.
+     * Busca en título, SKU y descripción.
+     * 
+     * @param string $searchTerm Término de búsqueda
+     * @param int $limit Máximo de resultados
+     * @return array Array de items encontrados
+     */
+    public function searchItems(string $searchTerm, int $limit = 50): array;
+
+    /**
      * Obtener el nombre del origen interno por defecto
      */
     public function getDefaultOriginName(): string;

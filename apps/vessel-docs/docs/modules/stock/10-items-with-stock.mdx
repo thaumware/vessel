@@ -1,0 +1,415 @@
+---
+sidebar_position: 10
+---
+
+# API Reference - Items con Stock
+
+Documentación completa de los endpoints para consultar items del catálogo enriquecidos con información de stock.
+
+## 🎯 Descripción General
+
+El módulo de Stock se integra con el Catálogo para proporcionar endpoints que:
+- Enriquecen items del catálogo con información de stock agregada
+- Permiten filtrar items por ubicación, categoría y nivel de stock
+- Incluyen nombres de términos de taxonomía
+- Facilitan la búsqueda de items con disponibilidad
+
+---
+
+## 📋 Endpoint Principal: Items con Stock
+
+### `GET /api/v1/items/read`
+
+Endpoint mejorado del Catálogo que soporta enriquecimiento con stock y múltiples filtros.
+
+#### Query Parameters
+
+| Parámetro | Tipo | Descripción |
+|-----------|------|-------------|
+| `with_stock` | boolean | Incluir resumen de stock agregado |
+| `with_terms` | boolean | Incluir nombres de términos de taxonomía |
+| `term_id` | uuid | Filtrar por término/categoría específica |
+| `location_id` | uuid | Filtrar items con stock en ubicación |
+| `low_stock` | boolean | Solo items con stock bajo |
+| `max_quantity` | int | Umbral de stock bajo (default: 5) |
+| `page` | int | Página (paginación estándar) |
+| `per_page` | int | Items por página |
+
+#### Response sin Enriquecimiento
+
+```json
+{
+  "data": [
+    {
+      "id": "item-123",
+      "name": "Mouse USB Logitech",
+      "description": "Mouse óptico inalámbrico",
+      "uom_id": "uom-unit",
+      "status": "active",
+      "term_ids": ["term-electronics"]
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "per_page": 50,
+  "last_page": 3
+}
+```
+
+#### Response con `?with_stock=true`
+
+```json
+{
+  "data": [
+    {
+      "id": "item-123",
+      "name": "Mouse USB Logitech",
+      "description": "Mouse óptico inalámbrico",
+      "uom_id": "uom-unit",
+      "status": "active",
+      "term_ids": ["term-electronics"],
+      "stock_summary": {
+        "total_quantity": 150,
+        "reserved_quantity": 30,
+        "available_quantity": 120,
+        "location_count": 3,
+        "locations": ["Bodega A", "Bodega B", "Taller Central"]
+      }
+    }
+  ],
+  "total": 150,
+  "page": 1,
+  "per_page": 50,
+  "last_page": 3
+}
+```
+
+#### Response con `?with_terms=true`
+
+```json
+{
+  "data": [
+    {
+      "id": "item-123",
+      "name": "Mouse USB Logitech",
+      "term_ids": ["term-electronics"],
+      "terms": [
+        {
+          "id": "term-electronics",
+          "name": "Electrónica",
+          "slug": "electronica",
+          "vocabulary_id": "vocab-categories"
+        }
+      ]
+    }
+  ]
+}
+```
+
+---
+
+## 🔍 Búsqueda de Items con Stock
+
+### `GET /api/v1/stock/catalog/search`
+
+Busca items en el catálogo por nombre o descripción, e incluye automáticamente información de stock.
+
+#### Query Parameters
+
+| Parámetro | Tipo | Requerido | Descripción |
+|-----------|------|-----------|-------------|
+| `q` | string | ✅ | Término de búsqueda |
+| `limit` | int | ❌ | Máximo de resultados (default: 50) |
+
+#### Request
+
+```http
+GET /api/v1/stock/catalog/search?q=mouse&limit=20
+```
+
+#### Response
+
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": "item-123",
+      "name": "Mouse USB Logitech",
+      "description": "Mouse óptico inalámbrico",
+      "uom_id": "uom-unit",
+      "status": "active",
+      "stock": {
+        "total_quantity": 150,
+        "available_quantity": 120,
+        "reserved_quantity": 30,
+        "locations": [
+          {
+            "location_id": "loc-bodega-a",
+            "quantity": 100,
+            "available": 80
+          },
+          {
+            "location_id": "loc-bodega-b",
+            "quantity": 50,
+            "available": 40
+          }
+        ]
+      }
+    }
+  ],
+  "count": 1
+}
+```
+
+#### Errores
+
+```json
+// 422 - Parámetro q faltante
+{
+  "message": "The q field is required.",
+  "errors": {
+    "q": ["The q field is required."]
+  }
+}
+```
+
+---
+
+## 📊 Casos de Uso
+
+### 1. Mostrar Items con Stock en Tabla
+
+```http
+GET /api/v1/items/read?with_stock=true&page=1&per_page=50
+```
+
+**Frontend puede mostrar:**
+- Total en stock
+- Disponible para vender
+- Reservado
+- Número de ubicaciones
+- Nombres de ubicaciones
+
+### 2. Filtrar Items por Categoría
+
+```http
+GET /api/v1/items/read?term_id=term-electronics&with_stock=true
+```
+
+**Uso:** Mostrar solo items de categoría "Electrónica" con su stock.
+
+### 3. Ver Items en Bodega Específica
+
+```http
+GET /api/v1/items/read?location_id=loc-bodega-a&with_stock=true
+```
+
+**Uso:** Dashboard de bodega mostrando qué items hay en esa ubicación.
+
+### 4. Alertas de Stock Bajo
+
+```http
+GET /api/v1/items/read?low_stock=true&max_quantity=10&with_stock=true
+```
+
+**Uso:** Alertas de reabastecimiento, items con menos de 10 unidades disponibles.
+
+### 5. Buscar Item por Nombre
+
+```http
+GET /api/v1/stock/catalog/search?q=laptop&limit=10
+```
+
+**Uso:** Buscador con autocompletado mostrando stock disponible.
+
+### 6. Combinar Todo
+
+```http
+GET /api/v1/items/read?with_stock=true&with_terms=true&term_id=term-electronics&low_stock=true&max_quantity=5
+```
+
+**Uso:** Items de categoría "Electrónica" con stock bajo, mostrando nombres de categorías.
+
+---
+
+## 🛠️ Estructura de Datos
+
+### Stock Summary (cuando `with_stock=true`)
+
+```typescript
+interface StockSummary {
+  total_quantity: number;        // Cantidad total en todas las ubicaciones
+  reserved_quantity: number;     // Cantidad reservada (bloqueada)
+  available_quantity: number;    // Disponible = total - reserved
+  location_count: number;        // Número de ubicaciones con stock
+  locations: string[];           // Nombres de ubicaciones
+}
+```
+
+### Term (cuando `with_terms=true`)
+
+```typescript
+interface Term {
+  id: string;              // UUID del término
+  name: string;            // Nombre del término
+  slug: string;            // Slug para URLs
+  vocabulary_id: string;   // ID del vocabulario padre
+}
+```
+
+### Stock por Ubicación (en búsqueda)
+
+```typescript
+interface LocationStock {
+  location_id: string;     // ID de la ubicación
+  quantity: number;        // Cantidad total en esa ubicación
+  available: number;       // Cantidad disponible en esa ubicación
+}
+```
+
+---
+
+## 🔄 Flujo de Integración
+
+### Frontend → Backend
+
+```mermaid
+graph LR
+    A[Frontend] -->|GET /items/read?with_stock=true| B[ItemController]
+    B -->|ListItems| C[ItemRepository]
+    C -->|Items[]| B
+    B -->|enrichWithStock| D[StockEnrichmentService]
+    D -->|Consulta stock_items| E[Database]
+    E -->|Stock agregado| D
+    D -->|Items + stock_summary| B
+    B -->|JSON| A
+```
+
+### Servicios Involucrados
+
+1. **ItemController** - Controlador principal
+2. **StockEnrichmentService** - Agrega información de stock
+3. **TaxonomyEnrichmentService** - Agrega nombres de términos
+4. **ListItems** - Caso de uso de listado del catálogo
+
+---
+
+## 📈 Performance
+
+### Optimizaciones Implementadas
+
+1. **Agregación en DB**: Stock se agrega con `SUM()` y `COUNT()` directamente en la base de datos
+2. **Batch Loading**: Términos y ubicaciones se cargan en lote, no por item
+3. **Filtros Tempranos**: Filtros aplicados antes de enriquecer para reducir procesamiento
+4. **Lazy Loading**: Stock y términos solo se cargan si se solicitan
+
+### Recomendaciones
+
+- Usar paginación (`per_page` <= 100)
+- Solicitar solo enriquecimientos necesarios
+- Filtrar antes de enriquecer cuando sea posible
+- Cachear resultados de búsqueda en frontend
+
+---
+
+## ⚡ Ejemplos Completos
+
+### Dashboard de Inventario
+
+```typescript
+// Obtener items con stock bajo y categorías
+const response = await fetch(
+  '/api/v1/items/read?with_stock=true&with_terms=true&low_stock=true&max_quantity=10'
+);
+
+const { data } = await response.json();
+
+data.forEach(item => {
+  console.log(`${item.name}: ${item.stock_summary.available_quantity} disponibles`);
+  console.log(`Categorías: ${item.terms.map(t => t.name).join(', ')}`);
+  console.log(`Ubicaciones: ${item.stock_summary.locations.join(', ')}`);
+});
+```
+
+### Buscador con Autocompletado
+
+```typescript
+// Buscar mientras el usuario escribe
+const searchItems = async (query: string) => {
+  const response = await fetch(
+    `/api/v1/stock/catalog/search?q=${encodeURIComponent(query)}&limit=10`
+  );
+  
+  const { data } = await response.json();
+  
+  return data.map(item => ({
+    label: item.name,
+    value: item.id,
+    stock: item.stock.available_quantity,
+    locations: item.stock.locations.length
+  }));
+};
+```
+
+### Filtro por Bodega
+
+```typescript
+// Mostrar items de una bodega específica
+const getWarehouseItems = async (locationId: string) => {
+  const response = await fetch(
+    `/api/v1/items/read?location_id=${locationId}&with_stock=true&per_page=100`
+  );
+  
+  const { data } = await response.json();
+  
+  return data;
+};
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Item sin stock_summary
+
+**Problema:** `stock_summary` no aparece en la respuesta.
+
+**Solución:** Asegurar que incluye `?with_stock=true` en el query string.
+
+### Filtro por location_id no funciona
+
+**Problema:** Filtrar por `location_id` devuelve lista vacía.
+
+**Solución:** El item debe tener al menos una entrada en `stock_items` para esa ubicación. Verificar con:
+
+```http
+GET /api/v1/stock/items/read?location_id={locationId}
+```
+
+### terms array vacío
+
+**Problema:** `terms` aparece vacío aunque el item tiene `term_ids`.
+
+**Solución:** 
+1. Verificar que usó `?with_terms=true`
+2. Confirmar que los términos existen en `taxonomy_terms`
+3. Verificar relaciones en `catalog_item_terms`
+
+### Búsqueda no encuentra items
+
+**Problema:** `/catalog/search` no devuelve resultados esperados.
+
+**Solución:** La búsqueda es con `LIKE %term%` en nombre y descripción. Verificar:
+- Ortografía correcta
+- Items no están soft-deleted
+- Term de búsqueda es suficientemente específico
+
+---
+
+## 📚 Ver También
+
+- [Stock Items](./02-stock-items) - CRUD de stock items
+- [Reservations](./07-reservations) - Reservas de stock
+- [Quick Reference](./09-quick-reference) - Guía rápida del módulo
+- [Catalog Module](../catalog) - Módulo de catálogo (si existe doc)

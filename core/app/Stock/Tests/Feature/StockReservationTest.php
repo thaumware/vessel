@@ -3,6 +3,8 @@
 namespace App\Stock\Tests\Feature;
 
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -18,6 +20,11 @@ class StockReservationTest extends TestCase
 {
     use RefreshDatabase;
 
+    // Keep property type aligned with Laravel's TestCase (no typed property).
+    protected $defaultHeaders = [
+        'VESSEL-ACCESS-PRIVATE' => 'test-token',
+    ];
+
     private string $warehouseId;
     private string $itemId;
     private string $stockItemId;
@@ -25,13 +32,22 @@ class StockReservationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        DB::table('auth_access_tokens')->insert([
+            'id' => Str::uuid()->toString(),
+            'token' => 'test-token',
+            'workspace_id' => 'ws-test',
+            'scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         
         $this->warehouseId = '09d37adb-a0c9-499e-8ef2-c9f45d290288';
         $this->itemId = 'test-item-' . uniqid();
         $this->stockItemId = 'stock-' . uniqid();
         
         // Insertar directamente en BD (bypass Portal/Catalog validation)
-        \DB::table('stock_items')->insert([
+        DB::table('stock_items')->insert([
             'id' => $this->stockItemId,
             'sku' => $this->itemId,
             'catalog_item_id' => $this->itemId,

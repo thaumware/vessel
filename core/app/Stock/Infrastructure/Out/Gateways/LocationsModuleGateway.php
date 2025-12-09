@@ -93,6 +93,24 @@ class LocationsModuleGateway implements LocationGatewayInterface
     }
 
     /**
+     * Devuelve datos básicos de la ubicación.
+     */
+    public function getLocation(string $locationId): ?array
+    {
+        $location = $this->locationRepository->findById($locationId);
+
+        if ($location === null) {
+            return null;
+        }
+
+        return [
+            'id' => $location->getId(),
+            'name' => method_exists($location, 'getName') ? $location->getName() : $location->getId(),
+            'type' => $location->getType()->value ?? null,
+        ];
+    }
+
+    /**
      * Recolecta recursivamente todos los descendientes de una ubicacion.
      *
      * @param string $locationId

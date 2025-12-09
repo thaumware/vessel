@@ -57,5 +57,8 @@ if (app()->environment('local', 'development', 'testing')) {
         Route::get('/config', [AdminPanelController::class, 'configList'])->name('config.list');
         Route::post('/config', [AdminPanelController::class, 'configSave'])->name('config.save');
         Route::delete('/config', [AdminPanelController::class, 'configDelete'])->name('config.delete');
+        Route::get('/tokens', [AdminPanelController::class, 'listTokens'])->name('tokens.list');
+        Route::post('/tokens', [AdminPanelController::class, 'createToken'])->name('tokens.create');
+        Route::delete('/tokens/{id}', [AdminPanelController::class, 'deleteToken'])->name('tokens.delete');
     });
 }

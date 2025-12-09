@@ -59,4 +59,9 @@ interface LocationGatewayInterface
      * Obtener tipo de ubicacion
      */
     public function getLocationType(string $locationId): ?string;
+
+    /**
+     * Obtener datos básicos de una ubicación (id, nombre, tipo, etc).
+     */
+    public function getLocation(string $locationId): ?array;
 }

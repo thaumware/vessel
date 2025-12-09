@@ -81,6 +81,16 @@ Los **Movimientos** son registros inmutables de cada operación de inventario. S
 | `created_at` | datetime | Fecha de creación |
 | `processed_at` | datetime? | Fecha de procesamiento |
 
+### Relaciones y enriquecimiento
+- Las respuestas de movimientos son **planas** (no expanden catálogos, ubicaciones ni reservas). Úsalas como hechos y enriquece en tu app con:
+  - `item_id` ↔ catálogo/sku
+  - `location_id`, `source_location_id`, `destination_location_id` ↔ módulo Locations
+  - `lot_id` / `tracked_unit_id` ↔ lotes o unidades serializadas
+  - `reference_type` + `reference_id` ↔ órdenes externas (SO/PO/TO, etc.)
+- Historial por ítem o reserva: usa `GET /v1/stock/movements?item_id=...&from=...` y filtra por `reference_type/reference_id` cuando la reserva usa esos mismos valores.
+- Transferencias: se crean dos movimientos (`transfer_out` y `transfer_in`) correlacionables vía `reference_type/reference_id` y timestamps cercanos.
+- Reservas/Liberaciones: los helpers `movements/reserve` y `movements/release` generan movimientos con `type` `reserve`/`release` y respetan `reference_type/reference_id`; correlación con `reservations` se hace por `item_id`, `location_id` y referencia externa.
+
 ---
 
 ## API Endpoints

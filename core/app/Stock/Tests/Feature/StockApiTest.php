@@ -2,7 +2,10 @@
 
 namespace App\Stock\Tests\Feature;
 
-use Tests\TestCase;
+ use Illuminate\Foundation\Testing\RefreshDatabase;
+ use Illuminate\Support\Facades\DB;
+ use Illuminate\Support\Str;
+ use Tests\TestCase;
 
 /**
  * Smoke tests for Stock module HTTP endpoints.
@@ -10,6 +13,27 @@ use Tests\TestCase;
  */
 class StockApiTest extends TestCase
 {
+    use RefreshDatabase;
+
+    // Keep property type aligned with Laravel's TestCase (no typed property).
+    protected $defaultHeaders = [
+        'VESSEL-ACCESS-PRIVATE' => 'test-token',
+    ];
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        DB::table('auth_access_tokens')->insert([
+            'id' => Str::uuid()->toString(),
+            'token' => 'test-token',
+            'workspace_id' => 'ws-test',
+            'scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
     public function test_list_stock_items_endpoint_exists(): void
     {
         $response = $this->withAdapter('stock', 'local')

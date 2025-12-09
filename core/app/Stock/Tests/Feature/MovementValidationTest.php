@@ -4,6 +4,8 @@ namespace App\Stock\Tests\Feature;
 
 use App\Stock\Infrastructure\Out\Models\Eloquent\MovementModel;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 /**
@@ -15,11 +17,25 @@ class MovementValidationTest extends TestCase
 {
     use RefreshDatabase;
 
+    // Keep property type aligned with Laravel's TestCase (no typed property).
+    protected $defaultHeaders = [
+        'VESSEL-ACCESS-PRIVATE' => 'test-token',
+    ];
+
     private string $warehouseId;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        DB::table('auth_access_tokens')->insert([
+            'id' => Str::uuid()->toString(),
+            'token' => 'test-token',
+            'workspace_id' => 'ws-test',
+            'scope' => 'all',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
         
         // Crear ubicación de prueba
         $this->warehouseId = '09d37adb-a0c9-499e-8ef2-c9f45d290288';

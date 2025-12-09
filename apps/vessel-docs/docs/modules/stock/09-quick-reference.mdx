@@ -8,6 +8,28 @@ Referencia rápida de las funcionalidades principales del módulo Stock.
 
 ## 🚀 Endpoints Más Usados
 
+### Items con Stock (Nuevo)
+
+```http
+# Listar items con información de stock
+GET /api/v1/items/read?with_stock=true
+
+# Items con stock y categorías
+GET /api/v1/items/read?with_stock=true&with_terms=true
+
+# Filtrar por categoría
+GET /api/v1/items/read?term_id={uuid}&with_stock=true
+
+# Items en una bodega específica
+GET /api/v1/items/read?location_id={uuid}&with_stock=true
+
+# Items con stock bajo
+GET /api/v1/items/read?low_stock=true&max_quantity=10&with_stock=true
+
+# Buscar items con stock
+GET /api/v1/stock/catalog/search?q=mouse&limit=20
+```
+
 ### Reservaciones (Flujo Simplificado)
 
 ```http
@@ -323,6 +345,21 @@ Available = Total - Reserved
 ## 🔍 Consultas Útiles
 
 ```http
+# Items del catálogo con stock agregado
+GET /api/v1/items/read?with_stock=true&with_terms=true
+
+# Buscar items con disponibilidad
+GET /api/v1/stock/catalog/search?q=laptop
+
+# Items con stock bajo (alertas)
+GET /api/v1/items/read?low_stock=true&max_quantity=5&with_stock=true
+
+# Items por categoría con stock
+GET /api/v1/items/read?term_id={uuid}&with_stock=true
+
+# Items en bodega específica
+GET /api/v1/items/read?location_id={uuid}&with_stock=true
+
 # Stock actual por locación
 GET /api/v1/stock/current/location/{locationId}
 
@@ -381,6 +418,7 @@ GET /api/v1/stock/movements/types
 
 ## 📚 Más Información
 
+- [Items con Stock](./10-items-with-stock) - **NUEVO** Consultas enriquecidas con stock
 - [Reservations](./07-reservations) - Flujo completo de reservas
 - [Extensibility](./08-extensibility) - Tipos custom de movimiento
 - [Movements](./03-movements) - Movimientos estándar

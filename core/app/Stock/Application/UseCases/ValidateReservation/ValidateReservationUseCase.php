@@ -66,14 +66,14 @@ class ValidateReservationUseCase
         }
 
         // 4. Obtener configuración de locación
-        $settings = $this->settingsRepository->findByLocation($request->locationId);
+        $settings = $this->settingsRepository->findByLocationId($request->locationId);
         
         // 5. Validar cantidad disponible
         $available = $stockItem->getAvailableQuantity();
         
         if ($available < $request->quantity) {
             // Verificar si permite stock negativo
-            if ($settings && $settings->allowNegativeStock()) {
+            if ($settings && $settings->allowsNegativeStock()) {
                 $warnings[] = "La reserva dejará stock disponible negativo ({$available} - {$request->quantity} = " . ($available - $request->quantity) . ")";
             } else {
                 return ReservationValidationResult::denied(

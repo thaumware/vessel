@@ -11,7 +11,12 @@ use App\Stock\Infrastructure\In\Http\CapacityController;
 use App\Stock\Infrastructure\In\Http\Controllers\LocationStockSummaryController;
 use App\Stock\Infrastructure\In\Http\ReservationController;
 
-Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
+Route::prefix('api/v1/stock')->middleware(['adapter:stock', 'vessel.access:own'])->group(function () {
+
+    // === Catalog Search (búsqueda de items con información de stock) ===
+    Route::prefix('catalog')->group(function () {
+        Route::get('/search', [StockItemController::class, 'searchCatalog']);
+    });
 
     // === StockItems (existencia real vinculada al catálogo) ===
     Route::prefix('items')->group(function () {
@@ -47,8 +52,11 @@ Route::prefix('api/v1/stock')->middleware('adapter:stock')->group(function () {
 
     // === Reservations (flujo simplificado de reservas) ===
     Route::prefix('reservations')->group(function () {
-        Route::get('/', [ReservationController::class, 'index']); // Listar activas
+        // Public scope: Check availability only
         Route::post('/validate', [ReservationController::class, 'validate']);
+
+        // Private scope: Manage reservations (ya protegido por vessel.access:own en el grupo padre)
+        Route::get('/', [ReservationController::class, 'index']); // Listar activas
         Route::post('/reserve', [ReservationController::class, 'reserve']);
         Route::post('/release', [ReservationController::class, 'release']);
         Route::delete('/{id}', [ReservationController::class, 'destroy']); // Cancelar por ID

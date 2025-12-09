@@ -10,6 +10,7 @@ use App\Stock\Application\UseCases\DeleteStockItem;
 use App\Stock\Application\UseCases\AdjustStockQuantity;
 use App\Stock\Application\UseCases\ReserveStock;
 use App\Stock\Application\UseCases\ReleaseStock;
+use App\Stock\Application\UseCases\SearchCatalogItems;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Thaumware\Support\Uuid\Uuid;
@@ -25,6 +26,7 @@ class StockItemController
         private AdjustStockQuantity $adjustStockQuantity,
         private ReserveStock $reserveStock,
         private ReleaseStock $releaseStock,
+        private SearchCatalogItems $searchCatalogItems,
     ) {
     }
 
@@ -268,5 +270,28 @@ class StockItemController
                 'message' => $e->getMessage(),
             ], 400);
         }
+    }
+
+    /**
+     * GET /stock/catalog/search?q=term
+     * Buscar items en el catálogo con información de stock
+     */
+    public function searchCatalog(Request $request): JsonResponse
+    {
+        $request->validate([
+            'q' => 'required|string|min:1',
+            'limit' => 'sometimes|integer|min:1|max:100',
+        ]);
+
+        $searchTerm = $request->input('q');
+        $limit = $request->integer('limit', 50);
+
+        $items = $this->searchCatalogItems->execute($searchTerm, $limit);
+
+        return response()->json([
+            'success' => true,
+            'data' => $items,
+            'count' => count($items),
+        ]);
     }
 }

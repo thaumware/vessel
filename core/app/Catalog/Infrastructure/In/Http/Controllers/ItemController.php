@@ -2,6 +2,8 @@
 
 namespace App\Catalog\Infrastructure\In\Http\Controllers;
 
+use App\Catalog\Application\Services\StockEnrichmentService;
+use App\Catalog\Application\Services\TaxonomyEnrichmentService;
 use App\Catalog\Domain\UseCases\CreateItem;
 use App\Catalog\Domain\UseCases\DeleteItem;
 use App\Catalog\Domain\UseCases\GetItem;
@@ -17,9 +19,23 @@ use Thaumware\Support\Uuid\Uuid;
 
 class ItemController extends Controller
 {
+    public function __construct(
+        private StockEnrichmentService $stockEnrichment,
+        private TaxonomyEnrichmentService $taxonomyEnrichment,
+    ) {
+    }
+
     /**
      * GET /items/read
      * Listar todos los items del catálogo
+     * 
+     * Query params:
+     * - with_stock: bool - Incluir resumen de stock
+     * - with_terms: bool - Incluir nombres de términos de taxonomía
+     * - term_id: uuid - Filtrar por término
+     * - location_id: uuid - Filtrar por ubicación (requiere stock en esa ubicación)
+     * - low_stock: bool - Solo items con stock bajo
+     * - max_quantity: int - Umbral de stock bajo (por defecto 5)
      */
     public function list(
         Request $request,
@@ -28,7 +44,63 @@ class ItemController extends Controller
         $params = PaginationParams::fromRequest($request->query());
         $result = $listItems->execute($params);
 
-        return response()->json($result->toArray());
+        // Convertir items a array y cargar term_ids
+        $items = array_map(function ($item) {
+            $array = $item->toArray();
+            
+            // Cargar term_ids desde la tabla pivot
+            $termIds = DB::table('catalog_item_terms')
+                ->where('item_id', $item->getId())
+                ->pluck('term_id')
+                ->toArray();
+            
+            $array['term_ids'] = $termIds;
+            
+            return $array;
+        }, $result->data);
+
+        // Aplicar enriquecimiento de stock si se solicita
+        $withStock = $request->boolean('with_stock', false);
+        if ($withStock) {
+            $items = $this->stockEnrichment->enrichWithStock($items);
+        }
+
+        // Aplicar enriquecimiento de términos si se solicita
+        $withTerms = $request->boolean('with_terms', false);
+        if ($withTerms) {
+            $items = $this->taxonomyEnrichment->enrichWithTerms($items);
+        }
+
+        // Filtrar por término
+        $termId = $request->input('term_id');
+        if ($termId) {
+            $items = $this->taxonomyEnrichment->filterByTerm($items, $termId);
+        }
+
+        // Filtrar por ubicación
+        $locationId = $request->input('location_id');
+        if ($locationId) {
+            $items = $this->stockEnrichment->filterByLocation($items, $locationId);
+        }
+
+        // Filtrar por stock bajo
+        $lowStock = $request->boolean('low_stock', false);
+        if ($lowStock) {
+            $maxQuantity = $request->integer('max_quantity', 5);
+            // Asegurar que tenemos stock_summary
+            if (!$withStock) {
+                $items = $this->stockEnrichment->enrichWithStock($items);
+            }
+            $items = $this->stockEnrichment->filterLowStock($items, $maxQuantity);
+        }
+
+        return response()->json([
+            'data' => array_values($items), // Re-indexar después de filtros
+            'total' => count($items),
+            'page' => $result->page,
+            'per_page' => $result->perPage,
+            'last_page' => $result->lastPage,
+        ]);
     }
 
     /**

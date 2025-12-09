@@ -638,6 +638,93 @@
                         </button>
                         <p class="text-[11px] text-gray-500 mt-2">Necesita git y APP_ALLOW_UPDATE=true. Usa branch opcional.</p>
                     </div>
+
+                    <!-- Access Tokens -->
+                    <div class="bg-gray-800/50 rounded-2xl border border-gray-700/50 p-6 md:col-span-2 lg:col-span-3">
+                        <div class="flex items-start justify-between mb-4">
+                            <div class="w-12 h-12 bg-indigo-500/10 rounded-xl flex items-center justify-center">
+                                <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 11c0 1.105-.895 2-2 2s-2-.895-2-2 .895-2 2-2 2 .895 2 2z" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7 6.97 6.97 0 01-3-.677L5 19l1.677-4a7 7 0 1112.323-4z" />
+                                </svg>
+                            </div>
+                            <button @click="fetchAccessTokens()" class="text-xs px-3 py-1 rounded-md border border-gray-700 bg-gray-900 hover:bg-gray-800 text-gray-200">Refrescar</button>
+                        </div>
+                        <h3 class="text-lg font-semibold text-white mb-2">API Access Tokens</h3>
+                        <p class="text-sm text-gray-400 mb-4">Genera tokens para usar con el header VESSEL-ACCESS-PRIVATE.</p>
+
+                        <div class="grid md:grid-cols-3 gap-3 mb-3">
+                            <div class="space-y-1">
+                                <label class="text-xs text-gray-400">Nombre (opcional)</label>
+                                <input x-model="tokenName" type="text" placeholder="Dashboard / Scripts" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs text-gray-400">Scope</label>
+                                <select x-model="tokenScope" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+                                    <option value="all">all (full access)</option>
+                                    <option value="own">own (scoped)</option>
+                                </select>
+                            </div>
+                            <div class="space-y-1">
+                                <label class="text-xs text-gray-400">Workspace ID (opcional)</label>
+                                <input x-model="tokenWorkspaceId" type="text" placeholder="workspace-123" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                            </div>
+                        </div>
+                        <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                            <button @click="createAccessToken()"
+                                    :disabled="tokenCreating"
+                                    class="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-600 disabled:cursor-not-allowed text-white text-sm font-medium flex items-center gap-2">
+                                <svg x-show="tokenCreating" class="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                <span x-text="tokenCreating ? 'Creando...' : 'Crear token'"></span>
+                            </button>
+                            <template x-if="newTokenValue">
+                                <div class="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-xs font-mono text-gray-100 break-all" x-text="newTokenValue"></div>
+                            </template>
+                        </div>
+
+                        <div class="mt-4 border border-gray-700/60 rounded-xl overflow-hidden">
+                            <div class="px-4 py-3 border-b border-gray-700/60 flex items-center justify-between">
+                                <h4 class="text-sm font-semibold text-white">Tokens existentes</h4>
+                                <span class="text-xs text-gray-400" x-text="accessTokens.length + ' tokens'"></span>
+                            </div>
+                            <div class="overflow-auto max-h-72">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-900/50">
+                                        <tr>
+                                            <th class="px-3 py-2 text-left text-xs text-gray-400">Nombre</th>
+                                            <th class="px-3 py-2 text-left text-xs text-gray-400">Scope</th>
+                                            <th class="px-3 py-2 text-left text-xs text-gray-400">Workspace</th>
+                                            <th class="px-3 py-2 text-left text-xs text-gray-400">Creado</th>
+                                            <th class="px-3 py-2 text-left text-xs text-gray-400">Token</th>
+                                            <th class="px-3 py-2 text-left text-xs text-gray-400">Acciones</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-800">
+                                        <template x-if="!accessTokens.length">
+                                            <tr>
+                                                <td colspan="6" class="px-4 py-6 text-center text-gray-500">No hay tokens creados.</td>
+                                            </tr>
+                                        </template>
+                                        <template x-for="token in accessTokens" :key="token.id">
+                                            <tr class="hover:bg-gray-700/30">
+                                                <td class="px-3 py-2 text-gray-100 font-mono text-xs" x-text="token.name || '-' "></td>
+                                                <td class="px-3 py-2"><span class="px-2 py-1 text-[11px] rounded-md" :class="token.scope === 'all' ? 'bg-indigo-500/20 text-indigo-200' : 'bg-amber-500/20 text-amber-200'" x-text="token.scope"></span></td>
+                                                <td class="px-3 py-2 text-gray-300 font-mono text-xs" x-text="token.workspace_id || '-' "></td>
+                                                <td class="px-3 py-2 text-gray-400 text-xs" x-text="token.created_at ? new Date(token.created_at).toLocaleString() : '-' "></td>
+                                                <td class="px-3 py-2 text-gray-100 font-mono text-[11px] break-all" x-text="token.token"></td>
+                                                <td class="px-3 py-2">
+                                                    <button @click="revokeToken(token.id)" class="text-xs text-red-300 hover:text-red-100">Revocar</button>
+                                                </td>
+                                            </tr>
+                                        </template>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Action Output -->
@@ -848,6 +935,12 @@
                 configEntries: [],
                 configKey: '',
                 configValue: '',
+                accessTokens: [],
+                tokenName: '',
+                tokenScope: 'all',
+                tokenWorkspaceId: '',
+                newTokenValue: '',
+                tokenCreating: false,
 
                 async parseJsonResponse(response) {
                     const text = await response.text();
@@ -864,6 +957,79 @@
                     this.missing = JSON.parse(this.$root.dataset.missing || '[]');
                     this.needsAdminSetup = (this.$root.dataset.needsSetup || 'false') === 'true';
                     this.configEntries = JSON.parse(this.$root.dataset.config || '[]');
+                    this.fetchAccessTokens();
+                },
+
+                async fetchAccessTokens() {
+                    try {
+                        const response = await fetch('/admin/tokens');
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) {
+                            throw new Error(data.error || 'No se pudo cargar tokens');
+                        }
+                        this.accessTokens = data.tokens || [];
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
+                },
+
+                async createAccessToken() {
+                    this.tokenCreating = true;
+                    this.newTokenValue = '';
+
+                    try {
+                        const response = await fetch('/admin/tokens', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            },
+                            body: JSON.stringify({
+                                name: this.tokenName || null,
+                                scope: this.tokenScope,
+                                workspace_id: this.tokenWorkspaceId || null,
+                            })
+                        });
+
+                        const data = await this.parseJsonResponse(response);
+                        if (!data.success) {
+                            throw new Error(data.error || 'No se pudo crear el token');
+                        }
+
+                        this.newTokenValue = data.token?.token || '';
+                        this.tokenName = '';
+                        this.tokenWorkspaceId = '';
+                        await this.fetchAccessTokens();
+                        this.showNotification('Token creado', 'success');
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    } finally {
+                        this.tokenCreating = false;
+                    }
+                },
+
+                async revokeToken(id) {
+                    if (!id) return;
+
+                    try {
+                        const response = await fetch(`/admin/tokens/${id}`, {
+                            method: 'DELETE',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content
+                            }
+                        });
+
+                        const data = await this.parseJsonResponse(response);
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.error || 'No se pudo revocar el token');
+                        }
+
+                        await this.fetchAccessTokens();
+                        this.showNotification('Token revocado', 'success');
+                    } catch (error) {
+                        this.showNotification(error.message, 'error');
+                    }
                 },
 
                 async runTests() {

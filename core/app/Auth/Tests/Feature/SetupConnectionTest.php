@@ -13,7 +13,7 @@ class SetupConnectionTest extends TestCase
         Config::set('database.default', 'mysql');
         Config::set('database.connections.mysql.host', '127.0.0.1');
         Config::set('database.connections.mysql.port', 3307);
-        Config::set('database.connections.mysql.database', 'vessel_db');
+        Config::set('database.connections.mysql.database', 'vessel');
         Config::set('database.connections.mysql.username', 'root');
         Config::set('database.connections.mysql.password', '');
         Config::set('database.connections.mysql.unix_socket', '');
@@ -38,7 +38,7 @@ class SetupConnectionTest extends TestCase
             'db_driver' => 'mysql',
             'db_host' => '127.0.0.1',
             'db_port' => '3307',
-            'db_name' => 'vessel_db',
+            'db_name' => 'vessel',
             'db_user' => 'root',
             'db_pass' => '',
             'app_url' => 'http://localhost',

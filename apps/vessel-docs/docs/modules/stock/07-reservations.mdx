@@ -58,6 +58,8 @@ Cuando tienes órdenes de venta, proyectos o préstamos que **necesitan garantiz
 - `released`: Liberada manualmente (orden cancelada)
 - `expired`: Expiró automáticamente (por `expires_at`)
 
+> Aprobaciones: **no existe** un flujo `pending/approved/rejected` nativo. Si tu proceso requiere aprobaciones, agrega una capa externa (p.ej. workflow de órdenes) que marque la reserva como creada solo cuando se apruebe. También puedes almacenar el estado propio en `reference_type/reference_id` o metadata y usarlo para decidir si liberar o convertir en envío.
+
 ---
 
 ## 🔄 API Endpoints
@@ -105,6 +107,12 @@ POST /api/v1/stock/reservations/validate
   ]
 }
 ```
+
+**Configuración que afecta la validación**
+- Límite de reserva por locación (`stock_location_settings.max_reservation_percentage`)
+- Política de stock negativo (`stock_location_settings.allow_negative_stock`)
+- Capacidad/mezcla por locación (ver `Configurar locación` más abajo)
+- Validaciones propias: agrega reglas antes de llamar a `/reserve` (aprobaciones, compliance, etc.)
 
 ---
 
@@ -266,6 +274,12 @@ DELETE /api/v1/stock/reservations/res-abc-123
 3. Libera el stock (crea Movement tipo `RELEASE`)
 4. Marca la reserva como `released`
 
+### Histórico y relaciones
+- Cada `/reserve` y `/release` crea un **Movement** (`type`: `reserve`/`release`). Guarda el `movement.id` y el `reservation_id` retornados en la respuesta para correlacionar.
+- Para reconstruir el historial de una reserva: filtra movimientos por `item_id`, `location_id` y `reference_type/reference_id` usados en la reserva; los movimientos de reserva/liberación comparten esos campos.
+- Las respuestas de reservas no expanden catálogo ni ubicaciones; enriquece con `item_id` y `location_id` desde tus propios catálogos/locations.
+- Si necesitas ver el balance después de cada evento, consume `/v1/stock/movements?item_id=...&from=...` y ordena por `created_at`; agrega `available_quantity` usando `quantity/reserved_quantity` acumulados o consulta el snapshot en `stock_items`.
+
 ---
 
 ## 🎭 Flujos Completos
@@ -374,6 +388,15 @@ POST /api/v1/stock/capacity
 - Si `total_quantity = 100` y `max_reservation_percentage = 80`
 - Límite de reserva = 80 unidades
 - Intentar reservar 90 → ❌ Error
+
+**Otros diales útiles**
+- `allow_negative_stock`: si es `true`, `/validate` permite reservas aun sin stock físico (no recomendado en productivo).
+- Capacidad y mezcla: en `04-location-settings.mdx` puedes fijar UoM, tipos permitidos, si mezcla SKUs/lotes y si aplica FIFO. La validación de reserva respeta esas reglas antes de aceptar.
+
+**Cómo forzar aprobación manual**
+1) Procesos con aprobación previa: corre tus reglas (aprobador humano/flujo BPM) **antes** de llamar a `/reserve`. Solo llama `/reserve` cuando tengas `approved`.
+2) Procesos con aprobación posterior: crea la reserva pero marca tu orden como `pending` en tu dominio; no permitas `/shipment` hasta que tu orden cambie a `approved`. Si se rechaza, llama `/release` o `DELETE /reservations/{id}`.
+3) Auditoría: usa `reserved_by`, `reference_type` y `reference_id` para rastrear quién pidió la reserva y enlazar al registro de aprobación.
 
 ---
 

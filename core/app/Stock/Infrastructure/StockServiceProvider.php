@@ -143,12 +143,20 @@ class StockServiceProvider extends ServiceProvider
         }
         // Register middleware alias for module-specific adapter usage
         $this->app['router']->aliasMiddleware('stock_adapter', \App\Shared\Infrastructure\Middleware\AdapterMiddleware::class . ':stock');
+        $this->app['router']->aliasMiddleware('stock.token', \App\Stock\Infrastructure\In\Http\Middleware\StockTokenMiddleware::class);
 
         // Register migrations from Stock module
         $this->loadMigrationsFrom(__DIR__ . '/Out/Database/Migrations');
 
         // Register routes from Stock module
         $this->loadRoutesFrom(__DIR__ . '/In/Http/Routes/StockRoutes.php');
+
+        // Register commands
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                \App\Stock\Application\Commands\ExpireReservationsCommand::class,
+            ]);
+        }
 
         if ($modules->wsEnabled('stock')) {
             Broadcast::routes(['middleware' => ['api']]);

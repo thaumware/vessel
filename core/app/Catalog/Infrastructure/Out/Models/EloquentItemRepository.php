@@ -6,6 +6,7 @@ use App\Catalog\Domain\Entities\Item;
 use App\Catalog\Domain\Interfaces\ItemRepositoryInterface;
 use App\Shared\Domain\DTOs\PaginatedResult;
 use App\Shared\Domain\DTOs\PaginationParams;
+use Illuminate\Support\Facades\DB;
 
 class EloquentItemRepository implements ItemRepositoryInterface
 {
@@ -62,10 +63,10 @@ class EloquentItemRepository implements ItemRepositoryInterface
             ->take($params->perPage)
             ->get();
 
-        $items = $models->map(fn($model) => $this->toDomain($model))->toArray();
+        $items = $models->map(fn($model) => $this->toDomain($model));
 
         return new PaginatedResult(
-            data: $items,
+            data: $items->toArray(),
             total: $total,
             page: $params->page,
             perPage: $params->perPage,
@@ -96,5 +97,24 @@ class EloquentItemRepository implements ItemRepositoryInterface
             status: $model->status ?? 'active',
             workspaceId: $model->workspace_id,
         );
+    }
+
+    /**
+     * Convierte Item a array enriquecido con term_ids.
+     */
+    private function toArrayWithTerms(Item $item): array
+    {
+        $array = $item->toArray();
+        
+        // Cargar term_ids desde la tabla pivot
+        $termIds = DB::table('catalog_item_terms')
+            ->where('item_id', $item->getId())
+            ->whereNull('deleted_at')
+            ->pluck('term_id')
+            ->toArray();
+        
+        $array['term_ids'] = $termIds;
+        
+        return $array;
     }
 }

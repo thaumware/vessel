@@ -79,7 +79,7 @@ class StockMovementService
      * Valida un movimiento antes de procesarlo.
      * Ruta PRIVADA - usa validateMovement() para incluir custom handlers.
      */
-    private function validate(Movement $movement): ValidationResult
+    public function validate(Movement $movement): ValidationResult
     {
         $result = ValidationResult::valid();
 

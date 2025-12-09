@@ -15,6 +15,7 @@ use App\Shared\Infrastructure\ModuleRegistry;
 use App\Shared\Infrastructure\ConfigStore;
 use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Support\Str;
+use Ramsey\Uuid\Uuid;
 
 class AdminPanelController
 {
@@ -883,5 +884,84 @@ class AdminPanelController
         $store->set('admin.root_password', $pass);
 
         return response()->json(['success' => true]);
+    }
+
+    public function listTokens(): JsonResponse
+    {
+        try {
+            $tokens = DB::table('auth_access_tokens')
+                ->orderByDesc('created_at')
+                ->limit(200)
+                ->get(['id', 'name', 'token', 'workspace_id', 'scope', 'created_at']);
+
+            return response()->json([
+                'success' => true,
+                'tokens' => $tokens,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function createToken(Request $request): JsonResponse
+    {
+        $name = trim((string) $request->input('name', ''));
+        $scope = $request->input('scope', 'all');
+        $workspaceId = trim((string) $request->input('workspace_id', ''));
+
+        if (!in_array($scope, ['all', 'own'], true)) {
+            return response()->json(['success' => false, 'error' => 'Scope must be all or own'], 422);
+        }
+
+        $tokenValue = substr((string) ($request->input('token') ?: Str::random(40)), 0, 64);
+
+        try {
+            $id = (string) Uuid::uuid4();
+            $now = now();
+
+            DB::table('auth_access_tokens')->insert([
+                'id' => $id,
+                'name' => $name ?: null,
+                'token' => $tokenValue,
+                'workspace_id' => $workspaceId ?: null,
+                'scope' => $scope,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ]);
+
+            $token = DB::table('auth_access_tokens')
+                ->where('id', $id)
+                ->first(['id', 'name', 'token', 'workspace_id', 'scope', 'created_at']);
+
+            return response()->json([
+                'success' => true,
+                'token' => $token,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function deleteToken(string $id): JsonResponse
+    {
+        try {
+            $deleted = DB::table('auth_access_tokens')->where('id', $id)->delete();
+
+            return response()->json([
+                'success' => $deleted > 0,
+                'deleted' => $deleted,
+            ], $deleted ? 200 : 404);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
     }
 }

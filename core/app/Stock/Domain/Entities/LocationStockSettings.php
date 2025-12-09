@@ -37,6 +37,8 @@ class LocationStockSettings
         private ?array $allowedItemTypes = null,
         private bool $allowMixedLots = true,
         private bool $allowMixedSkus = true,
+        private bool $allowNegativeStock = false,
+        private ?int $maxReservationPercentage = null,
         private bool $fifoEnforced = false,
         private bool $isActive = true,
         private ?string $workspaceId = null,
@@ -89,6 +91,16 @@ class LocationStockSettings
     public function allowsMixedSkus(): bool
     {
         return $this->allowMixedSkus;
+    }
+
+    public function allowsNegativeStock(): bool
+    {
+        return $this->allowNegativeStock;
+    }
+
+    public function getMaxReservationPercentage(): ?int
+    {
+        return $this->maxReservationPercentage;
     }
 
     public function isFifoEnforced(): bool
@@ -199,84 +211,92 @@ class LocationStockSettings
     public function withMaxQuantity(?int $maxQuantity): self
     {
         return new self(
-            $this->id,
-            $this->locationId,
-            $maxQuantity,
-            $this->storageUomId,
-            $this->maxWeight,
-            $this->maxVolume,
-            $this->allowedItemTypes,
-            $this->allowMixedLots,
-            $this->allowMixedSkus,
-            $this->fifoEnforced,
-            $this->isActive,
-            $this->workspaceId,
-            $this->meta,
-            $this->createdAt,
-            new DateTimeImmutable(),
+            id: $this->id,
+            locationId: $this->locationId,
+            maxQuantity: $maxQuantity,
+            storageUomId: $this->storageUomId,
+            maxWeight: $this->maxWeight,
+            maxVolume: $this->maxVolume,
+            allowedItemTypes: $this->allowedItemTypes,
+            allowMixedLots: $this->allowMixedLots,
+            allowMixedSkus: $this->allowMixedSkus,
+            allowNegativeStock: $this->allowNegativeStock,
+            maxReservationPercentage: $this->maxReservationPercentage,
+            fifoEnforced: $this->fifoEnforced,
+            isActive: $this->isActive,
+            workspaceId: $this->workspaceId,
+            meta: $this->meta,
+            createdAt: $this->createdAt,
+            updatedAt: new DateTimeImmutable(),
         );
     }
 
     public function withMaxWeight(?float $maxWeight): self
     {
         return new self(
-            $this->id,
-            $this->locationId,
-            $this->maxQuantity,
-            $this->storageUomId,
-            $maxWeight,
-            $this->maxVolume,
-            $this->allowedItemTypes,
-            $this->allowMixedLots,
-            $this->allowMixedSkus,
-            $this->fifoEnforced,
-            $this->isActive,
-            $this->workspaceId,
-            $this->meta,
-            $this->createdAt,
-            new DateTimeImmutable(),
+            id: $this->id,
+            locationId: $this->locationId,
+            maxQuantity: $this->maxQuantity,
+            storageUomId: $this->storageUomId,
+            maxWeight: $maxWeight,
+            maxVolume: $this->maxVolume,
+            allowedItemTypes: $this->allowedItemTypes,
+            allowMixedLots: $this->allowMixedLots,
+            allowMixedSkus: $this->allowMixedSkus,
+            allowNegativeStock: $this->allowNegativeStock,
+            maxReservationPercentage: $this->maxReservationPercentage,
+            fifoEnforced: $this->fifoEnforced,
+            isActive: $this->isActive,
+            workspaceId: $this->workspaceId,
+            meta: $this->meta,
+            createdAt: $this->createdAt,
+            updatedAt: new DateTimeImmutable(),
         );
     }
 
     public function activate(): self
     {
         return new self(
-            $this->id,
-            $this->locationId,
-            $this->maxQuantity,
-            $this->storageUomId,
-            $this->maxWeight,
-            $this->maxVolume,
-            $this->allowedItemTypes,
-            $this->allowMixedLots,
-            $this->allowMixedSkus,
-            $this->fifoEnforced,
-            true,
-            $this->workspaceId,
-            $this->meta,
-            $this->createdAt,
-            new DateTimeImmutable(),
+            id: $this->id,
+            locationId: $this->locationId,
+            maxQuantity: $this->maxQuantity,
+            storageUomId: $this->storageUomId,
+            maxWeight: $this->maxWeight,
+            maxVolume: $this->maxVolume,
+            allowedItemTypes: $this->allowedItemTypes,
+            allowMixedLots: $this->allowMixedLots,
+            allowMixedSkus: $this->allowMixedSkus,
+            allowNegativeStock: $this->allowNegativeStock,
+            maxReservationPercentage: $this->maxReservationPercentage,
+            fifoEnforced: $this->fifoEnforced,
+            isActive: true,
+            workspaceId: $this->workspaceId,
+            meta: $this->meta,
+            createdAt: $this->createdAt,
+            updatedAt: new DateTimeImmutable(),
         );
     }
 
     public function deactivate(): self
     {
         return new self(
-            $this->id,
-            $this->locationId,
-            $this->maxQuantity,
-            $this->storageUomId,
-            $this->maxWeight,
-            $this->maxVolume,
-            $this->allowedItemTypes,
-            $this->allowMixedLots,
-            $this->allowMixedSkus,
-            $this->fifoEnforced,
-            false,
-            $this->workspaceId,
-            $this->meta,
-            $this->createdAt,
-            new DateTimeImmutable(),
+            id: $this->id,
+            locationId: $this->locationId,
+            maxQuantity: $this->maxQuantity,
+            storageUomId: $this->storageUomId,
+            maxWeight: $this->maxWeight,
+            maxVolume: $this->maxVolume,
+            allowedItemTypes: $this->allowedItemTypes,
+            allowMixedLots: $this->allowMixedLots,
+            allowMixedSkus: $this->allowMixedSkus,
+            allowNegativeStock: $this->allowNegativeStock,
+            maxReservationPercentage: $this->maxReservationPercentage,
+            fifoEnforced: $this->fifoEnforced,
+            isActive: false,
+            workspaceId: $this->workspaceId,
+            meta: $this->meta,
+            createdAt: $this->createdAt,
+            updatedAt: new DateTimeImmutable(),
         );
     }
 
@@ -294,6 +314,8 @@ class LocationStockSettings
             'allowed_item_types' => $this->allowedItemTypes,
             'allow_mixed_lots' => $this->allowMixedLots,
             'allow_mixed_skus' => $this->allowMixedSkus,
+            'allow_negative_stock' => $this->allowNegativeStock,
+            'max_reservation_percentage' => $this->maxReservationPercentage,
             'fifo_enforced' => $this->fifoEnforced,
             'is_active' => $this->isActive,
             'workspace_id' => $this->workspaceId,

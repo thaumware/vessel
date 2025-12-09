@@ -24,6 +24,13 @@ Define restricciones y reglas de inventario para ubicaciones específicas. Sin c
 - Datos del producto (eso lo maneja el **Catálogo**)
 - Los movimientos (eso lo maneja **Stock**)
 
+### Checklist de configuración rápida
+1) Crea la locación en `Locations` (ver `../locations`).
+2) Define capacidad y UoM (`storage_uom_id`, ver `../uom`).
+3) Ajusta mezcla: `allow_mixed_skus`, `allow_mixed_lots`.
+4) Limita tipos: `allowed_item_types` (ej: solo `hazmat`).
+5) Activa FIFO si la salida debe ser ordenada (`fifo_enforced=true`).
+
 ---
 
 ## Modelo de Datos
@@ -39,6 +46,8 @@ Define restricciones y reglas de inventario para ubicaciones específicas. Sin c
 | `allowed_item_types` | array? | null | Tipos de items permitidos |
 | `allow_mixed_lots` | bool | true | ¿Permite mezclar lotes del mismo SKU? |
 | `allow_mixed_skus` | bool | true | ¿Permite diferentes SKUs? |
+| `allow_negative_stock` | bool | false | ¿Permite reservar/mover aunque quede stock negativo? |
+| `max_reservation_percentage` | int? | null | % máximo del stock físico que puede reservarse (null = sin límite) |
 | `fifo_enforced` | bool | false | ¿Requiere salida FIFO? |
 | `is_active` | bool | true | ¿Configuración activa? |
 
@@ -52,6 +61,16 @@ El sistema convierte automáticamente cuando ingresas stock en diferentes UoM.
 :::
 | `workspace_id` | UUID? | null | Workspace para multi-tenant |
 | `meta` | json? | null | Datos adicionales |
+
+### Valores por defecto y flexibilidad
+- Si no configuras nada: **sin límites** (ilimitado y acepta cualquier SKU/lote).
+- `max_quantity`, `max_weight`, `max_volume` en `null`: sin tope para ese eje.
+- `storage_uom_id`: opcional; usa la medida que prefieras (ver `../uom`).
+- `allow_mixed_skus=false`: obliga a un único SKU por locación.
+- `allow_mixed_lots=false`: obliga a un único lote por SKU.
+- `allowed_item_types`: lista blanca; vacío = acepta todos.
+- `allow_negative_stock=false`: evita reservas/movimientos que dejen la locación en negativo.
+- `max_reservation_percentage`: null = sin tope; si pones `80`, solo 80% del stock físico es reservable.
 
 ---
 
@@ -107,6 +126,8 @@ El sistema convierte automáticamente cuando ingresas stock en diferentes UoM.
     allowed_item_types: ['regular', 'fragile'],
     allow_mixed_lots: false,
     allow_mixed_skus: true,
+    allow_negative_stock: false,
+    max_reservation_percentage: 80,
     fifo_enforced: true
   }}
   description="Crea o actualiza configuración de capacidad"
@@ -312,6 +333,18 @@ Total: 2500
 | `MIXED_SKUS_NOT_ALLOWED` | La ubicación no permite mezclar diferentes SKUs |
 | `MIXED_LOTS_NOT_ALLOWED` | La ubicación no permite mezclar diferentes lotes |
 | `LOCATION_NOT_ACTIVE` | La configuración de la ubicación está desactivada |
+
+---
+
+## Recetas rápidas (opcionales, no hardcode)
+
+Son diales configurables; si no los usas, la locación queda abierta (sin restricciones) porque **no hay defaults ocultos**. Los ejemplos usan "SKU" como identificador genérico de ítem; aplica a cualquier clave de producto que uses.
+
+- **Un solo SKU**: `allow_mixed_skus=false`, `allow_mixed_lots=true` (default) → acepta un identificador de ítem único, múltiples lotes.
+- **Un solo lote**: `allow_mixed_lots=false` → no mezcla lotes del mismo ítem.
+- **Un solo tipo de item**: `allowed_item_types=['fragile']` (u otra lista) → lista blanca configurable.
+- **Con capacidad en UoM específica**: define `storage_uom_id` (kg, units, m³) para que la validación convierta cantidades entrantes; si lo dejas `null`, no hay tope por UoM.
+- **FIFO obligatorio**: `fifo_enforced=true` para obligar rotación; si `false`, no fuerza orden.
 
 ---
 

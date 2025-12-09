@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         
         $middleware->alias([
             'jwt.validate' => \App\Shared\Adapters\Http\Middleware\ValidateJwt::class,
+            'vessel.access' => \App\Auth\Infrastructure\In\Http\Middleware\VesselAccessMiddleware::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

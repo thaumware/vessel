@@ -173,6 +173,10 @@ Permite ajustar la cantidad de stock directamente. Genera un movimiento de tipo 
 
 Reserva stock para una orden pendiente. No reduce la cantidad total, solo incrementa `reserved_quantity`.
 
+:::caution Preferir el módulo de Reservas
+Estos endpoints ajustan `reserved_quantity` pero **no crean la entidad de tracking de reservas** (no guardan `reserved_by`, `expires_at` ni generan `reservation_id`). Para trazabilidad completa usa `/v1/stock/reservations/*` documentado en `07-reservations.mdx`, que registra el historial y devuelve IDs de reserva y movimientos.
+:::
+
 <ApiPlayground
   method="POST"
   endpoint="/v1/stock/items/reserve/{id}"
