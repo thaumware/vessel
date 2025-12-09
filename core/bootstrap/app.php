@@ -17,6 +17,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: __DIR__ . '/../app/Shared/Infrastructure/In/Http/Routes/HealthRoutes.php',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Confiar en todos los proxies (Nginx) para generar URLs https correctas
+        $middleware->trustProxies(at: '*');
+
         // CORS middleware para todas las peticiones
         $middleware->prepend(\Illuminate\Http\Middleware\HandleCors::class);
         
