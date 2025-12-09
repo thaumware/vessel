@@ -21,4 +21,4 @@ volumes:
 networks:
   default:
     external: true
-    name: web_default
+    name: web_fablab-network
