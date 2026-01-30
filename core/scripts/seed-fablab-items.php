@@ -194,23 +194,23 @@ $errors = 0;
 foreach ($items as $name) {
     $name = trim($name);
     if (empty($name)) continue;
-    
+
     // Verificar si ya existe
     $exists = DB::table('catalog_items')
         ->whereNull('deleted_at')
         ->where('name', $name)
         ->exists();
-    
+
     if ($exists) {
         echo "⏭ Ya existe: {$name}\n";
         $skipped++;
         continue;
     }
-    
+
     try {
         $id = Uuid::v4()->toRfc4122();
         $now = now();
-        
+
         DB::table('catalog_items')->insert([
             'id' => $id,
             'name' => $name,
@@ -221,7 +221,7 @@ foreach ($items as $name) {
             'created_at' => $now,
             'updated_at' => $now,
         ]);
-        
+
         echo "✓ Creado: {$name}\n";
         $created++;
     } catch (\Exception $e) {

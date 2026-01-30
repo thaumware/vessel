@@ -273,11 +273,11 @@ foreach ($items as $item) {
     $stockItemId = (string) Str::uuid();
     $movementId = (string) Str::uuid();
     $now = now();
-    
+
     // Determinar cantidad (null = sin especificar = 0 para el sistema)
     $cantidad = $item['cantidad'] ?? 0;
     $cantidadDisplay = $item['cantidad'] === null ? '—' : $item['cantidad'];
-    
+
     // 3a. Crear artículo en catálogo
     DB::table('catalog_items')->insert([
         'id' => $catalogItemId,
@@ -290,7 +290,7 @@ foreach ($items as $item) {
         'created_at' => $now,
         'updated_at' => $now,
     ]);
-    
+
     // 3b. Crear stock item en Camptech
     DB::table('stock_items')->insert([
         'id' => $stockItemId,
@@ -311,7 +311,7 @@ foreach ($items as $item) {
         'created_at' => $now,
         'updated_at' => $now,
     ]);
-    
+
     // 3c. Registrar movimiento de entrada (solo si hay cantidad)
     if ($cantidad > 0) {
         DB::table('stock_movements')->insert([
@@ -335,9 +335,9 @@ foreach ($items as $item) {
     } else {
         $sinStock++;
     }
-    
+
     $created++;
-    
+
     // Mostrar progreso cada 50 items
     if ($created % 50 == 0 || $created == $totalArticulos) {
         echo "   Procesados: {$created}/{$totalArticulos}\n";

@@ -238,14 +238,14 @@ $notFound = [];
 foreach ($items as $nombre => $cantidad) {
     // Buscar el stock item por nombre
     $stockItem = DB::table('stock_items')->where('sku', $nombre)->first();
-    
+
     if (!$stockItem) {
         $notFound[] = $nombre;
         continue;
     }
-    
+
     $currentQty = $stockItem->quantity;
-    
+
     // Si la cantidad es diferente, actualizar
     if ($currentQty != $cantidad) {
         // Actualizar cantidad en stock_items
@@ -255,7 +255,7 @@ foreach ($items as $nombre => $cantidad) {
                 'quantity' => $cantidad,
                 'updated_at' => now(),
             ]);
-        
+
         // Si la cantidad actual es 0 y la nueva es > 0, crear movimiento de entrada
         if ($currentQty == 0 && $cantidad > 0) {
             $movementId = (string) Str::uuid();
@@ -278,7 +278,7 @@ foreach ($items as $nombre => $cantidad) {
             ]);
             $movementsCreated++;
         }
-        
+
         $updated++;
         echo "✓ {$nombre}: {$currentQty} → {$cantidad}\n";
     }

@@ -8,7 +8,7 @@ use Symfony\Component\Uid\Uuid;
 
 /**
  * Seed the internal_catalog portal origin
- * 
+ *
  * This origin is required for Stock module to link items to the internal catalog.
  */
 return new class extends Migration {

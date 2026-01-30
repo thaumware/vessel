@@ -36,7 +36,7 @@ if ($locationUpdated) {
             'updated_at' => now(),
         ]);
         echo "   ✓ Ubicación 'Camptech' creada\n";
-        
+
         // Actualizar todos los stock_items para usar esta ubicación
         DB::table('stock_items')->update(['location_id' => $locationId]);
         echo "   ✓ Stock items actualizados con nueva ubicación\n";
@@ -58,7 +58,7 @@ foreach ($catalogItems as $catalogItem) {
     // Generar un SKU limpio basado en el nombre
     $cleanName = preg_replace('/[^a-zA-Z0-9]/', '', $catalogItem->name);
     $sku = strtoupper(substr($cleanName, 0, 10));
-    
+
     // Actualizar el stock_item correspondiente
     $result = DB::table('stock_items')
         ->where('catalog_item_id', $catalogItem->id)
@@ -66,7 +66,7 @@ foreach ($catalogItems as $catalogItem) {
             'item_id' => $catalogItem->name,
             'sku' => $catalogItem->name,
         ]);
-    
+
     if ($result) {
         $updated++;
     }

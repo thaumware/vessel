@@ -217,7 +217,7 @@ foreach ($items as $item) {
     $stockItemId = (string) Str::uuid();
     $movementId = (string) Str::uuid();
     $now = now();
-    
+
     // 3a. Crear artículo en catálogo
     DB::table('catalog_items')->insert([
         'id' => $catalogItemId,
@@ -230,7 +230,7 @@ foreach ($items as $item) {
         'created_at' => $now,
         'updated_at' => $now,
     ]);
-    
+
     // 3b. Crear stock item en Camptech
     DB::table('stock_items')->insert([
         'id' => $stockItemId,
@@ -251,7 +251,7 @@ foreach ($items as $item) {
         'created_at' => $now,
         'updated_at' => $now,
     ]);
-    
+
     // 3c. Registrar movimiento de entrada
     DB::table('stock_movements')->insert([
         'id' => $movementId,
@@ -270,9 +270,9 @@ foreach ($items as $item) {
         'updated_at' => $now,
         'processed_at' => $now,
     ]);
-    
+
     $created++;
-    
+
     // Mostrar progreso cada 20 items
     if ($created % 20 == 0 || $created == $totalItems) {
         echo "   Procesados: {$created}/{$totalItems}\n";

@@ -22,7 +22,7 @@ $defaultLocation = DB::table('locations_locations')
 if (!$defaultLocation) {
     $locationId = Uuid::v4()->toRfc4122();
     $now = now();
-    
+
     DB::table('locations_locations')->insert([
         'id' => $locationId,
         'name' => 'FabLab Principal',
@@ -33,7 +33,7 @@ if (!$defaultLocation) {
         'created_at' => $now,
         'updated_at' => $now,
     ]);
-    
+
     echo "✓ Ubicación 'FabLab Principal' creada\n\n";
     $defaultLocationId = $locationId;
 } else {
@@ -58,21 +58,21 @@ foreach ($catalogItems as $catalogItem) {
         ->where('catalog_item_id', $catalogItem->id)
         ->whereNull('deleted_at')
         ->exists();
-    
+
     if ($exists) {
         echo "⏭ Ya tiene stock: {$catalogItem->name}\n";
         $skipped++;
         continue;
     }
-    
+
     try {
         $id = Uuid::v4()->toRfc4122();
         $now = now();
-        
+
         // Generar SKU basado en el nombre
         $sku = strtoupper(substr(preg_replace('/[^a-zA-Z0-9]/', '', $catalogItem->name), 0, 10));
         $sku = $sku . '-' . substr($id, 0, 4);
-        
+
         DB::table('stock_items')->insert([
             'id' => $id,
             'sku' => $sku,
@@ -95,7 +95,7 @@ foreach ($catalogItems as $catalogItem) {
             'created_at' => $now,
             'updated_at' => $now,
         ]);
-        
+
         echo "✓ Stock creado: {$catalogItem->name} (SKU: {$sku})\n";
         $created++;
     } catch (\Exception $e) {
