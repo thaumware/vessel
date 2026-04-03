@@ -59,6 +59,8 @@ class EloquentItemRepository implements ItemRepositoryInterface
         $lastPage = (int) ceil($total / $params->perPage);
         
         $models = $query
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
             ->skip(($params->page - 1) * $params->perPage)
             ->take($params->perPage)
             ->get();

@@ -3,6 +3,8 @@
 use App\Auth\Infrastructure\In\Http\Controllers\AdminPanelController;
 use App\Auth\Infrastructure\In\Http\Controllers\SetupController;
 use App\Auth\Infrastructure\In\Http\Middleware\SetupRedirect;
+use App\Shared\Infrastructure\ConfigStore;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Route;
 
 // Setup wizard (no auth) for first install
@@ -16,17 +18,31 @@ Route::middleware('web')->group(function () {
 // Login form handler (no auth)
 Route::middleware('web')->group(function () {
     Route::post('/admin/login', function (\Illuminate\Http\Request $request) {
-        $credentials = $request->only('username', 'password');
-        
-        $adminRoot = env('ADMIN_ROOT', 'admin');
-        $adminPassword = env('ADMIN_ROOT_PASSWORD');
+        $payload = $request->all();
+        if ((!array_key_exists('username', $payload) || !array_key_exists('password', $payload)) && $request->getContent()) {
+            $decoded = json_decode((string) $request->getContent(), true);
+            if (is_array($decoded)) {
+                $payload = array_merge($payload, $decoded);
+            }
+        }
+
+        $inputUser = (string) ($payload['username'] ?? $payload['user'] ?? $request->getUser() ?? '');
+        $inputPassword = (string) ($payload['password'] ?? $payload['pass'] ?? $request->getPassword() ?? '');
+
+        /** @var ConfigStore $store */
+        $store = app(ConfigStore::class);
+        $adminRoot = (string) ($store->get('admin.root') ?? env('ADMIN_ROOT', 'admin'));
+        $adminPassword = $store->get('admin.root_password') ?? env('ADMIN_ROOT_PASSWORD');
         
         if (!$adminPassword) {
             return response()->json(['success' => false, 'error' => 'Admin no configurado. Ve a /setup'], 500);
         }
-        
-        // Verificar password hasheado con password_verify
-        if ($credentials['username'] === $adminRoot && password_verify($credentials['password'], $adminPassword)) {
+
+        $adminPassword = (string) $adminPassword;
+        $passwordOk = $inputPassword === $adminPassword
+            || (str_starts_with($adminPassword, '$2y$') && Hash::check($inputPassword, $adminPassword));
+
+        if ($inputUser === $adminRoot && $passwordOk) {
             $request->session()->put('admin_authenticated', true);
             return response()->json(['success' => true]);
         }

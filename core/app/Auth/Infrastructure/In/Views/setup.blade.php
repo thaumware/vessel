@@ -15,6 +15,12 @@
             <p class="text-sm text-slate-400">Completa la conexión a base de datos y credenciales del panel admin.</p>
         </div>
 
+        @if (!empty($is_reconfigure))
+            <div class="mb-6 rounded-2xl border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+                Estas reabriendo el setup sobre una instalacion existente. Al guardar, se actualizaran la base configurada y las credenciales admin.
+            </div>
+        @endif
+
         <div id="setup" class="space-y-4 bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl" x-data="{ dbDriver: '{{ $db_driver }}' }">
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="space-y-2">

@@ -55,7 +55,7 @@ class InMemoryItemRepository implements ItemRepositoryInterface
 
     public function findAll(PaginationParams $params): PaginatedResult
     {
-        $allItems = array_values($this->items);
+        $allItems = array_reverse(array_values($this->items));
         $total = count($allItems);
 
         $offset = ($params->page - 1) * $params->perPage;

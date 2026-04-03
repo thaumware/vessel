@@ -5,7 +5,6 @@ namespace App\Shared\Console\Commands;
 use Illuminate\Console\Command;
 use App\Shared\Infrastructure\ConfigStore;
 use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\DB;
 
 class ResetAdminCredentialsCommand extends Command
 {
@@ -17,6 +16,7 @@ class ResetAdminCredentialsCommand extends Command
     {
         $user = $this->option('user') ?: 'admin';
         $pass = $this->option('password') ?: 'admin123';
+        $hashedPass = password_hash((string) $pass, PASSWORD_BCRYPT);
 
         /** @var ConfigStore $store */
         $store = app(ConfigStore::class);
@@ -24,7 +24,7 @@ class ResetAdminCredentialsCommand extends Command
         try {
             $this->ensureConfigTable();
             $store->set('admin.root', $user);
-            $store->set('admin.root_password', $pass);
+            $store->set('admin.root_password', $hashedPass);
             $store->set('app.installed', true);
         } catch (\Throwable $e) {
             $this->error('No se pudo escribir en shared_config: ' . $e->getMessage());
@@ -33,7 +33,7 @@ class ResetAdminCredentialsCommand extends Command
 
         $this->writeEnv([
             'ADMIN_ROOT' => $user,
-            'ADMIN_ROOT_PASSWORD' => $pass,
+            'ADMIN_ROOT_PASSWORD' => $hashedPass,
             'APP_INSTALLED' => 'true',
         ]);
 
@@ -67,7 +67,7 @@ class ResetAdminCredentialsCommand extends Command
             $replacement = $key . '=' . $this->escapeEnvValue($value);
 
             if (preg_match($pattern, $contents)) {
-                $contents = preg_replace($pattern, $replacement, $contents);
+                $contents = preg_replace_callback($pattern, static fn () => $replacement, $contents);
             } else {
                 $contents = rtrim($contents, "\r\n") . PHP_EOL . $replacement . PHP_EOL;
             }
@@ -82,8 +82,9 @@ class ResetAdminCredentialsCommand extends Command
             return '';
         }
 
-        $needsQuotes = str_contains((string) $value, ' ');
-        $escaped = str_replace(["\n", '"'], ['\\n', '\\"'], (string) $value);
+        $str = (string) $value;
+        $needsQuotes = str_contains($str, ' ') || str_contains($str, '$') || str_contains($str, '#');
+        $escaped = str_replace(['\\', '"', "\n"], ['\\\\', '\\"', '\\n'], $str);
 
         return $needsQuotes ? '"' . $escaped . '"' : $escaped;
     }

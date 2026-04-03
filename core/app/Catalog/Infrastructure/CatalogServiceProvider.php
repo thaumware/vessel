@@ -3,8 +3,11 @@
 namespace App\Catalog\Infrastructure;
 
 use App\Catalog\Domain\Interfaces\ItemRepositoryInterface;
+use App\Catalog\Domain\Interfaces\ItemIdentifierRepositoryInterface;
 use App\Catalog\Infrastructure\Out\Models\EloquentItemRepository;
+use App\Catalog\Infrastructure\Out\Models\EloquentItemIdentifierRepository;
 use App\Catalog\Infrastructure\Out\InMemory\InMemoryItemRepository;
+use App\Catalog\Infrastructure\Out\InMemory\InMemoryItemIdentifierRepository;
 use Illuminate\Support\ServiceProvider;
 
 class CatalogServiceProvider extends ServiceProvider
@@ -13,6 +16,7 @@ class CatalogServiceProvider extends ServiceProvider
     {
         // Default binding (Eloquent/SQL)
         $this->app->bind(ItemRepositoryInterface::class, EloquentItemRepository::class);
+        $this->app->bind(ItemIdentifierRepositoryInterface::class, EloquentItemIdentifierRepository::class);
 
         // === Adapter Configuration for Middleware ===
         $this->app->instance('adapters.catalog', [
@@ -20,6 +24,10 @@ class CatalogServiceProvider extends ServiceProvider
                 ItemRepositoryInterface::class => [
                     'local' => InMemoryItemRepository::class,
                     'eloquent' => EloquentItemRepository::class,
+                ],
+                ItemIdentifierRepositoryInterface::class => [
+                    'local' => InMemoryItemIdentifierRepository::class,
+                    'eloquent' => EloquentItemIdentifierRepository::class,
                 ],
             ],
         ]);

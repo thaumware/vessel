@@ -878,12 +878,57 @@ class AdminPanelController
             return response()->json(['success' => false, 'error' => 'Usuario y password son requeridos'], 422);
         }
 
+        $hashedPass = password_hash($pass, PASSWORD_BCRYPT);
+
         /** @var ConfigStore $store */
         $store = app(ConfigStore::class);
         $store->set('admin.root', $user);
-        $store->set('admin.root_password', $pass);
+        $store->set('admin.root_password', $hashedPass);
+        $store->set('app.installed', true);
+
+        $this->writeEnv([
+            'ADMIN_ROOT' => $user,
+            'ADMIN_ROOT_PASSWORD' => $hashedPass,
+            'APP_INSTALLED' => 'true',
+        ]);
 
         return response()->json(['success' => true]);
+    }
+
+    private function writeEnv(array $pairs): void
+    {
+        $envPath = base_path('.env');
+        $contents = file_exists($envPath) ? file_get_contents($envPath) : '';
+
+        foreach ($pairs as $key => $value) {
+            $pattern = "/^{$key}=.*$/m";
+            $replacement = $key . '=' . $this->escapeEnvValue($value);
+
+            if (preg_match($pattern, $contents)) {
+                $contents = preg_replace_callback($pattern, static fn () => $replacement, $contents);
+            } else {
+                $contents = rtrim($contents, "\r\n") . PHP_EOL . $replacement . PHP_EOL;
+            }
+        }
+
+        file_put_contents($envPath, $contents);
+    }
+
+    private function escapeEnvValue($value): string
+    {
+        if ($value === null) {
+            return '';
+        }
+
+        $str = (string) $value;
+        $needsQuotes = str_contains($str, ' ') || str_contains($str, '$') || str_contains($str, '#');
+
+        if ($needsQuotes) {
+            $escaped = str_replace(['\\', '"'], ['\\\\', '\\"'], $str);
+            return '"' . $escaped . '"';
+        }
+
+        return $str;
     }
 
     public function listTokens(): JsonResponse

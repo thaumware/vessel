@@ -13,7 +13,7 @@ use App\Shared\Infrastructure\ConfigStore;
 
 class SetupController
 {
-    public function show()
+    public function show(Request $request)
     {
         // Si no existe .env, crearlo desde .env.example
         $envPath = base_path('.env');
@@ -25,9 +25,12 @@ class SetupController
             // Generar APP_KEY
             Artisan::call('key:generate', ['--force' => true]);
         }
+
+        $installed = $this->isInstalled();
+        $canReconfigureInstalledApp = $installed && $this->canReconfigureInstalledApp($request);
         
         // Bloquear si ya está instalado
-        if (env('APP_INSTALLED') === 'true' || env('APP_INSTALLED') === true) {
+        if ($installed && !$canReconfigureInstalledApp) {
             return redirect('/admin')->with('error', 'La aplicación ya está instalada.');
         }
 
@@ -52,12 +55,20 @@ class SetupController
             'db_pass' => env('DB_PASSWORD', ''),
             'db_path' => $dbPath,
             'app_url' => env('APP_URL', 'http://localhost'),
+            'is_reconfigure' => $canReconfigureInstalledApp,
         ]);
     }
 
     public function store(Request $request)
     {
         try {
+            if ($this->isInstalled() && !$this->canReconfigureInstalledApp($request)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'La aplicacion ya esta instalada y no permite reconfiguracion desde esta sesion.',
+                ], 403);
+            }
+
             $driver = $request->input('db_driver', 'sqlite');
             
             // Log raw input para debug
@@ -264,7 +275,7 @@ class SetupController
             $replacement = $key . '=' . $this->escapeEnvValue($value);
 
             if (preg_match($pattern, $contents)) {
-                $contents = preg_replace($pattern, $replacement, $contents);
+                $contents = preg_replace_callback($pattern, static fn () => $replacement, $contents);
             } else {
                 $contents = rtrim($contents, "\r\n") . PHP_EOL . $replacement . PHP_EOL;
             }
@@ -328,12 +339,39 @@ class SetupController
             $replacement = $key . '=' . $this->escapeEnvValue($value);
 
             if (preg_match($pattern, $contents)) {
-                $contents = preg_replace($pattern, $replacement, $contents);
+                $contents = preg_replace_callback($pattern, static fn () => $replacement, $contents);
             } else {
                 $contents = rtrim($contents, "\r\n") . PHP_EOL . $replacement . PHP_EOL;
             }
         }
 
         file_put_contents($envPath, $contents);
+    }
+
+    private function isInstalled(): bool
+    {
+        $envInstalled = env('APP_INSTALLED');
+        if ($envInstalled !== null && filter_var($envInstalled, FILTER_VALIDATE_BOOLEAN)) {
+            return true;
+        }
+
+        try {
+            /** @var ConfigStore $store */
+            $store = app(ConfigStore::class);
+            $storeValue = $store->get('app.installed');
+
+            return $storeValue !== null && filter_var($storeValue, FILTER_VALIDATE_BOOLEAN);
+        } catch (\Throwable $e) {
+            return false;
+        }
+    }
+
+    private function canReconfigureInstalledApp(Request $request): bool
+    {
+        if (app()->environment('local')) {
+            return true;
+        }
+
+        return (bool) $request->session()->get('admin_authenticated', false);
     }
 }

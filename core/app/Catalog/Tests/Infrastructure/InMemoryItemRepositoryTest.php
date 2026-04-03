@@ -110,6 +110,25 @@ class InMemoryItemRepositoryTest extends CatalogTestCase
         $this->assertEquals(2, $result->page);
     }
 
+    public function test_find_all_returns_newest_items_first(): void
+    {
+        $this->repository->save(new Item(
+            id: $this->generateUuid(),
+            name: 'Producto antiguo'
+        ));
+
+        $this->repository->save(new Item(
+            id: $this->generateUuid(),
+            name: 'Producto nuevo'
+        ));
+
+        $result = $this->repository->findAll(new PaginationParams(page: 1, perPage: 10));
+
+        $this->assertCount(2, $result->data);
+        $this->assertEquals('Producto nuevo', $result->data[0]->getName());
+        $this->assertEquals('Producto antiguo', $result->data[1]->getName());
+    }
+
     public function test_find_all_last_page_partial(): void
     {
         for ($i = 1; $i <= 25; $i++) {

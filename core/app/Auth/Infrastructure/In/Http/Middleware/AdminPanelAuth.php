@@ -47,6 +47,7 @@ class AdminPanelAuth
 
         return response()->view('auth::login', [
             'user' => $user,
+            'canAccessSetup' => app()->environment('local'),
         ], 401);
     }
 

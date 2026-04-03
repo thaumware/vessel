@@ -48,7 +48,7 @@ class UomSeeder extends Seeder
             }
         }
 
-        $this->command->info("✓ Categorías: {$inserted} insertadas, " . (count($categories) - $inserted) . " existentes");
+        $this->command?->info("✓ Categorías: {$inserted} insertadas, " . (count($categories) - $inserted) . " existentes");
     }
 
     private function seedMeasures(): void
@@ -80,7 +80,7 @@ class UomSeeder extends Seeder
             }
         }
 
-        $this->command->info("✓ Medidas: {$inserted} insertadas, " . (count($measures) - $inserted) . " existentes");
+        $this->command?->info("✓ Medidas: {$inserted} insertadas, " . (count($measures) - $inserted) . " existentes");
     }
 
     private function seedConversions(): void
@@ -132,6 +132,6 @@ class UomSeeder extends Seeder
             }
         }
 
-        $this->command->info("✓ Conversiones: {$inserted} insertadas, {$skipped} existentes/omitidas");
+        $this->command?->info("✓ Conversiones: {$inserted} insertadas, {$skipped} existentes/omitidas");
     }
 }

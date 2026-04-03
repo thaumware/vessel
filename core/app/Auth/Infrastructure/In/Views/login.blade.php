@@ -39,7 +39,11 @@
             </form>
 
             <p class="text-xs text-slate-500 text-center mt-6">
-                Si no configuraste admin, ve a <a href="/setup" class="text-blue-400 hover:text-blue-300">/setup</a>
+                @if (!empty($canAccessSetup))
+                    Si necesitas reconfigurar la instalacion local, ve a <a href="/setup" class="text-blue-400 hover:text-blue-300">/setup</a>
+                @else
+                    Si no recuerdas el admin, restablecelo con <code class="text-slate-300">php artisan admin:reset</code>
+                @endif
             </p>
         </div>
     </div>
